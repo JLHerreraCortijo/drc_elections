@@ -31,7 +31,7 @@ here::i_am("R/001 - data processing.R", uuid = "e44ebf95-8ba3-4dad-aacf-7356584f
 # 
 # 2006 Data: The script reads two sets of data for 2006. The first dataset is filtered 
 # to remove rows representing provincial totals and select columns are excluded. 
-# The second dataset, labeled as clean, undergoes a similar cleaning process. 
+# The second dataset, labeled as second round, undergoes a similar cleaning process. 
 # These datasets are then merged based on a common column related to geographical divisions.
 # 2011 Data: Data from the 2011 elections is read and rows containing aggregated 
 # totals are excluded to ensure the dataset only contains individual record entries.
@@ -75,5 +75,76 @@ data.2018 %<>% dplyr::mutate(candidat_id=as.numeric(candidate_id[candidat_id]))
 
 # Join candidates table
 data.2018 %<>% dplyr::left_join(candidates.2018,by=c(candidat_id="nCANDIDAT"))
+
+##### 2-RENAME COLUMNS AND NEST VOTES FOR EACH CANDIDATE #####
+
+# This section processes election data from 2006, 2011, and 2018 to structure and 
+# organize key information regarding electoral votes and participants. Specifically, 
+# it performs the following operations:
+#   
+# 1. For the year 2006, it restructures the data to list each candidate along with 
+# the percentage and calculated number of votes they received. This transformation 
+# involves pivoting the dataset so that candidate names and their corresponding 
+# vote percentages are collated into a nested data frame, which includes both the 
+# candidate names and the calculated votes based on valid votes and participation percentages.
+# 
+# 2. For the years 2011 and 2018, the script formats the data by nesting details 
+# about each candidate’s votes into a similar structured format. This includes 
+# renaming certain columns for consistency and clarity, such as the candidate’s 
+# name and the number of votes they received.
+# 
+# 3. Additionally, the script standardizes other important electoral information 
+# across the datasets for these years, such as the number of registered voters, 
+# actual voters, ballot boxes, and the count of processed ballot boxes. This renaming 
+# ensures uniformity across different election years for easier comparison and analysis.
+# 
+# Overall, this section enhances the accessibility and usability of election data 
+# by organizing it into a consistent format across different election years, 
+# allowing for streamlined analysis and reporting.
+
+# In 2011 and 2018, we have:
+# - Votes for each candidate
+# - Registered voters
+# - Voters
+# - Number of ballot boxes
+# - Number of ballot boxes counted
+
+# In 2006 we have:
+# - Votes for each candidate
+# - Total votes
+
+# nest the number of votes for each candidate in a data.frame with columns:
+# - First name= candidate
+# - number of votes=votes
+
+data.2006 %<>% tidyr::pivot_longer(cols = -dplyr::one_of("Votes valables","Percent_participation","Territoire/ville","Province","Subprovince"),names_to = "candidate",values_to="percent" ) %>%
+  dplyr::mutate(votes=`Votes valables`*percent/100) %>% 
+  tidyr::nest(votes.data=c(candidate,votes,percent))
+
+
+data.2011 %<>% dplyr::mutate(candidate=`First Name`) %>%
+  dplyr::rename(votes=`Number of Votes`) %>%
+  tidyr::nest(votes.data=c(candidate,votes,`Candidate Number`,`First Name`,`Second Name`,`Third Name`,`Fourth Name`,`Fifth Name`,Percent))
+
+
+data.2018 %<>% dplyr::mutate(candidate=nom) %>%
+  dplyr::rename(votes=voix) %>%
+  tidyr::nest(votes.data=c(candidate,votes,candidat_id, nom,prenom,postnom))
+
+# Other columns will be renamed as:
+# - registered.voters
+# - voters
+# - ballot.boxes
+# - ballot.boxes_counted
+
+data.2011 %<>% dplyr::rename(registered.voters=`Number of registered voters`,
+                      voters=`Number of Voters`,
+                      ballot.boxes=`Number of Ballot boxed`,
+                      ballot.boxes_counted=`Ballot boxes counted`)
+
+data.2018 %<>% dplyr::rename(registered.voters=electeurs_attendus,
+                      voters=votants,
+                      ballot.boxes=bv_prevus,
+                      ballot.boxes_counted=bv_traites)
 
 
