@@ -470,3 +470,78 @@ villes.equ %<>% dplyr::full_join(villes.equ.2006.2018,by="index.2006") %>% dplyr
 
 # Clean vars no longer needed
 rm(list=setdiff(ls(),c("data.2006","data.2011","data.2018","villes.equ","kinshasa.subprov")))
+
+##### 5-MERGE DATA ACROSS ELECTIONS #####
+
+##### 5-MERGE DATA ACROSS ELECTIONS #####
+
+# This section consolidates election data from different years (2006, 2011, and 2018) 
+# using previously created matching indexes to ensure consistency and continuity 
+# across datasets. The primary activities in this process include:
+#
+# 1. **Data Preparation**: Indexes that have been aligned in previous steps are 
+# used to merge data across the election years. This ensures that each entry from 
+# different years corresponds to the same geographic location or administrative 
+# division, even when direct matches in names are not apparent.
+#
+# 2. **Merging Process**: The script performs several full joins to combine the 
+# datasets from 2006, 2011, and 2018 based on these indexes. This method allows 
+# for the inclusion of all available data, whether or not a direct match exists 
+# in all three years, thus preserving the maximum possible data granularity.
+#
+# 3. **Final Structuring and Cleaning**: Once merged, the data is restructured to 
+# create a unified view that includes labels and province names standardized across 
+# years. This structuring is crucial for analyses that require consistent geographic 
+# identifiers across multiple election cycles.
+#
+# 4. **Variable Cleanup and Data Saving**: Unnecessary variables are removed to 
+# tidy up the workspace, and the final structured dataset is arranged and saved 
+# for further analysis or reporting.
+#
+# By integrating data from multiple election years, this section facilitates 
+# comprehensive longitudinal electoral analyses, helping to identify trends and 
+# changes over time within the same geographic locales.
+
+#' In order to keep the original data granularity, we will nest the data and then we will join using the indexes created in
+#' villes.equ.
+
+# Merge 2006-2018
+villes.eq.2006_2018 <- villes.equ %>% dplyr::select(index.2006,index.2018) %>% 
+  dplyr::filter(!is.na(index.2006) | !is.na(index.2018))
+
+merged.2006_2018 <- data.2006  %>% dplyr::full_join(villes.eq.2006_2018,by="index.2006")
+
+merged.2018_2006 <- data.2018  %>% dplyr::full_join(villes.eq.2006_2018,by="index.2018")
+
+merged <- merged.2006_2018 %>% dplyr::full_join(merged.2018_2006,by=c("index.2006","index.2018"))
+
+# Merge 2011
+villes.eq.2006_2011 <- villes.equ %>% dplyr::select(index.2006,index.2011) %>% 
+  dplyr::filter(!is.na(index.2006) | !is.na(index.2011))
+
+merged.2011_2006 <- data.2011 %>% dplyr::full_join(villes.eq.2006_2011,by="index.2011")
+
+merged %<>% dplyr::full_join(merged.2011_2006,by="index.2006")
+
+
+# Clean vars no longer needed
+rm(list=setdiff(ls(),c("merged","kinshasa.subprov")))
+
+# Arrange the data and save
+
+data <- merged %>% dplyr::mutate(
+  province=dplyr::case_when(!is.na(index.2018)~province.2018, # Create common index across years
+                            TRUE ~dplyr::case_when(!is.na(index.2011)~province.2011,
+                                                   TRUE~province.2006)),
+  label=dplyr::case_when(!is.na(index.2006)~label.2006, # Create common index across years
+                         TRUE ~dplyr::case_when(!is.na(index.2011)~label.2011,
+                                                TRUE~label.2018)),
+  index=dplyr::case_when(!is.na(index.2006)~index.2006, # Create common index across years
+                         TRUE ~dplyr::case_when(!is.na(index.2011)~index.2011,
+                                                TRUE~index.2018))) %>% 
+  dplyr::select(index,label,province,index.2006,data_2006,index.2011,data_2011,index.2018,data_2018) %>% 
+  dplyr::arrange(province,index)
+
+
+rm(list=setdiff(ls(),c("data","kinshasa.subprov")))
+
