@@ -138,13 +138,175 @@ data.2018 %<>% dplyr::mutate(candidate=nom) %>%
 # - ballot.boxes_counted
 
 data.2011 %<>% dplyr::rename(registered.voters=`Number of registered voters`,
-                      voters=`Number of Voters`,
-                      ballot.boxes=`Number of Ballot boxed`,
-                      ballot.boxes_counted=`Ballot boxes counted`)
+                             voters=`Number of Voters`,
+                             ballot.boxes=`Number of Ballot boxed`,
+                             ballot.boxes_counted=`Ballot boxes counted`)
 
 data.2018 %<>% dplyr::rename(registered.voters=electeurs_attendus,
-                      voters=votants,
-                      ballot.boxes=bv_prevus,
-                      ballot.boxes_counted=bv_traites)
+                             voters=votants,
+                             ballot.boxes=bv_prevus,
+                             ballot.boxes_counted=bv_traites)
+
+##### 3-NEST DATA BY LOCATION AND STANDARDIZE INDEXES #####
+
+# This section focuses on organizing and indexing election data from 2006, 2011, 
+# and 2018 by geographic and administrative divisions such as provinces, cities, 
+# and electoral constituencies. It aims to facilitate easier data comparison and 
+# analysis across different election years:
+#   
+#   1. **Nesting and Index Creation**: The script nests voting site data within 
+#   each constituency for the 2018 dataset. For all years, it establishes indexes 
+#   based on geographic identifiers like city names and constituency names, which 
+#   are standardized to lower case and stripped of extra spaces for uniformity.
+# 
+# 2. **Labeling and Manual Adjustments**: The script also assigns labels to each 
+# entry for clearer identification and resolves inconsistencies in geographic names 
+# between datasets. In Kinshasa, for example, it adjusts city names to subprovince 
+# levels to match data granularity in other years.
+# 
+# 3. **Data Matching and Structuring**: Efforts are made to align the datasets by 
+# manually correcting discrepancies in geographic names across the election years. 
+# This includes both simplifying and matching names and ensuring that the names 
+# used reflect the administrative changes or differences noted in different datasets.
+# 
+# 4. **Nested Structuring**: Finally, the data is restructured into nested formats 
+# based on updated indexes and labels. This allows for detailed yet manageable 
+# data subsets, which can be used for in-depth regional analysis or aggregated to 
+# provide broader electoral insights.
+# 
+# This meticulous organization of data by location enhances the analytical framework, 
+# making it easier to track electoral trends and patterns across different regions 
+# and election cycles.
+
+# Nest 2018 voting sites within each circonscription
+
+data.2018 %<>% tidyr::nest(voting.sites=-c(province_id,province,clcr_id,clcr,circonscription_id,circonscription,siege))
+
+
+# Create indexes. We can match most of the data using Ville in 2006, Ville in 2011 and circonscription in 2018. So,
+# we create the indexes using those
+data.2006 %<>% dplyr::mutate(index.2006=`Territoire/ville` %>% tolower() %>% stringr::str_squish(),
+                             label.2006=`Territoire/ville`,
+                             province.2006=stringr::str_to_title(tolower(Province)))
+data.2011 %<>% dplyr::mutate(index.2011=Ville %>% tolower() %>% stringr::str_squish(),
+                             label.2011=Ville,
+                             province.2011=Province)
+data.2018 %<>% dplyr::mutate(index.2018=circonscription %>% tolower() %>%stringr::str_squish(),
+                             label.2018=stringr::str_to_title(circonscription),
+                             province.2018=province)
+
+# Labels 
+
+#' 2011 data at Kinshasa is given only at the subprovince level
+#' So, in 2006 and 2018, we must use the data by subprovince. Here we replace the ville names with
+#' their corresponding subprovince
+
+Kinshasa.2006 <- data.2006 %>% dplyr::filter(Province=="KINSHASA")
+manual.matches <- c("kin 1 lukunga"="kinshasa i lukunga",
+                    "kin 2 funa"="kinshasa ii funa",
+                    "kin 3 mt amba"="kinshasa iii mt amba",
+                    "kin 4 tshangu"="kinshasa iv tshangu"
+)
+kinshasa.subprov <- Kinshasa.2006$Subprovince %>% tolower()
+
+kinshasa.subprov  %<>% stringr::str_replace_all(manual.matches) %>% magrittr::set_names(Kinshasa.2006$index.2006)
+
+kinshasa.subprov.labels <- Kinshasa.2006$Subprovince %>% magrittr::set_names(Kinshasa.2006$index.2006)
+
+# Nest the data
+data.2006 %<>% dplyr::mutate(index=index.2006,label=label.2006) %>% 
+  tidyr::nest(circonscription=-c(index.2006,label.2006,province.2006))
+data.2011 %<>%  dplyr::mutate(index=index.2011,label=label.2011) %>% 
+  tidyr::nest(circonscription=-c(index.2011,label.2011,province.2011))
+data.2018 %<>%  dplyr::mutate(index=index.2018,label=label.2018) %>% 
+  tidyr::nest(ville.territoire=-c(index.2018,label.2018,province.2018))
+
+# Replace Villages with Subprovinces where necessary
+
+
+data.2006 %<>% dplyr:: mutate(index=index.2006,
+                              label=label.2006,
+                              label.2006=dplyr::case_when(index.2006 %in% names(kinshasa.subprov.labels) ~ kinshasa.subprov.labels[index.2006],
+                                                          TRUE ~ label.2006),
+                              index.2006=dplyr::case_when(index.2006 %in% names(kinshasa.subprov) ~ kinshasa.subprov[index.2006],
+                                                          TRUE ~ index.2006))
+
+
+# Some names are written differently across the elections, fix that in 2006
+
+manual.matches <- c("mo bay i-m bongo"="mobayi-mbongo",
+                    "kabeya-kamwang"="kabeya-kamwanga",
+                    "beni territoire"="beni"
+)
+
+# Apply equivalences and nest the data
+data.2006 %<>% dplyr::mutate(index.2006=dplyr::case_when(index.2006 %in% names(manual.matches) ~ manual.matches[index.2006],
+                                                         TRUE ~ index.2006))
+data.2006 %<>% tidyr::nest(data_2006=-c(index.2006,label.2006,province.2006))
+
+
+# Create indexes and nest data for 2011
+
+data.2011 %<>% dplyr::mutate(index=index.2011,label=label.2011) %>% 
+  tidyr::nest(data_2011=-c(index.2011,label.2011,province.2011))
+
+
+# Some names are written differently across the elections, fix that in 2018
+manual.matches <- c(
+  "luilu (mwene-ditu)"="luilu",
+  "tshikapa"="kamonia",
+  "tshikapa ville"="tshikapa"
+)
+
+# Apply the equivalences
+
+data.2018 %<>% dplyr::mutate(
+  label.2018=dplyr::case_when(index.2018 %in% names(manual.matches) ~ stringr::str_to_title(manual.matches[index.2018]),
+                              TRUE ~ label.2018),
+  index.2018=dplyr::case_when(index.2018 %in% names(manual.matches) ~ manual.matches[index.2018],
+                              TRUE ~ index.2018))
+
+
+# In 2018, in some provinces we have a distinction between their capital and the remaining territoire. In 2006 and 2011 we don't
+# have such distinction. We will match both the capital and the remaining territorie with the aggregated 2006, 2011 data, but
+# nesting them to keep the granularity.
+
+manual.matches <- c("kenge ville"="kenge",
+                    "inongo ville"="inongo",
+                    "gemena ville"="gemena",
+                    "lisala ville"="lisala",
+                    "boende ville"="boende",
+                    "buta ville"="buta",
+                    "kamina ville"="kamina",
+                    "kalemie ville"="kalemie",
+                    "kabinda ville"="kabinda",
+                    "lusambo ville"="lusambo",
+                    "isiro ville"="rungu",
+                    "bunia ville"="irumu"
+)
+
+
+
+
+# Apply the equivalences and nest the data
+
+data.2018 %<>% dplyr::mutate(index=index.2018,
+                             label=label.2018,
+                             label.2018=dplyr::case_when(index.2018 %in% names(manual.matches) ~ stringr::str_to_title(manual.matches[index.2018]),
+                                                         TRUE ~ label.2018),
+                             index.2018=dplyr::case_when(index.2018 %in% names(manual.matches) ~ manual.matches[index.2018],
+                                                         TRUE ~ index.2018)
+)
+data.2018 %<>% tidyr::nest(circonscription=-c(index.2018,label.2018,province.2018))
+
+# Nest by subprovinces
+data.2018 %<>% dplyr::mutate(index=index.2018,
+                             label=label.2018,
+                             label.2018=dplyr::case_when(index.2018 %in% names(kinshasa.subprov.labels) ~ kinshasa.subprov.labels[index.2018],
+                                                         TRUE ~ label.2018),
+                             index.2018=dplyr::case_when(index.2018 %in% names(kinshasa.subprov) ~ kinshasa.subprov[index.2018],TRUE ~ index.2018))
+
+data.2018 %<>% tidyr::nest(data_2018=-c(index.2018,label.2018,province.2018))
+
 
 
