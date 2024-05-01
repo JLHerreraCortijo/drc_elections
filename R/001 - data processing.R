@@ -309,4 +309,164 @@ data.2018 %<>% dplyr::mutate(index=index.2018,
 data.2018 %<>% tidyr::nest(data_2018=-c(index.2018,label.2018,province.2018))
 
 
+##### 4-MATCH DATA ACROSS ELECTIONS #####
 
+# This section is dedicated to matching election data across three different election 
+# years: 2006, 2011, and 2018. The primary challenge addressed here is the discrepancies 
+# in geographical names across different datasets, particularly because some regions 
+# like Kinshasa lack detailed geographic identifiers in some years. To tackle this, 
+# a multi-step matching strategy is implemented:
+# 
+# 1. **Initial Extraction and Naming**: The script extracts names of cities or 
+# constituencies (referred to as villes/circonscriptions) from each year's dataset 
+# and assigns them as names to character vectors. This unique approach uses the 
+# names of these vectors for matching, ensuring that the actual content remains unchanged.
+# 
+# 2. **Iterative Matching Process**: The matching process involves several iterative 
+# steps where the names in the vectors are slightly modified in each iteration to 
+# accommodate differences in naming conventions between datasets. For example, 
+# the term "ville" is removed and excess whitespace is cleaned to improve matching accuracy.
+# 
+# 3. **Compilation of Matched and Unmatched Names**: After each matching attempt, 
+# matched names are compiled, and unmatched names undergo further processing to 
+# refine their format and attempt another match. This stepwise refinement continues 
+# until no further matches can be found.
+# 
+# 4. **Final Data Structuring**: The results are then structured into a comprehensive 
+# list that captures both matched and unmatched names, ensuring that data from different 
+# years can be compared accurately despite initial discrepancies.
+# 
+# The process is meticulous and aims to ensure that electoral data from different 
+# years can be aligned and analyzed consistently, addressing challenges posed by 
+# changes in geographic names and administrative boundaries over time.
+
+#' There are some missing Circonscriptions in 2011. At Kinshasa, because we don't have enough detail in 2011 data, 
+#' we are limited to use the subprovince level.
+#' The strategy followed is to extract the names of the villes/circonscriptions into a named character vector. Matching is done
+#' in several steps because there are differences across elections in the way the villes are named.
+#' First, the names of the vector are set equal to the vector contents. 
+#' We will use the names and not the contents to match the villes across elections. 
+#' In each step trying to match the data, we modify the names of the vector, leaving the vector contents untouched.
+#' That way, in the end, we have an index of villes matches across elections, even if the actual names are different.
+
+# Get the villes/circonscriptions
+ville.2006 <- data.2006  %>% dplyr::pull("index.2006")  %>% magrittr::set_names(.,.)
+ville.2011 <- data.2011 %>% dplyr::pull("index.2011") %>% magrittr::set_names(.,.)
+circonscription.2018 <- data.2018 %>% dplyr::pull("index.2018") %>% magrittr::set_names(.,.)
+
+
+# Match 2006 and 2011 
+
+# Find matches
+matches.2006.2011 <- match(names(ville.2006),names(ville.2011))
+matches.2011.2006 <- match(names(ville.2011),names(ville.2006))
+
+# Extract matched names
+villes.2006.2011 <- ville.2006[!is.na(matches.2006.2011)]
+villes.2011.2006 <- ville.2011[!is.na(matches.2011.2006)]
+
+# Get names not matched
+villes.unique.2011 <- ville.2011[is.na(matches.2011.2006)]
+villes.unique.2006 <- ville.2006[is.na(matches.2006.2011)]
+
+# In some cases the difference is because there is the name ville included in the name
+names(villes.unique.2011) %<>% stringr::str_remove("ville") %>% stringr::str_squish()
+names(villes.unique.2006) %<>% stringr::str_remove("ville") %>% stringr::str_squish()
+
+# Match again
+matches.2006.2011 <- match(names(villes.unique.2006),names(villes.unique.2011))
+matches.2011.2006 <- match(names(villes.unique.2011),names(villes.unique.2006))
+
+# Get matched names and append to previous ones
+villes.2006.2011 %<>% c(villes.unique.2006[!is.na(matches.2006.2011)])
+villes.2011.2006 %<>% c(villes.unique.2011[!is.na(matches.2011.2006)])
+
+# Get remaining names not matched
+villes.unique.2011 <- villes.unique.2011[is.na(matches.2011.2006)]
+villes.unique.2006 <- villes.unique.2006[is.na(matches.2006.2011)]
+
+
+
+# Check names not matched
+# villes.unique.2011
+# named character(0)
+# 
+# villes.unique.2006
+# kiri      watsa   niangara      wamba    mambasa 
+# "kiri"    "watsa" "niangara"    "wamba"  "mambasa" 
+
+# Now match the names already matched and create a data frame of paired Villes. Then add the villes not matched
+
+matches.2006.2011 <- match(names(villes.2006.2011),names(villes.2011.2006))
+
+matches.2011.2006 <- match(names(villes.2011.2006),names(villes.2006.2011))
+
+villes.equ <- dplyr::bind_rows(
+  data.frame(index.2006=villes.2006.2011,index.2011=villes.2011.2006[matches.2006.2011]),
+  data.frame(index.2006=villes.2006.2011[matches.2011.2006],index.2011=villes.2011.2006),
+  data.frame(index.2006=villes.unique.2006),
+  data.frame(index.2011=villes.unique.2011)
+) %>% dplyr::distinct()
+
+villes.equ %<>% dplyr::arrange(ville.2006)
+
+
+
+# Match 2006 and 2018
+
+# Match names
+matches.2006.2018 <- match(names(ville.2006),names(circonscription.2018))
+matches.2018.2006 <- match(names(circonscription.2018),names(ville.2006))
+
+# Get matched names
+villes.2006.2018 <- c(ville.2006[!is.na(matches.2006.2018)])
+villes.2018.2006 <- c(circonscription.2018[!is.na(matches.2018.2006)])
+
+# Get names not matched
+villes.unique.2018 <- circonscription.2018[is.na(matches.2018.2006)]
+villes.unique.2006 <- ville.2006[is.na(matches.2006.2018)]
+
+
+# Now we can remove the word ville as in2006-2011
+names(villes.unique.2018) %<>% stringr::str_remove("ville") %>% stringr::str_squish()
+names(villes.unique.2006) %<>% stringr::str_remove("ville") %>% stringr::str_squish()
+
+# Match names
+matches.2006.2018 <- match(names(villes.unique.2006),names(villes.unique.2018))
+matches.2018.2006 <- match(names(villes.unique.2018),names(villes.unique.2006))
+
+# Append matched names to previous data
+villes.2006.2018 %<>% c(villes.unique.2006[!is.na(matches.2006.2018)])
+villes.2018.2006 %<>% c(villes.unique.2018[!is.na(matches.2011.2006)])
+
+# Get names not matched
+villes.unique.2018 <- villes.unique.2018[is.na(matches.2018.2006)]
+villes.unique.2006 <- villes.unique.2006[is.na(matches.2006.2018)]
+
+
+
+# Check unmatched names
+# villes.unique.2006
+# named character(0)
+
+# 
+# villes.unique.2018
+# named character(0)
+
+
+# Now match the names already matched and create a data frame of paired Villes. Then add the villes not matched
+
+matches.2006.2018 <- match(names(villes.2006.2018),names(villes.2018.2006))
+matches.2018.2006 <- match(names(villes.2018.2006),names(villes.2006.2018))
+
+villes.equ.2006.2018 <- dplyr::bind_rows(
+  data.frame(index.2006=villes.2006.2018,index.2018=villes.2018.2006[matches.2006.2018]),
+  data.frame(index.2006=villes.2006.2018[matches.2018.2006],index.2018=villes.2018.2006),
+  data.frame(index.2006=villes.unique.2006),
+  data.frame(index.2018=villes.unique.2018)) %>% dplyr::distinct()
+
+# Now, merge with previous 2006-2011 matched names
+villes.equ %<>% dplyr::full_join(villes.equ.2006.2018,by="index.2006") %>% dplyr::arrange(index.2006)
+
+# Clean vars no longer needed
+rm(list=setdiff(ls(),c("data.2006","data.2011","data.2018","villes.equ","kinshasa.subprov")))
