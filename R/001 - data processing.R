@@ -652,29 +652,25 @@ registered.voters_2018=purrr::map(data_2018,~sum(.x$registered.voters, na.rm = T
 
 ##### 6.2-VOTERS IN EACH LEVEL #####
 
-#### 6-DERIVED QUANTITIES #####
-
-##### 6.2-CALCULATE TOTAL VOTERS #####
-
-# This section is devoted to calculating the total number of valid votes (referred to as "voters") 
+# This section is devoted to calculating the total number of voters 
 # from election data spanning three different years: 2006, 2011, and 2018. Here's 
 # an overview of how the data is processed:
 #
 # 1. **Data Transformation**: For each election year, the data undergoes a series 
-# of transformations to calculate the total valid votes within each administrative level, 
+# of transformations to calculate the total voters within each administrative level, 
 # such as circonscriptions and voting sites.
 #
 # 2. **Nested Calculations**: Utilizing the `purrr::map` function, the script navigates 
-# through nested structures (circonscription to voting sites) to aggregate valid 
-# votes at various levels.
+# through nested structures (circonscription to voting sites) to aggregate 
+# voters at various levels.
 #
-# 3. **Summation and Aggregation**: After extracting the valid votes for smaller 
-# units, the script sums these votes to compute total figures for larger geographic 
+# 3. **Summation and Aggregation**: After extracting the voters for smaller 
+# units, the script sums these voters to compute total figures for larger geographic 
 # or administrative areas. This aggregation helps in understanding the total voter 
 # turnout and the distribution across different regions.
 #
-# 4. **Data Integration and Unnesting**: The sums of valid votes are then integrated 
-# back into the main dataset, ensuring that each administrative unit's total votes 
+# 4. **Data Integration and Unnesting**: The sums of voters are then integrated 
+# back into the main dataset, ensuring that each administrative unit's total voters 
 # are reflected in the final dataset. The use of `tidyr::unnest` helps in flattening 
 # nested lists into simpler dataframe structures.
 #
@@ -686,7 +682,7 @@ data %<>%
       purrr::map(~{
         # Check if the element is not NULL to proceed with processing
         if(!is.null(.x)){
-          # Calculate the sum of valid votes ('Votes valables') within each circonscription
+          # Calculate the sum of voters ('Votes valables') within each circonscription
           .x %>% dplyr::mutate(
             voters=circonscription %>% 
               purrr::map(~{
@@ -773,4 +769,145 @@ data %<>%
   ) %>% 
   tidyr::unnest(voters_2018)  # Final unnest to flatten and integrate voters into 'data'
 
-                              
+##### 6.3-TOTAL VOTES IN EACH LEVEL #####
+
+
+# This section of the script is dedicated to calculating the total number of valid votes 
+# (referred to as "total votes") across different administrative levels for the 
+# election years 2006, 2011, and 2018. Here’s a concise breakdown of the process:
+#
+# 1. **Data Preparation**: For each year, the data is initially checked for null 
+# values to ensure only valid data is processed. This step is crucial for maintaining 
+# data integrity.
+#
+# 2. **Vote Calculation**:
+#    - For 2006, the script directly assigns the number of valid votes ('Votes valables') 
+#    from the data to a new column called 'total.votes' for each circonscription. 
+#    It then sums these votes to get a total count for each higher administrative level.
+#    - In 2011, the process involves extracting and summing votes from nested data 
+#    structures within each circonscription. This is slightly more complex as it 
+#    involves pulling and summing nested vote counts.
+#    - For 2018, the calculation is even more granular, extending down to voting 
+#    sites within each ville and territoire. This involves multiple layers of 
+#    mapping and summing to aggregate votes all the way up from the most detailed levels.
+#
+# 3. **Data Aggregation**: After calculating the total votes at the lowest necessary 
+# levels, the script aggregates these totals to provide comprehensive vote counts 
+# for larger geographic or administrative areas.
+#
+# 4. **Integration and Unnesting**: The aggregated total votes are then integrated 
+# back into the main dataset. The use of `tidyr::unnest()` simplifies the data 
+# structure, making it more accessible for further analysis.
+
+
+# Updating the 'data' dataframe to include transformations for 2006 election data
+data %<>%  
+  dplyr::mutate(
+    data_2006=data_2006 %>% 
+      purrr::map(~{
+        # Check if the current data element is not NULL
+        if(!is.null(.x)){
+          # Perform transformations within each circonscription
+          .x %>% 
+            dplyr::mutate(
+              circonscription=circonscription %>% 
+                purrr::map(~{
+                  # Directly assign 'Votes valables' to a new column 'total.votes'
+                  .x %>% dplyr::mutate(total.votes=`Votes valables`)
+                }),
+              # Sum up 'total.votes' across all circonscriptions
+              total.votes= circonscription %>% 
+                purrr::map(~sum(.x$total.votes, na.rm = TRUE))
+            ) %>% 
+            # Flatten the list to a single vector of total votes
+            tidyr::unnest(total.votes)
+        } else {
+          NULL  # Return NULL if the initial data was NULL
+        }
+      }),
+    # Sum all total votes from 2006 and add as a new column
+    total.votes_2006=data_2006 %>% 
+      purrr::map(~sum(.x$total.votes, na.rm = TRUE))
+  ) %>% 
+  # Flatten the summed total votes for easier analysis
+  tidyr::unnest(total.votes_2006)
+
+
+# Processing 2011 election data similarly to 2006
+data %<>%  dplyr::mutate(
+  data_2011=data_2011 %>% 
+    purrr::map(~{
+      if(!is.null(.x)){
+        .x %>% dplyr::mutate(
+          circonscription=circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                # Calculate total votes within each voting site
+                total.votes=votes.data %>% 
+                  purrr::map(~{
+                    .x  %>% dplyr::pull("votes") %>% sum(na.rm = TRUE)
+                  })) %>% 
+                  # Unnest the total votes calculated from nested voting sites
+                  tidyr::unnest(total.votes)
+              
+            }),
+          # Sum up all the total votes across circonscriptions
+          total.votes=circonscription %>% 
+            purrr::map(~sum(.x$total.votes, na.rm = TRUE))
+        ) %>% 
+          # Flatten the structure to include total votes in the main dataframe
+          tidyr::unnest(total.votes)
+      } else {
+        NULL
+      }
+    }),
+  # Sum all the total votes from 2011 and integrate into the main dataframe
+  total.votes_2011=data_2011 %>% 
+    purrr::map(~sum(.x$total.votes, na.rm = TRUE))
+) %>% 
+  # Flatten the summed total votes for 2011
+  tidyr::unnest(total.votes_2011)
+
+
+
+# Similar process for 2018 election data with more nested levels
+data %<>%  dplyr::mutate(
+  data_2018=data_2018 %>% 
+    purrr::map(~{
+      if(!is.null(.x)){
+        .x %>% dplyr::mutate(
+          circonscription=circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                ville.territoire=ville.territoire %>% 
+                  purrr::map(~{
+                    .x %>% dplyr::mutate(
+                      voting.sites=voting.sites %>% 
+                        purrr::map(~{
+                          .x %>% dplyr::mutate(total.votes=voters)  # Map total votes directly from voters
+                        }),
+                      # Sum votes from all voting sites
+                      total.votes = voting.sites %>% 
+                        purrr::map(~sum(.x$total.votes, na.rm = TRUE))
+                    ) %>% 
+                      # Unnest total votes from each ville.territoire
+                      tidyr::unnest(total.votes)
+                  }),
+                # Sum all votes from ville.territoire and unnest
+                total.votes = ville.territoire %>% 
+                  purrr::map(~sum(.x$total.votes, na.rm = TRUE))) %>% 
+                tidyr::unnest(total.votes)
+            }),
+          # Sum up total votes from each circonscription and unnest for the final structure
+          total.votes = circonscription %>% 
+            purrr::map(~sum(.x$total.votes, na.rm = TRUE))) %>% 
+          tidyr::unnest(total.votes)
+      } else {
+        NULL
+      }
+    }),
+  # Sum and unnest total votes for 2018 in the main dataframe
+  total.votes_2018=data_2018 %>% 
+    purrr::map(~sum(.x$total.votes, na.rm = TRUE))
+) %>% 
+  tidyr::unnest(total.votes_2018)
