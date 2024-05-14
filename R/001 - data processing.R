@@ -1090,5 +1090,110 @@ data %<>%  dplyr::mutate(
 
 
 
+##### 6.5-BALLOT BOXES IN EACH LEVEL (2011,2018 ONLY) #####
+
+# This section of the script processes and calculates the total number of ballot 
+# boxes counted at various administrative levels during the 2011 and 2018 elections. 
+# The approach involves multiple steps to ensure accurate aggregation of data:
+# 
+# 1. **Data Validation**: Each dataset is checked to confirm that it is not null, 
+# ensuring that only valid data is processed. This step is crucial to avoid 
+# errors during data manipulation.
+# 
+# 2. **Mapping and Summation**:
+#   - For each entry in the dataset, the script uses `purrr::map()` to apply 
+#   functions at different nesting levels, calculating the sum of ballot boxes 
+#   counted within each administrative unit, such as circonscriptions or voting sites.
+# - This involves iterating over each circonscription and, for the 2018 data, 
+# each ville.territoire within the circonscriptions, to aggregate the counts 
+# from the smallest units upwards.
+# 
+# 3. **Data Aggregation**:
+#   - The aggregated counts of ballot boxes from the smaller units (voting sites 
+#   or circonscriptions) are further summed to provide totals for larger areas.
+# - This is performed using nested `purrr::map()` functions that apply the summation 
+# across the nested data structures.
+# 
+# 4. **Flattening and Integration**:
+#   - The nested results are flattened using `tidyr::unnest()` to integrate the 
+#   summed ballot box counts back into the main dataframe. This transformation 
+#   simplifies the nested list into a standard column format within the main dataset.
+# 
+# 5. **Final Aggregation and Calculation**:
+#   - After processing individual entries, a final summation is performed across 
+#   all entries for each election year to calculate the total number of ballot 
+#   boxes counted across all circonscriptions.
+# - The results are added to the dataframe, providing a clear overview of ballot 
+# box distribution and availability during the elections.
+
+
+# Update the 'data' dataframe to include the count of ballot boxes for 2011
+data %<>%  dplyr::mutate(
+  # Process each entry in 'data_2011'
+  data_2011=data_2011 %>% 
+    purrr::map(~{
+      # Check if the data entry is not null to ensure valid data processing
+      if(!is.null(.x)){
+        # Calculate the sum of ballot boxes counted within each circonscription
+        .x %>% dplyr::mutate(
+          ballot.boxes_counted=circonscription %>% 
+            purrr::map(~sum(.x$ballot.boxes_counted, na.rm = TRUE))
+        ) %>% 
+          # Flatten the list to integrate ballot box counts into the main dataframe
+          tidyr::unnest(ballot.boxes_counted)
+      }else{
+        NULL  # Return NULL if the initial data was NULL
+      }
+    }),
+  # Sum the total ballot boxes counted across all circonscriptions for 2011
+  ballot.boxes_counted_2011=data_2011 %>% 
+    purrr::map(~sum(.x$ballot.boxes_counted, na.rm = TRUE))
+) %>% 
+  # Flatten the summed total of ballot boxes for easier analysis and integration
+  tidyr::unnest(ballot.boxes_counted_2011)
+# Similar processing is done for 2018 data
+data %<>%  dplyr::mutate(
+  # Process each entry in 'data_2018'
+  data_2018=data_2018 %>% 
+    purrr::map(~{
+      if(!is.null(.x)){
+        # Navigate deeper into nested structures for 2018, reaching down to voting sites
+        .x %>% dplyr::mutate(
+          circonscription=circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                ville.territoire=ville.territoire %>% 
+                  purrr::map(~{
+                    .x %>% dplyr::mutate(
+                      # Aggregate ballot boxes counted within each voting site
+                      ballot.boxes_counted=voting.sites %>% 
+                        purrr::map(~sum(.x$ballot.boxes_counted, na.rm = TRUE))
+                    ) %>% 
+                      # Unnest the results to collapse nested structures
+                      tidyr::unnest(ballot.boxes_counted)
+                  }),
+                # Sum ballot boxes counted at the 'ville.territoire' level
+                ballot.boxes_counted=ville.territoire %>% 
+                  purrr::map(~sum(.x$ballot.boxes_counted, na.rm = TRUE))
+              ) %>% 
+                tidyr::unnest(ballot.boxes_counted)
+            }),
+          # Sum ballot boxes counted at the 'circonscription' level
+          ballot.boxes_counted=circonscription %>% 
+            purrr::map(~sum(.x$ballot.boxes_counted, na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(ballot.boxes_counted)
+      }else{
+        NULL
+      }
+    }),
+  # Sum the total ballot boxes counted across all circonscriptions for 2018
+  ballot.boxes_counted_2018=data_2018 %>% 
+    purrr::map(~sum(.x$ballot.boxes_counted, na.rm = TRUE))
+) %>% 
+  # Flatten the summed total of ballot boxes to finalize integration
+  tidyr::unnest(ballot.boxes_counted_2018)
+
+
 
 
