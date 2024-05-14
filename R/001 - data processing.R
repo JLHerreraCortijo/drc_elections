@@ -23,7 +23,7 @@ here::i_am("R/001 - data processing.R", uuid = "e44ebf95-8ba3-4dad-aacf-7356584f
 # R and packages versions defined in renv.lock 
 
 
-##### 1-READ DATA #####
+#### 1-READ DATA ####
 
 # This section processes and combines election data from different years to prepare 
 # it for further analysis. Specifically, it handles data from the years 2006, 2011, 
@@ -76,7 +76,7 @@ data.2018 %<>% dplyr::mutate(candidat_id=as.numeric(candidate_id[candidat_id]))
 # Join candidates table
 data.2018 %<>% dplyr::left_join(candidates.2018,by=c(candidat_id="nCANDIDAT"))
 
-##### 2-RENAME COLUMNS AND NEST VOTES FOR EACH CANDIDATE #####
+#### 2-RENAME COLUMNS AND NEST VOTES FOR EACH CANDIDATE ####
 
 # This section processes election data from 2006, 2011, and 2018 to structure and 
 # organize key information regarding electoral votes and participants. Specifically, 
@@ -147,7 +147,7 @@ data.2018 %<>% dplyr::rename(registered.voters=electeurs_attendus,
                              ballot.boxes=bv_prevus,
                              ballot.boxes_counted=bv_traites)
 
-##### 3-NEST DATA BY LOCATION AND STANDARDIZE INDEXES #####
+#### 3-NEST DATA BY LOCATION AND STANDARDIZE INDEXES ####
 
 # This section focuses on organizing and indexing election data from 2006, 2011, 
 # and 2018 by geographic and administrative divisions such as provinces, cities, 
@@ -309,7 +309,7 @@ data.2018 %<>% dplyr::mutate(index=index.2018,
 data.2018 %<>% tidyr::nest(data_2018=-c(index.2018,label.2018,province.2018))
 
 
-##### 4-MATCH DATA ACROSS ELECTIONS #####
+#### 4-MATCH DATA ACROSS ELECTIONS ####
 
 # This section is dedicated to matching election data across three different election 
 # years: 2006, 2011, and 2018. The primary challenge addressed here is the discrepancies 
@@ -471,7 +471,7 @@ villes.equ %<>% dplyr::full_join(villes.equ.2006.2018,by="index.2006") %>% dplyr
 # Clean vars no longer needed
 rm(list=setdiff(ls(),c("data.2006","data.2011","data.2018","villes.equ","kinshasa.subprov")))
 
-##### 5-MERGE DATA ACROSS ELECTIONS #####
+#### 5-MERGE DATA ACROSS ELECTIONS ####
 
 # This section consolidates election data from different years (2006, 2011, and 2018) 
 # using previously created matching indexes to ensure consistency and continuity 
@@ -847,8 +847,8 @@ data %<>%  dplyr::mutate(
                   purrr::map(~{
                     .x  %>% dplyr::pull("votes") %>% sum(na.rm = TRUE)
                   })) %>% 
-                  # Unnest the total votes calculated from nested voting sites
-                  tidyr::unnest(total.votes)
+                # Unnest the total votes calculated from nested voting sites
+                tidyr::unnest(total.votes)
               
             }),
           # Sum up all the total votes across circonscriptions
@@ -911,3 +911,184 @@ data %<>%  dplyr::mutate(
     purrr::map(~sum(.x$total.votes, na.rm = TRUE))
 ) %>% 
   tidyr::unnest(total.votes_2018)
+
+##### 6.4-VOTES AND PERCENTAGE FOR KABILA IN EACH LEVEL #####
+
+# This section of the script is dedicated to calculating the total votes and the 
+# percentage of votes received by the candidate Kabila (and Ramazani in 2018) at 
+# various administrative levels across the election years 2006, 2011, and 2018. 
+# The method involves several steps:
+# 
+# 1. **Data Filtering and Extraction**:
+#   - For each year, the data undergoes a check to ensure it is not null, which 
+#   is crucial for maintaining accuracy.
+# - The votes specifically for Kabila (or Ramazani in 2018) are extracted from 
+# nested data structures by filtering for the candidate's name within each voting 
+# site or circonscription.
+# 
+# 2. **Vote Calculation**:
+#    - The valid votes for Kabila are aggregated first within the smallest units 
+#    (voting sites or circonscriptions) and then summed up to provide totals for 
+#    larger administrative areas.
+#    - This process involves mapping through nested data structures and applying 
+#    filters and summation functions to accurately compile the votes.
+# 
+# 3. **Percentage Calculation**:
+#    - The percentage of votes received by Kabila or Ramazani is calculated by 
+#    dividing their total votes by the total votes of all candidates at each 
+#    administrative level. This step provides insight into the candidate's 
+#    performance relative to others.
+# - The calculation is done post-aggregation to ensure it reflects the comprehensive 
+# vote share.
+# 
+# 4. **Data Aggregation and Unnesting**:
+#   - After calculating the total votes and percentages, these metrics are nested 
+#   back into the main dataset. Using `tidyr::unnest()`, the nested lists are 
+#   simplified into standard columns for ease of analysis.
+# 
+# 5. **Result Integration**:
+#   - The final step involves integrating the calculated votes and percentages 
+#   into the main dataset, enhancing the dataset with key electoral metrics for 
+#   Kabila and Ramazani, which are pivotal for electoral analysis.
+# 
+
+
+
+# Update the 'data' dataframe by adding Kabila's votes and percentages for 2006
+data %<>%  dplyr::mutate(
+  # Process each entry in 'data_2006' using a map function
+  data_2006=data_2006 %>% 
+    purrr::map(~{
+      # Check if the data entry is not null
+      if(!is.null(.x)){
+        # For each circonscription, calculate Kabila's votes
+        .x %>% dplyr::mutate(
+          circonscription=circonscription %>% 
+            purrr::map(~{
+              # Within each circonscription, extract and sum votes for Kabila
+              .x %>% dplyr::mutate(
+                kabila.votes=votes.data %>% 
+                  purrr::map(~{
+                    .x %>% 
+                      dplyr::filter(tolower(candidate)=="kabila") %>% 
+                      dplyr::pull("votes") %>% 
+                      sum(na.rm = TRUE)
+                  })
+              ) %>% 
+                tidyr::unnest(kabila.votes) %>% 
+                dplyr::mutate(kabila.percent=kabila.votes/total.votes)
+            }),
+          # Sum Kabila's votes across all circonscriptions
+          kabila.votes=circonscription %>% 
+            purrr::map(~sum(.x$kabila.votes,na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(kabila.votes) %>% 
+          dplyr::mutate(kabila.percent=kabila.votes/total.votes)
+      } else {
+        NULL
+      }
+    }),
+  # Aggregate Kabila's votes and calculate the overall percentage for 2006
+  kabila.votes_2006 = data_2006 %>%
+    purrr::map(~sum(.x$kabila.votes,na.rm = TRUE))
+) %>% 
+  tidyr::unnest(kabila.votes_2006) %>% 
+  dplyr::mutate(kabila.percent_2006=kabila.votes_2006/total.votes_2006)
+
+
+
+
+# Similar processing for 2011 data with Kabila's votes and percentages
+data %<>%  dplyr::mutate(
+  data_2011=data_2011 %>% 
+    purrr::map(~{
+      if(!is.null(.x)){
+        .x %>% dplyr::mutate(
+          circonscription=circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                kabila.votes = votes.data %>% 
+                  purrr::map(~{
+                    .x %>% dplyr::filter(tolower(candidate)=="kabila") %>% 
+                      dplyr::pull("votes") %>% 
+                      sum(na.rm = TRUE)
+                  })
+              ) %>% 
+                tidyr::unnest(kabila.votes) %>% 
+                dplyr::mutate(kabila.percent=kabila.votes/total.votes)
+            }),
+          kabila.votes=circonscription %>% 
+            purrr::map(~sum(.x$kabila.votes,na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(kabila.votes)%>% 
+          dplyr::mutate(kabila.percent=kabila.votes/total.votes)
+      } else {
+        NULL
+      }
+    }),
+  kabila.votes_2011=data_2011 %>% 
+    purrr::map(~sum(.x$kabila.votes,na.rm = TRUE))
+) %>% 
+  tidyr::unnest(kabila.votes_2011) %>% 
+  dplyr::mutate(kabila.percent_2011=kabila.votes_2011/total.votes_2011)
+
+
+
+
+# Processing 2018 data for another candidate, Ramazani
+data %<>%  dplyr::mutate(
+  data_2018=data_2018 %>% 
+    purrr::map(~{
+      if(!is.null(.x)){
+        .x %>% dplyr::mutate(
+          circonscription=circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                ville.territoire=ville.territoire %>% 
+                  purrr::map(~{
+                    .x %>% dplyr::mutate(
+                      voting.sites=voting.sites %>% 
+                        purrr::map(~{
+                          .x %>% dplyr::mutate(
+                            ramazani.votes=votes.data %>% 
+                              purrr::map(~{
+                                .x %>% 
+                                  dplyr::filter(tolower(candidate)=="ramazani") %>% 
+                                  dplyr::pull("votes") %>% 
+                                  sum(na.rm = TRUE)
+                              })
+                          ) %>% 
+                            tidyr::unnest(ramazani.votes) %>% 
+                            dplyr::mutate(ramazani.percent=ramazani.votes/total.votes)
+                        }),
+                      ramazani.votes=voting.sites %>% 
+                        purrr::map(~sum(.x$ramazani.votes,na.rm = TRUE))
+                    ) %>% 
+                      tidyr::unnest(ramazani.votes) %>% 
+                      dplyr::mutate(ramazani.percent=ramazani.votes/total.votes)
+                  }),
+                ramazani.votes=ville.territoire %>% 
+                  purrr::map(~sum(.x$ramazani.votes,na.rm = TRUE))
+              ) %>% 
+                tidyr::unnest(ramazani.votes) %>% 
+                dplyr::mutate(ramazani.percent=ramazani.votes/total.votes)
+            }),
+          ramazani.votes=circonscription %>% 
+            purrr::map(~sum(.x$ramazani.votes,na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(ramazani.votes) %>% 
+          dplyr::mutate(ramazani.percent=ramazani.votes/total.votes)
+      } else {
+        NULL
+      }
+    }),
+  ramazani.votes_2018=data_2018 %>% 
+    purrr::map(~sum(.x$ramazani.votes,na.rm = TRUE))
+) %>% 
+  tidyr::unnest(ramazani.votes_2018) %>% 
+  dplyr::mutate(ramazani.percent_2018=ramazani.votes_2018/total.votes_2018)
+
+
+
+
+
