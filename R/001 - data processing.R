@@ -1195,5 +1195,112 @@ data %<>%  dplyr::mutate(
   tidyr::unnest(ballot.boxes_counted_2018)
 
 
+##### 6.6-VOTING SITES WITH ZERO VOTERS (2018 ONLY) #####
+
+# This section identifies and quantifies voting sites with zero voters from the 
+# 2018 election data. It performs the following operations:
+#   
+# 1. **Filtering Voting Sites**: The script navigates through multiple nested 
+# data structures, filtering out voting sites where the number of voters is not 
+# available or is zero.
+# 2. **Counting Voting Sites**: For each administrative level (e.g., circonscription, 
+# ville.territoire), it counts the number of voting sites that reported zero voters.
+# 3. **Aggregating Data**: These counts are aggregated at higher administrative 
+# levels, providing a comprehensive total of voting sites with zero voters for each level.
+# 4. **Data Integration**: The results are integrated back into the main dataset, 
+# adding the total counts of zero-voter sites for further analysis and reporting.
+# 
+
+
+# Update 'data' dataframe to include the count of voting sites with non-zero voters for 2018
+data %<>%  dplyr::mutate(
+  # Process each entry in 'data_2018'
+  data_2018 = data_2018 %>% 
+    purrr::map(~{
+      # Check if the data entry is not null to ensure valid data processing
+      if (!is.null(.x)) {
+        # Calculate the number of non-zero voter sites within each circonscription
+        .x %>% dplyr::mutate(
+          circonscription = circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                ville.territoire = ville.territoire %>% 
+                  purrr::map(~{
+                    .x %>% dplyr::mutate(
+                      # Count the number of voting sites with non-zero voters
+                      n.voting.sites = voting.sites %>% 
+                        purrr::map(~.x %>% dplyr::filter(!is.na(voters)) %>% nrow)
+                    ) %>% 
+                      # Unnest the results to integrate into the main dataframe
+                      tidyr::unnest(n.voting.sites)
+                  }),
+                # Sum the counts of non-zero voter sites at the ville.territoire level
+                n.voting.sites = ville.territoire %>% 
+                  purrr::map(~sum(.x$n.voting.sites, na.rm = TRUE))
+              ) %>% 
+                tidyr::unnest(n.voting.sites)
+            }),
+          # Sum the counts at the circonscription level
+          n.voting.sites = circonscription %>% 
+            purrr::map(~sum(.x$n.voting.sites, na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(n.voting.sites)
+      } else {
+        NULL  # Return NULL if the initial data was NULL
+      }
+    }),
+  # Sum the total number of non-zero voter sites across all circonscriptions for 2018
+  n.voting.sites_2018 = data_2018 %>% 
+    purrr::map(~sum(.x$n.voting.sites, na.rm = TRUE))
+) %>% 
+  # Unnest the summed total to integrate into the main dataframe
+  tidyr::unnest(n.voting.sites_2018)
+
+
+
+# Update 'data' dataframe to include the count of voting sites with zero voters for 2018
+data %<>%  dplyr::mutate(
+  # Process each entry in 'data_2018'
+  data_2018 = data_2018 %>% 
+    purrr::map(~{
+      # Check if the data entry is not null to ensure valid data processing
+      if (!is.null(.x)) {
+        # Calculate the number of zero voter sites within each circonscription
+        .x %>% dplyr::mutate(
+          circonscription = circonscription %>% 
+            purrr::map(~{
+              .x %>% dplyr::mutate(
+                ville.territoire = ville.territoire %>% 
+                  purrr::map(~{
+                    .x %>% dplyr::mutate(
+                      # Count the number of voting sites with zero voters
+                      zero.voters.sites = voting.sites %>% 
+                        purrr::map(~sum(.x$voters == 0, na.rm = TRUE))
+                    ) %>% 
+                      # Unnest the results to integrate into the main dataframe
+                      tidyr::unnest(zero.voters.sites)
+                  }),
+                # Sum the counts of zero voter sites at the ville.territoire level
+                zero.voters.sites = ville.territoire %>% 
+                  purrr::map(~sum(.x$zero.voters.sites, na.rm = TRUE))
+              ) %>% 
+                tidyr::unnest(zero.voters.sites)
+            }),
+          # Sum the counts at the circonscription level
+          zero.voters.sites = circonscription %>% 
+            purrr::map(~sum(.x$zero.voters.sites, na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(zero.voters.sites)
+      } else {
+        NULL  # Return NULL if the initial data was NULL
+      }
+    }),
+  # Sum the total number of zero voter sites across all circonscriptions for 2018
+  zero.voters.sites_2018 = data_2018 %>% 
+    purrr::map(~sum(.x$zero.voters.sites, na.rm = TRUE))
+) %>% 
+  # Unnest the summed total to integrate into the main dataframe
+  tidyr::unnest(zero.voters.sites_2018)
+
 
 
