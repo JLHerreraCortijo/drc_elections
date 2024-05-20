@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ESRI_ItemInformation Culture='en-US'>
+<name>13e9b3ccf4e64c4cb4122ca174526c4b</name>
+<guid>D066671E-E433-4A13-8719-1EB3EC72DD52</guid>
+<catalogpath></catalogpath>
+<snippet></snippet>
+<description>Limites du troisi&amp;egrave;me niveau d&amp;rsquo;entit&amp;eacute;s
+administratives de la RDC : territoires (ruraux) et communes (urbaines).
+
+
+
+ Le fichier est issu de la digitalisation par UNOCHA de l&amp;rsquo;atlas de
+l&amp;rsquo;organisation administrative de la RDC r&amp;eacute;alis&amp;eacute; par
+le p&amp;egrave;re L&amp;eacute;on de Saint Moulin. Lorsque les limites de
+territoires sont d&amp;eacute;finies par un cours d&amp;rsquo;eau, la
+g&amp;eacute;om&amp;eacute;trie a &amp;eacute;t&amp;eacute; partag&amp;eacute;e. Une
+validation topologique a &amp;eacute;t&amp;eacute; effectu&amp;eacute;e par UNDP et
+les limites de communes de Kinshasa ont &amp;eacute;t&amp;eacute;
+ajout&amp;eacute;es. L&amp;rsquo;ensemble des communes de 19 autres villes sont
+d&amp;eacute;tour&amp;eacute;es au moyen d&amp;rsquo;un seul polygone. La toponymie
+a &amp;eacute;t&amp;eacute; valid&amp;eacute;e par l&amp;rsquo;INS.
+
+
+
+Boundaries of the third level administrative units of the Democratic
+Republic of Congo: the rural territories and urban communities.
+
+
+
+These data were digitized by UNOCHA from the atlas of the administrative
+organizations of the Democratic Republic of Congo by father Leon de
+Saint Moulin. The territory boundaries are defined by waterways,
+geometry and subdividions. A topological validation was done by UNDP and
+the community boundaries of Kinshasa were added. The collection of
+communities and of 19 other cities were cut into the middle of a single
+polygon. The toponomy was validated by the INS.
+
+
+This dataset was uploaded to Data Basin and is available with additional information at: http://app.databasin.org/app/pages/datasetPage.jsp?id=13e9b3ccf4e64c4cb4122ca174526c4b</description>
+<summary></summary>
+<title>Les territoires de Congo _territories of Congo_</title>
+<tags></tags>
+<type>Layer Package</type>
+<typekeywords>
+<typekeyword>Shapefile Feature Class</typekeyword>
+<typekeyword>Layer Package</typekeyword>
+<typekeyword>Data</typekeyword>
+<typekeyword>ArcMap</typekeyword>
+<typekeyword>.lpk</typekeyword>
+</typekeywords>
+<thumbnail>thumbnail/thumbnail.png</thumbnail>
+<documentation></documentation>
+<url></url>
+<datalastmodifiedtime></datalastmodifiedtime>
+<extent>
+<xmin>12.2056645535977</xmin>
+<ymin>-13.4559992617217</ymin>
+<xmax>31.2773000405279</xmax>
+<ymax>5.38609815360958</ymax>
+</extent>
+<spatialreference>WGS_1984_Web_Mercator_Auxiliary_Sphere</spatialreference>
+<accessinformation></accessinformation>
+</ESRI_ItemInformation>

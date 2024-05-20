@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <idinfo>
+    <descript>
+      <abstract>Limites du troisi&amp;#232;me niveau d&amp;#8217;entit&amp;#233;s administratives de la RDC : territoires (ruraux) et communes (urbaines).
+ 
+ Le fichier est issu de la digitalisation par UNOCHA de l&amp;#8217;atlas de l&amp;#8217;organisation administrative de la RDC r&amp;#233;alis&amp;#233; par le p&amp;#232;re L&amp;#233;on de Saint Moulin. Lorsque les limites de territoires sont d&amp;#233;finies par un cours d&amp;#8217;eau, la g&amp;#233;om&amp;#233;trie a &amp;#233;t&amp;#233; partag&amp;#233;e. Une validation topologique a &amp;#233;t&amp;#233; effectu&amp;#233;e par UNDP et les limites de communes de Kinshasa ont &amp;#233;t&amp;#233; ajout&amp;#233;es. L&amp;#8217;ensemble des communes de 19 autres villes sont d&amp;#233;tour&amp;#233;es au moyen d&amp;#8217;un seul polygone. La toponymie a &amp;#233;t&amp;#233; valid&amp;#233;e par l&amp;#8217;INS.
+ 
+ Boundaries of the third level administrative units of the Democratic Republic of Congo: the rural territories and urban communities.
+ 
+ These data were digitized by UNOCHA from the atlas of the administrative organizations of the Democratic Republic of Congo by father Leon de Saint Moulin. The territory boundaries are defined by waterways, geometry and subdividions. A topological validation was done by UNDP and the community boundaries of Kinshasa were added. The collection of communities and of 19 other cities were cut into the middle of a single polygon. The toponomy was validated by the INS.</abstract>
+      <purpose />
+      <supplinf />
+    </descript>
+    <useconst>(http://creativecommons.org/licenses/by-nc/3.0/)This work is licensed under a Creative Commons Attribution-Noncommercial 3.0 License (http://creativecommons.org/licenses/by-nc/3.0/).</useconst>
+    <datacred />
+    <citation>
+      <citeinfo>
+        <title>Les territoires de Congo (territories of Congo)</title>
+        <pubdate />
+        <othercit />
+        <origin>Le Referential Geographique Commun (http://www.rgc.cd/document.php?id_cat=2)</origin>
+        <onlink>http://app.databasin.org/app/pages/datasetPage.jsp?id=13e9b3ccf4e64c4cb4122ca174526c4b</onlink>
+        <pubinfo>
+          <publish />
+          <pubplace />
+        </pubinfo>
+      </citeinfo>
+    </citation>
+    <ptcontac>
+      <cntinfo>
+        <cntperp>
+          <cntper />
+          <cntorg>Le Referential Geographique Commun (http://www.rgc.cd/document.php?id_cat=2)</cntorg>
+        </cntperp>
+        <cntemail />
+      </cntinfo>
+    </ptcontac>
+    <status>
+      <progress />
+      <update />
+    </status>
+    <timeperd>
+      <timeinfo>
+        <sngdate />
+        <current />
+      </timeinfo>
+    </timeperd>
+    <keywords>
+      <theme>
+        <themekey>district</themekey>
+        <themekey>Congo</themekey>
+        <themekey>ville</themekey>
+        <themekey>village</themekey>
+        <themekey>localite</themekey>
+        <themekey>territoire</themekey>
+        <themekey>Africa</themekey>
+        <themekey>Afrique</themekey>
+        <themekt>Data Basin tags</themekt>
+      </theme>
+    </keywords>
+    <spdom>
+      <bounding>
+        <northbc>5.3860981536095816</northbc>
+        <eastbc>31.277300040527873</eastbc>
+        <southbc>-13.455999261721722</southbc>
+        <westbc>12.205664553597654</westbc>
+      </bounding>
+    </spdom>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr />
+    </attracc>
+    <complete />
+    <lineage />
+  </dataqual>
+  <eainfo>
+    <detailed>
+      <attr>
+        <attrlabl>FID</attrlabl>
+        <attalias>FID</attalias>
+        <attrdef>Internal feature number.</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attalias>Shape</attalias>
+        <attrdef>Feature geometry.</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>NOM</attrlabl>
+        <attalias>NOM</attalias>
+        <attrdef>Nom usuel du territoire, territory name</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>TYPE</attrlabl>
+        <attalias>TYPE</attalias>
+        <attrdef>Sp&amp;#233;cifie s&amp;#8217;il s&amp;#8217;agit d&amp;#8217;un &amp;#171; Territoire &amp;#187; ou d&amp;#8217;une &amp;#171; Commune &amp;#187; urbaine telle que d&amp;#233;finie par l&amp;#8217;INS. Sauf pour les communes de Kinshasa qui sont individualis&amp;#233;es, un seul polygone d&amp;#233;limite l&amp;#8217;ensemble des &amp;#171; Communes &amp;#187; urbaines pour chaque autre ville. Dans ce cas, la valeur du code INS est celle de la ville correspondante suivit d&amp;#8217;un 0.</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>CODE_INS</attrlabl>
+        <attalias>CODE_INS</attalias>
+        <attrdef>Identifiant de l&amp;#8217;objet dans la base INS. Lorsque plusieurs communes sont regroup&amp;#233;es aux sein d&amp;#8217;un polygone, la valeur du code INS est celle de la ville correspondante suivit d&amp;#8217;un 0.</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>SCE_SEM</attrlabl>
+        <attalias>SCE_SEM</attalias>
+        <attrdef />
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>SCE_GEO</attrlabl>
+        <attalias>SCE_GEO</attalias>
+        <attrdef />
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>MODIF</attrlabl>
+        <attalias>MODIF</attalias>
+        <attrdef>modif</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>SURFACE</attrlabl>
+        <attalias>SURFACE</attalias>
+        <attrdef>Surface de l&amp;#8217;entit&amp;#233; administrative en km&amp;#178;, surface area of administrative unit in km2</attrdef>
+        <attrdomv />
+      </attr>
+      <attr>
+        <attrlabl>ORIGINE</attrlabl>
+        <attalias>ORIGINE</attalias>
+        <attrdef>origine</attrdef>
+        <attrdomv />
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>Data Basin</cntorg>
+          <cntper>Data Basin Administrator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>physical address</addrtype>
+          <address>136 SW Washington Ave, Suite 202</address>
+          <city>Corvallis</city>
+          <state>OR</state>
+          <postal>97333</postal>
+          <country>USA</country>
+        </cntaddr>
+        <cntvoice>541-757-0687</cntvoice>
+        <cntemail>databasin_admin@consbio.org</cntemail>
+      </cntinfo>
+    </distrib>
+    <resdesc>Les territoires de Congo (territories of Congo)</resdesc>
+    <distliab>No warranty is made by Data Basin for use of this dataset.  No warranty is made by Data Basin regarding the accuracy, reliability, or completeness of this dataset. In no event shall Data Basin have any liability whatsoever for payment of any consequential, incidental, indirect, special, or tort damages of any kind, including, but not limited to, any loss of profits arising out of the use or reliance on the geographic or attribute data contained within this dataset or arising out of the delivery, installation, operation, or support by Data Basin.</distliab>
+    <stdorder>
+      <digform>
+        <digtinfo>
+          <formname>Shapefile Feature Class</formname>
+          <formvern>ArcGIS  10</formvern>
+          <formspec>Shapefile Feature Class</formspec>
+          <filedec>No compression applied</filedec>
+        </digtinfo>
+        <digtopt>
+          <onlinopt>
+            <computer>
+              <networka>
+                <networkr>http://app.databasin.org/app/pages/datasetPage.jsp?id=13e9b3ccf4e64c4cb4122ca174526c4b</networkr>
+              </networka>
+            </computer>
+            <accinstr>Download from http://databasin.org</accinstr>
+          </onlinopt>
+        </digtopt>
+      </digform>
+      <fees>None</fees>
+      <ordering>Download from http://databasin.org</ordering>
+    </stdorder>
+    <techpreq>ESRI ArcGIS Desktop and supporting operating systems.</techpreq>
+  </distinfo>
+</metadata>
+

@@ -1,0 +1,97 @@
+
+# Les territoires de Congo (territories of Congo)
+
+
+## URL
+https://databasin.org/datasets/13e9b3ccf4e64c4cb4122ca174526c4b/
+
+
+## Tipo de conjunto de datos
+ArcGIS
+
+
+## Créditos
+[Le Referential
+ Geographique Commun](http://www.rgc.cd/document.php?id_cat=2)
+
+
+## Cargado por
+[Conservation Biology Institute](https://databasin.org/people/consbio/)
+
+
+## Descripción
+Limites du troisième niveau d&#39;entités
+administratives de la RDC : territoires (ruraux) et communes (urbaines).
+  
+
+  
+
+Le fichier est issu de la digitalisation par UNOCHA de l&#39;atlas de
+l&#39;organisation administrative de la RDC réalisé par
+le père Léon de Saint Moulin. Lorsque les limites de
+territoires sont définies par un cours d&#39;eau, la
+géométrie a été partagée. Une
+validation topologique a été effectuée par UNDP et
+les limites de communes de Kinshasa ont été
+ajoutées. L&#39;ensemble des communes de 19 autres villes sont
+détourées au moyen d&#39;un seul polygone. La toponymie
+a été validée par l&#39;INS.
+  
+
+  
+
+Boundaries of the third level administrative units of the Democratic
+Republic of Congo: the rural territories and urban communities.
+  
+
+  
+
+These data were digitized by UNOCHA from the atlas of the administrative
+organizations of the Democratic Republic of Congo by father Leon de
+Saint Moulin. The territory boundaries are defined by waterways,
+geometry and subdividions. A topological validation was done by UNDP and
+the community boundaries of Kinshasa were added. The collection of
+communities and of 19 other cities were cut into the middle of a single
+polygon. The toponomy was validated by the INS.
+
+
+## Restricciones de uso
+This work is licensed under a  Creative Commons Attribution-NonCommercial 3.0 License .
+
+
+### Metadatos originales
+metadata/metadata1_original.xml
+
+
+### Metadatos de Data Basin
+metadata/metadata1.xml
+
+
+### Data Files
+data/./0000Les territoires de Congo _territories of Congo_.lyr
+data/commondata/data0/Territoire.dbf
+data/commondata/data0/Territoire.prj
+data/commondata/data0/Territoire.sbn
+data/commondata/data0/Territoire.sbx
+data/commondata/data0/Territoire.shp
+data/commondata/data0/Territoire.shp.xml
+data/commondata/data0/Territoire.shx
+data/esriinfo/item.pkinfo
+data/esriinfo/iteminfo.xml
+data/esriinfo/thumbnail/thumbnail.png
+
+
+
+### Attribute Data
+
+CODE_INS    CODE_INS    Identifiant de l’objet dans la base INS. Lorsque plusieurs communes sont regroupées aux sein d’un polygone, la valeur du code INS est celle de la ville correspondante suivit d’un 0.    
+FID    FID    Internal feature number.    
+MODIF    MODIF    modif    
+NOM    NOM    Nom usuel du territoire, territory name    
+ORIGINE    ORIGINE    origine    
+SCE_GEO    SCE_GEO        
+SCE_SEM    SCE_SEM        
+Shape    Shape    Feature geometry.    
+SURFACE    SURFACE    Surface de l’entité administrative en km², surface area of administrative unit in km2    
+TYPE    TYPE    Spécifie s’il s’agit d’un « Territoire » ou d’une « Commune » urbaine telle que définie par l’INS. Sauf pour les communes de Kinshasa qui sont individualisées, un seul polygone délimite l’ensemble des « Communes » urbaines pour chaque autre ville. Dans ce cas, la valeur du code INS est celle de la ville correspondante suivit d’un 0.    
+

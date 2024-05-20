@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+	<idinfo>
+		<descript>
+			<abstract>Limites du troisi&amp;egrave;me niveau d&amp;rsquo;entit&amp;eacute;s
+administratives de la RDC : territoires (ruraux) et communes (urbaines).&lt;br /&gt;
+&lt;br /&gt;
+ Le fichier est issu de la digitalisation par UNOCHA de l&amp;rsquo;atlas de
+l&amp;rsquo;organisation administrative de la RDC r&amp;eacute;alis&amp;eacute; par
+le p&amp;egrave;re L&amp;eacute;on de Saint Moulin. Lorsque les limites de
+territoires sont d&amp;eacute;finies par un cours d&amp;rsquo;eau, la
+g&amp;eacute;om&amp;eacute;trie a &amp;eacute;t&amp;eacute; partag&amp;eacute;e. Une
+validation topologique a &amp;eacute;t&amp;eacute; effectu&amp;eacute;e par UNDP et
+les limites de communes de Kinshasa ont &amp;eacute;t&amp;eacute;
+ajout&amp;eacute;es. L&amp;rsquo;ensemble des communes de 19 autres villes sont
+d&amp;eacute;tour&amp;eacute;es au moyen d&amp;rsquo;un seul polygone. La toponymie
+a &amp;eacute;t&amp;eacute; valid&amp;eacute;e par l&amp;rsquo;INS.&lt;br /&gt;
+&lt;br /&gt;
+Boundaries of the third level administrative units of the Democratic
+Republic of Congo: the rural territories and urban communities.&lt;br /&gt;
+&lt;br /&gt;
+These data were digitized by UNOCHA from the atlas of the administrative
+organizations of the Democratic Republic of Congo by father Leon de
+Saint Moulin. The territory boundaries are defined by waterways,
+geometry and subdividions. A topological validation was done by UNDP and
+the community boundaries of Kinshasa were added. The collection of
+communities and of 19 other cities were cut into the middle of a single
+polygon. The toponomy was validated by the INS.&lt;br /&gt;</abstract>
+			<purpose/>
+			<supplinf/>
+		</descript>
+		<useconst>&lt;a rel="license" style="float:right;" href="http://creativecommons.org/licenses/by-nc/3.0/" target="_blank"&gt;&lt;img alt="Creative Commons License" style="border-width:0" src="http://creativecommons.org/images/public/somerights20.png" /&gt;&lt;/a&gt;This work is licensed under a &lt;a rel="license" href="http://creativecommons.org/licenses/by-nc/3.0/"  target="_blank"&gt;Creative Commons Attribution-Noncommercial 3.0 License&lt;/a&gt;.</useconst>
+		<datacred/>
+		<citation>
+			<citeinfo>
+				<title>Les territoires de Congo (territories of Congo)</title>
+				<pubdate/>
+				<othercit/>
+				<origin>&lt;a href="http://www.rgc.cd/document.php?id_cat=2"&gt;Le Referential
+  Geographique Commun&lt;/a&gt;</origin>
+				<onlink>http://app.databasin.org/app/pages/datasetPage.jsp?id=13e9b3ccf4e64c4cb4122ca174526c4b</onlink>
+				<pubinfo>
+					<publish/>
+					<pubplace/>
+				</pubinfo>
+			</citeinfo>
+		</citation>
+		<ptcontac>
+			<cntinfo>
+				<cntperp>
+					<cntper/>
+					<cntorg>&lt;a href="http://www.rgc.cd/document.php?id_cat=2" target="_self"&gt;Le Referential Geographique Commun&lt;/a&gt;</cntorg>
+				</cntperp>
+				<cntemail/>
+			</cntinfo>
+		</ptcontac>
+		<status>
+			<progress/>
+			<update/>
+		</status>
+		<timeperd>
+			<timeinfo>
+				<sngdate/>
+				<current/>
+			</timeinfo>
+		</timeperd>
+		<keywords/>
+		<spdom>
+			<bounding>
+				<northbc>5.3860981536095816</northbc>
+				<eastbc>31.277300040527873</eastbc>
+				<southbc>-13.455999261721722</southbc>
+				<westbc>12.205664553597654</westbc>
+			</bounding>
+		</spdom>
+	</idinfo>
+	<dataqual>
+		<attracc>
+			<attraccr/>
+		</attracc>
+		<complete/>
+		<lineage/>
+	</dataqual>
+	<eainfo>
+		<detailed>
+			<attr>
+				<attrlabl>FID</attrlabl>
+				<attalias>FID</attalias>
+				<attrdef>Internal feature number.</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>Shape</attrlabl>
+				<attalias>Shape</attalias>
+				<attrdef>Feature geometry.</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>NOM</attrlabl>
+				<attalias>NOM</attalias>
+				<attrdef>Nom usuel du territoire, territory name</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>TYPE</attrlabl>
+				<attalias>TYPE</attalias>
+				<attrdef>Spécifie s’il s’agit d’un « Territoire » ou d’une « Commune » urbaine telle que définie par l’INS. Sauf pour les communes de Kinshasa qui sont individualisées, un seul polygone délimite l’ensemble des « Communes » urbaines pour chaque autre ville. Dans ce cas, la valeur du code INS est celle de la ville correspondante suivit d’un 0.</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>CODE_INS</attrlabl>
+				<attalias>CODE_INS</attalias>
+				<attrdef>Identifiant de l’objet dans la base INS. Lorsque plusieurs communes sont regroupées aux sein d’un polygone, la valeur du code INS est celle de la ville correspondante suivit d’un 0.</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>SCE_SEM</attrlabl>
+				<attalias>SCE_SEM</attalias>
+				<attrdef/>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>SCE_GEO</attrlabl>
+				<attalias>SCE_GEO</attalias>
+				<attrdef/>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>MODIF</attrlabl>
+				<attalias>MODIF</attalias>
+				<attrdef>modif</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>SURFACE</attrlabl>
+				<attalias>SURFACE</attalias>
+				<attrdef>Surface de l’entité administrative en km², surface area of administrative unit in km2</attrdef>
+				<attrdomv/>
+			</attr>
+			<attr>
+				<attrlabl>ORIGINE</attrlabl>
+				<attalias>ORIGINE</attalias>
+				<attrdef>origine</attrdef>
+				<attrdomv/>
+			</attr>
+		</detailed>
+	</eainfo>
+	<distinfo>
+		<resdesc>Les territoires de Congo (territories of Congo)</resdesc>
+		<distrib>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>Data Basin (www.databasin.org)</cntorg>
+				</cntorgp>
+				<cntemail>databasin@consbio.org</cntemail>
+				<cntorgp/>
+			</cntinfo>
+			<cntinfo/>
+			<cntinfo/>
+		</distrib>
+		<stdorder>
+			<digform>
+				<digtopt>
+					<onlinopt>
+						<computer>
+							<networka>
+								<networkr>http://app.databasin.org/app/pages/datasetPage.jsp?id=13e9b3ccf4e64c4cb4122ca174526c4b</networkr>
+							</networka>
+						</computer>
+					</onlinopt>
+				</digtopt>
+			</digform>
+		</stdorder>
+	</distinfo>
+	<Esri><CreaDate>20110514</CreaDate><CreaTime>05294900</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><itemProps><itemLocation><linkage Sync="TRUE">file://\\IP-0A5317A4\C\arcgisserver\services\im2\13e9b3ccf4e64c4cb4122ca174526c4b\13e9b3ccf4e64c4cb4122ca174526c4b\commondata\data0\Territoire</linkage><protocol Sync="TRUE">Local Area Network</protocol></itemLocation></itemProps><copyHistory><copy source="C:\arcgisserver\services\im2\13e9b3ccf4e64c4cb4122ca174526c4b\commondata\data0\Territoire" dest="\\IP-0A5317A4\C\arcgisserver\services\im2\13e9b3ccf4e64c4cb4122ca174526c4b\13e9b3ccf4e64c4cb4122ca174526c4b\commondata\data0\Territoire" date="20110514" time="05294900"></copy></copyHistory></DataProperties></Esri></metadata>

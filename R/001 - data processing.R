@@ -1489,11 +1489,14 @@ data %<>%  dplyr::mutate(
 
 # Mutate the data to calculate turnout rates for the years 2006, 2011, and 2018
 data %<>% dplyr::mutate(
-  # Calculate the turnout rate for 2006 by dividing the number of voters by the number of registered voters
+  # Calculate the turnout rate for 2006 by dividing the number of voters by the 
+  # number of registered voters
   turnout_2006 = voters_2006 / registered.voters_2006,
-  # Calculate the turnout rate for 2011 by dividing the number of voters by the number of registered voters
+  # Calculate the turnout rate for 2011 by dividing the number of voters by the 
+  # number of registered voters
   turnout_2011 = voters_2011 / registered.voters_2011,
-  # Calculate the turnout rate for 2018 by dividing the number of voters by the number of registered voters
+  # Calculate the turnout rate for 2018 by dividing the number of voters by the 
+  # number of registered voters
   turnout_2018 = voters_2018 / registered.voters_2018
 )
 
@@ -1511,10 +1514,170 @@ data %<>% dplyr::mutate(
 # Max.   :0.9990   Max.   :1.00137   Max.   :0.7334  
 # NA's   :5
 
-# The following commented-out code generates a detailed summary using the dfSummary function from the summarytools package
+# The following commented-out code generates a detailed summary using the dfSummary 
+# function from the summarytools package
 # Uncomment this line to see a detailed summary of the turnout rates
-# data %>% dplyr::select(starts_with("turnout_")) %>% summarytools::dfSummary() %>% summarytools::stview()
+# data %>% dplyr::select(starts_with("turnout_")) %>% summarytools::dfSummary() %>% 
+# summarytools::stview()
 
 
+##### 7-HARMONIZE MAP AND DATA LOCATIONS #####
 
+# This section aligns geographic data with the electoral dataset to ensure consistency 
+# in analysis. It performs the following tasks:
+#   
+#   1. **Read Detailed Shapefiles**: Loads detailed shapefiles for Congo's 
+#   territories to get precise geographic boundaries.
+# 2. **Filter and Standardize Kinshasa Regions**: Filters the shapefile data to 
+# include only Kinshasa regions and standardizes names by replacing hyphens 
+# with spaces.
+# 3. **Update and Summarize Geometry Data**: Updates the Kinshasa shapefile data 
+# with standardized names, selects relevant columns, groups by names, and 
+# summarizes geometries.
+# 4. **Read Main Shapefiles**: Loads the main shapefile for Congo's territories 
+# and creates an index by standardizing territory names.
+# 5. **Exclude Kinshasa**: Excludes Kinshasa from the main shapefile data.
+# 6. **Create Indices for Matching**: Extracts and standardizes names from both 
+# the map and data for matching purposes.
+# 7. **Manual Name Matching**: Applies manual name corrections for regions and 
+# cities to ensure consistency between map and data.
+# 8. **Match Indices**: Matches data names with map names and identifies 
+# unmatched names.
+# 9. **Create Index DataFrame**: Creates a DataFrame to link data and map 
+# indices, ensuring unique matches.
+# 10. **Join and Summarize Map Data**: Joins the map data with matched indices, 
+# updates index names, and groups by index to summarize geometries.
+# 11. **Transform Projections**: Ensures the geographic projections of Kinshasa 
+# borders match the main dataset.
+# 12. **Combine Borders**: Combines Kinshasa borders with the main territory 
+# borders.
+# 13. **Clean Environment**: Removes unnecessary variables, keeping only the 
+# relevant ones for further analysis.
+# 
+# This section harmonizes geographic and electoral data, facilitating accurate 
+# mapping and spatial analysis of election results.
+
+# Read the detailed shapefile for Congo's territories
+detailed.congo.territoire.border <- sf::st_read("data/Les territoires de Congo (territories of Congo)/data/commondata/data0/Territoire.shp")
+
+# Filter the shapefile data to include only Kinshasa regions
+congo.territoire.borders.kinsasha <- detailed.congo.territoire.border %>%
+  dplyr::filter(stringr::str_replace(tolower(NOM), "-", " ") %in% stringr::str_replace(names(kinshasa.subprov), "-", " "))
+
+# Create a copy of the Kinshasa subprovince names
+.kinsasha.subp <- kinshasa.subprov
+# Standardize the names by replacing hyphens with spaces
+names(.kinsasha.subp) <- stringr::str_replace(names(kinshasa.subprov), "-", " ")
+
+# Update the Kinshasa shapefile data with the standardized names
+congo.territoire.borders.kinsasha %<>% dplyr::mutate(
+  NOM = .kinsasha.subp[stringr::str_replace(tolower(congo.territoire.borders.kinsasha$NOM), "-", " ")]
+)
+
+# Select the updated names and geometry columns
+congo.territoire.borders.kinsasha %<>% dplyr::select(index.data = NOM, geometry)
+
+# Group by the updated names and summarize to combine geometries
+congo.territoire.borders.kinsasha %<>% dplyr::group_by(index.data) %>% dplyr::summarise()
+
+# Read the main shapefile for Congo's territories
+congo.territoire.borders <- sf::st_read("data/cod_adm2_un/cod_adm2_un.shp")
+
+# Create an index for the map data by standardizing the territory names
+congo.territoire.borders %<>% dplyr::mutate(index.map = adm2_name %>% tolower() %>% stringr::str_squish())
+
+# Exclude Kinshasa from the main shapefile data
+congo.territoire.borders %<>% dplyr::filter(index.map != "kinshasa")
+
+# Create indices for matching map names with data names
+
+# Extract the map names
+map.index <- congo.territoire.borders %>% dplyr::pull("index.map")
+map.index %<>% magrittr::set_names(map.index)
+
+# Extract the data names
+data.index <- data %>% dplyr::pull(index)
+data.index %<>% magrittr::set_names(data.index)
+
+# Define manual matches for regions with different names in the map and data
+manual.matches <- c(
+  "mankanza" = "makanza",
+  "beni" = "oicha",
+  "beni ville" = "beni"
+)
+
+# Update the data index names with manual matches
+names(data.index) <- dplyr::case_when(names(data.index) %in% names(manual.matches) ~ manual.matches[data.index], TRUE ~ names(data.index))
+
+# Define manual matches for cities merged into their territories
+manual.matches <- c(
+  "isiro" = "rungu",
+  "bunia" = "irumu",
+  "nioki" = "kutu",
+  "inkisi" = "madimba",
+  "mangai" = "idiofa",
+  "dibaya-lubwe" = "idiofa",
+  "yangambi" = "isangi",
+  "dingila" = "bambesa",
+  "ariwara" = "aru",
+  "baraka" = "fizi",
+  "kamituga" = "mwenga",
+  "ingbokolo" = "aru",
+  "mongwalu" = "djugu",
+  "kalima" = "kailo",
+  "namoya" = "kabambare",
+  "kasaji" = "dilolo",
+  "lukalaba" = "tshilenge",
+  "tshimbulu" = "dibaya",
+  "bena-dibele" = "kole",
+  "kaoze" = "moba",
+  "aba" = "faradje",
+  "tshumbe" = "kole",
+  "bangu" = "songololo"
+)
+
+# Update the map index names with manual matches
+names(map.index) <- dplyr::case_when(names(map.index) %in% names(manual.matches) ~ manual.matches[map.index], TRUE ~ names(map.index))
+
+# Remove the word "city" from map index names
+names(map.index) %<>% stringr::str_remove("city") %>% stringr::str_squish()
+
+# Match data and map indices
+matches.map.data <- match(names(map.index), names(data.index))
+matches.data.map <- match(names(data.index), names(map.index))
+
+# Extract matched names for map and data
+villes.map.data <- map.index[!is.na(matches.map.data)]
+villes.data.map <- data.index[!is.na(matches.data.map)]
+
+# Get names not matched for map and data
+villes.unique.map <- map.index[is.na(matches.map.data)]
+villes.unique.data <- data.index[is.na(matches.data.map)]
+
+# Create index data.frame for matching data and map indices
+matches.data.map <- match(names(villes.data.map), names(villes.map.data))
+matches.map.data <- match(names(villes.map.data), names(villes.data.map))
+data.map.index <- dplyr::bind_rows(
+  data.frame(index.data = villes.data.map, index.map = villes.map.data[matches.data.map]),
+  data.frame(index.data = villes.data.map[matches.map.data], index.map = villes.map.data)
+) %>% dplyr::distinct()
+
+# Join the map data with the matched indices and update the index.data column
+congo.territoire.borders %<>% dplyr::full_join(data.map.index, by = "index.map") %>%
+  dplyr::mutate(index.data = dplyr::case_when(is.na(index.data) ~ index.map, TRUE ~ index.data)) %>%
+  dplyr::select(index.data, geometry) %>%
+  dplyr::group_by(index.data) %>%
+  dplyr::summarise()
+
+# Get the data projection
+lon_lat_projection <- sf::st_crs(congo.territoire.borders)
+
+# Transform the Kinshasa borders to match the data projection
+congo.territoire.borders.kinsasha <- sf::st_transform(congo.territoire.borders.kinsasha, lon_lat_projection)
+
+# Combine the main borders with the Kinshasa borders
+congo.territoire.borders <- dplyr::bind_rows(congo.territoire.borders, congo.territoire.borders.kinsasha)
+
+# Clean up the environment, keeping only relevant variables
+rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "data.map.index")))
 
