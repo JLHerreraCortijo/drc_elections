@@ -1229,7 +1229,11 @@ data %<>%  dplyr::mutate(
                     .x %>% dplyr::mutate(
                       # Count the number of voting sites with non-zero voters
                       n.voting.sites = voting.sites %>% 
-                        purrr::map(~.x %>% dplyr::filter(!is.na(voters)) %>% nrow)
+                        purrr::map(
+                          ~.x %>% 
+                            dplyr::filter(!is.na(voters)) %>% 
+                            nrow
+                        )
                     ) %>% 
                       # Unnest the results to integrate into the main dataframe
                       tidyr::unnest(n.voting.sites)
@@ -1301,6 +1305,216 @@ data %<>%  dplyr::mutate(
 ) %>% 
   # Unnest the summed total to integrate into the main dataframe
   tidyr::unnest(zero.voters.sites_2018)
+
+
+##### 6.7-VOTES AND PERCENTAGES FOR OTHER CANDIDATES IN 2018 #####
+
+# This section calculates the total votes and percentages for the candidates 
+# Fayulu and Tshisekedi in the 2018 election. The script performs the following 
+# tasks:
+#   
+#   1. **Fayulu's Votes and Percentages**:
+#    - For each administrative level (circonscription, ville.territoire, voting sites), 
+#    the script identifies and sums the votes cast for Fayulu.
+#    - It then calculates the percentage of votes Fayulu received out of the total 
+#    votes at each level.
+#    - These results are aggregated and integrated back into the main dataset, 
+#    providing Fayulu's total votes and percentage for 2018.
+# 
+# 2. **Tshisekedi's Votes and Percentages**:
+#    - Similar to the process for Fayulu, the script identifies and sums the 
+#    votes cast for Tshisekedi at each administrative level.
+#    - It calculates Tshisekedi's percentage of total votes at each level.
+# - The aggregated results are then integrated back into the main dataset, 
+# detailing Tshisekedi's total votes and percentage for 2018.
+
+
+# Faluyu
+data %<>%  dplyr::mutate(
+  data_2018 = data_2018 %>%
+    purrr::map(~{
+      
+      # Check if the current element is not NULL
+      if(!is.null(.x)){
+        
+        .x %>% dplyr::mutate(
+          # Map over circonscription
+          circonscription = circonscription %>% 
+            purrr::map(~{
+              
+              .x %>% dplyr::mutate(
+                # Map over ville.territoire
+                ville.territoire = ville.territoire %>% 
+                  purrr::map(~{
+                    
+                    .x %>% dplyr::mutate(
+                      # Map over voting.sites
+                      voting.sites = voting.sites %>% 
+                        purrr::map(~{
+                          
+                          .x %>% dplyr::mutate(
+                            # Calculate fayulu.votes for each voting site
+                            fayulu.votes = votes.data %>% 
+                              purrr::map(~{
+                                
+                                # Filter votes for Fayulu and sum them
+                                .x %>% dplyr::filter(tolower(candidate) == "fayulu") %>% 
+                                  dplyr::pull("votes") %>% 
+                                  sum(na.rm = TRUE)
+                              })
+                          ) %>% 
+                            tidyr::unnest(fayulu.votes) %>% 
+                            # Calculate the percentage of Fayulu's votes
+                            dplyr::mutate(fayulu.percent = fayulu.votes / total.votes)
+                        }),
+                      # Sum Fayulu's votes at the ville.territoire level
+                      fayulu.votes = voting.sites %>% 
+                        purrr::map(~sum(.x$fayulu.votes, na.rm = TRUE))
+                    ) %>% 
+                      tidyr::unnest(fayulu.votes) %>% 
+                      # Calculate the percentage of Fayulu's votes at the ville.territoire level
+                      dplyr::mutate(fayulu.percent = fayulu.votes / total.votes)
+                  }),
+                # Sum Fayulu's votes at the circonscription level
+                fayulu.votes = ville.territoire %>% 
+                  purrr::map(~sum(.x$fayulu.votes, na.rm = TRUE))
+              ) %>% 
+                tidyr::unnest(fayulu.votes) %>%
+                # Calculate the percentage of Fayulu's votes at the circonscription level
+                dplyr::mutate(fayulu.percent = fayulu.votes / total.votes)
+            }),
+          # Sum Fayulu's votes at the data_2018 level
+          fayulu.votes = circonscription %>% 
+            purrr::map(~sum(.x$fayulu.votes, na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(fayulu.votes) %>% 
+          # Calculate the percentage of Fayulu's votes at the data_2018 level
+          dplyr::mutate(fayulu.percent = fayulu.votes / total.votes)
+      } else {
+        NULL
+      }
+    }),
+  # Sum Fayulu's votes for all data_2018
+  fayulu.votes_2018 = data_2018 %>% 
+    purrr::map(~sum(.x$fayulu.votes, na.rm = TRUE))
+) %>% 
+  tidyr::unnest(fayulu.votes_2018) %>% 
+  # Calculate the percentage of Fayulu's votes for 2018
+  dplyr::mutate(fayulu.percent_2018 = fayulu.votes_2018 / total.votes_2018)
+
+# Tshisekedi
+data %<>%  dplyr::mutate(
+  data_2018 = data_2018 %>%
+    purrr::map(~{
+      
+      # Check if the current element is not NULL
+      if(!is.null(.x)){
+        
+        .x %>% dplyr::mutate(
+          # Map over circonscription
+          circonscription = circonscription %>% 
+            purrr::map(~{
+              
+              .x %>% dplyr::mutate(
+                # Map over ville.territoire
+                ville.territoire = ville.territoire %>% 
+                  purrr::map(~{
+                    
+                    .x %>% dplyr::mutate(
+                      # Map over voting.sites
+                      voting.sites = voting.sites %>% 
+                        purrr::map(~{
+                          
+                          .x %>% dplyr::mutate(
+                            # Calculate tshisekedi.votes for each voting site
+                            tshisekedi.votes = votes.data %>% 
+                              purrr::map(~{
+                                
+                                # Filter votes for Tshisekedi and sum them
+                                .x %>% 
+                                  dplyr::filter(tolower(candidate) == "tshisekedi") %>% 
+                                  dplyr::pull("votes") %>% 
+                                  sum(na.rm = TRUE)
+                              })) %>% 
+                            tidyr::unnest(tshisekedi.votes) %>% 
+                            # Calculate the percentage of Tshisekedi's votes
+                            dplyr::mutate(tshisekedi.percent = tshisekedi.votes / total.votes)
+                        }),
+                      # Sum Tshisekedi's votes at the ville.territoire level
+                      tshisekedi.votes = voting.sites %>% 
+                        purrr::map(~sum(.x$tshisekedi.votes, na.rm = TRUE))
+                    ) %>% 
+                      tidyr::unnest(tshisekedi.votes) %>% 
+                      # Calculate the percentage of Tshisekedi's votes at the ville.territoire level
+                      dplyr::mutate(tshisekedi.percent = tshisekedi.votes / total.votes)
+                  }),
+                # Sum Tshisekedi's votes at the circonscription level
+                tshisekedi.votes = ville.territoire %>% 
+                  purrr::map(~sum(.x$tshisekedi.votes, na.rm = TRUE))
+              ) %>% 
+                tidyr::unnest(tshisekedi.votes) %>% 
+                # Calculate the percentage of Tshisekedi's votes at the circonscription level
+                dplyr::mutate(tshisekedi.percent = tshisekedi.votes / total.votes)
+            }),
+          # Sum Tshisekedi's votes at the data_2018 level
+          tshisekedi.votes = circonscription %>% 
+            purrr::map(~sum(.x$tshisekedi.votes, na.rm = TRUE))
+        ) %>% 
+          tidyr::unnest(tshisekedi.votes) %>% 
+          # Calculate the percentage of Tshisekedi's votes at the data_2018 level
+          dplyr::mutate(tshisekedi.percent = tshisekedi.votes / total.votes)
+      } else {
+        NULL
+      }
+    }),
+  # Sum Tshisekedi's votes for all data_2018
+  tshisekedi.votes_2018 = data_2018 %>% 
+    purrr::map(~sum(.x$tshisekedi.votes, na.rm = TRUE))
+) %>% 
+  tidyr::unnest(tshisekedi.votes_2018) %>% 
+  # Calculate the percentage of Tshisekedi's votes for 2018
+  dplyr::mutate(tshisekedi.percent_2018 = tshisekedi.votes_2018 / total.votes_2018)
+
+
+##### 6.8-TURNOUT #####
+# This section calculates voter turnout rates for the election years 2006, 2011, 
+# and 2018. The script performs the following tasks:
+#   
+# 1. **Calculate Turnout Rates**: It computes the turnout rate for each year by 
+# dividing the number of voters by the number of registered voters for 2006, 
+# 2011, and 2018.
+# 2. **Generate Summary Statistics**: Although commented out, the script includes 
+# code to generate summary statistics for the calculated turnout rates, providing 
+# insights into the distribution of turnout across the datasets.
+
+# Mutate the data to calculate turnout rates for the years 2006, 2011, and 2018
+data %<>% dplyr::mutate(
+  # Calculate the turnout rate for 2006 by dividing the number of voters by the number of registered voters
+  turnout_2006 = voters_2006 / registered.voters_2006,
+  # Calculate the turnout rate for 2011 by dividing the number of voters by the number of registered voters
+  turnout_2011 = voters_2011 / registered.voters_2011,
+  # Calculate the turnout rate for 2018 by dividing the number of voters by the number of registered voters
+  turnout_2018 = voters_2018 / registered.voters_2018
+)
+
+# The following commented-out code generates a summary of the turnout rates
+# Uncomment this line to see a summary of the calculated turnout rates for each year
+# data %>% dplyr::select(starts_with("turnout_")) %>% summary
+
+# Example summary output for turnout rates:
+# turnout_2006     turnout_2011      turnout_2018   
+# Min.   :0.1230   Min.   :0.05822   Min.   :0.0000  
+# 1st Qu.:0.6480   1st Qu.:0.51215   1st Qu.:0.3095  
+# Median :0.7410   Median :0.57121   Median :0.3940  
+# Mean   :0.7034   Mean   :0.57619   Mean   :0.3821  
+# 3rd Qu.:0.8150   3rd Qu.:0.63532   3rd Qu.:0.4656  
+# Max.   :0.9990   Max.   :1.00137   Max.   :0.7334  
+# NA's   :5
+
+# The following commented-out code generates a detailed summary using the dfSummary function from the summarytools package
+# Uncomment this line to see a detailed summary of the turnout rates
+# data %>% dplyr::select(starts_with("turnout_")) %>% summarytools::dfSummary() %>% summarytools::stview()
+
 
 
 
