@@ -22,6 +22,10 @@ here::i_am("R/001 - data processing.R", uuid = "e44ebf95-8ba3-4dad-aacf-7356584f
 
 # R and packages versions defined in renv.lock 
 
+if(!dir.exists(here::here("results"))){
+  dir.create(here::here("results"))
+  
+}
 
 #### 1-READ DATA ####
 
@@ -1832,3 +1836,284 @@ conflict.aggregated_by_type %<>% dplyr::filter(n.conflicts > 0)
 
 # Clean up the environment, keeping only relevant variables
 rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "ged201", "conflict.aggregated", "conflict.aggregated_by_type", "data.map.index")))
+
+##### 8.2 - RECODING CONFLICT ACTORS #####
+
+# Read actor types data from an Excel file
+actor_types <- readxl::read_excel(here::here("data/DRC armed groups in UCDP dataset Rwanda and Uganda.xlsx"))
+
+# Create a copy of the conflict data for the relevant period
+ged201_for_period <- ged201
+
+# Check for actors in conflict data that are not in the actor types list and sort them
+dplyr::setdiff(unique(c(ged201_for_period$side_a, ged201_for_period$side_b)), actor_types$groups) %>% sort
+
+# Ensure all actors in conflict data are present in the actor types list
+stopifnot(all(ged201_for_period$side_a %in% actor_types$groups) & all(ged201_for_period$side_b %in% actor_types$groups))
+
+# Filter the conflict data to include only actors present in the actor types list
+ged201_for_period %<>% dplyr::filter(side_a %in% actor_types$groups & side_b %in% actor_types$groups)
+
+# Create lists for actor types
+actor_types1 <- as.list(actor_types$type1) %>% magrittr::set_names(actor_types$groups)
+actor_types2 <- as.list(actor_types$type2) %>% magrittr::set_names(actor_types$groups)
+
+# Add actor type information to the conflict data
+ged201_for_period %<>% as.data.frame() %>%
+  dplyr::mutate(
+    side_a_type1 = dplyr::case_when(side_a %in% names(actor_types1) ~ unlist(actor_types1[side_a]), TRUE ~ NA_character_),
+    side_b_type1 = dplyr::case_when(side_b %in% names(actor_types1) ~ unlist(actor_types1[side_b]), TRUE ~ NA_character_),
+    side_a_type2 = dplyr::case_when(side_a %in% names(actor_types2) ~ unlist(actor_types2[side_a]), TRUE ~ NA_character_),
+    side_b_type2 = dplyr::case_when(side_b %in% names(actor_types2) ~ unlist(actor_types2[side_b]), TRUE ~ NA_character_)
+  )
+
+###### Actor type 1 ######
+
+# Summarize conflicts and deaths by actor type 1 and election period
+actor_types1_table <- ged201_for_period %>% dplyr::filter(!is.na(election)) %>%
+  dplyr::select(election, side_a_type1, side_b_type1, n.deaths_a = deaths_a, n.deaths_b = deaths_b, n.deaths_civilians = deaths_civilians, n.deaths_unknown = deaths_unknown, n.deaths = best, index.data) %>% 
+  dplyr::group_by(election, side_a_type1, side_b_type1, index.data) %>%
+  dplyr::summarise(n.conflicts = dplyr::n(), dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)), .groups = "drop") %>% 
+  dplyr::group_by(election, side_a_type1, side_b_type1) %>%
+  dplyr::summarise(n.conflicts = sum(n.conflicts), dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)), territories = dplyr::n(), .groups = "drop")
+
+# Ensure the total number of conflicts matches the original data
+stopifnot(sum(actor_types1_table$n.conflicts) == nrow(ged201_for_period))
+
+# Ensure the sum of deaths matches the total deaths
+with(actor_types1_table, stopifnot(all(n.deaths == n.deaths_a + n.deaths_b + n.deaths_civilians + n.deaths_unknown)))
+
+# Merge conflict data where the actor types are reversed (side_a and side_b switched)
+actor_types1_table %<>% dplyr::left_join(
+  actor_types1_table %>% dplyr::filter(side_a_type1 != side_b_type1), 
+  by = c("election", side_a_type1 = "side_b_type1", side_b_type1 = "side_a_type1")
+) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(election, side_a_type1, side_b_type1)), collapse = ",")) %>% 
+  dplyr::ungroup() %>%
+  dplyr::filter(!duplicated(idx)) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    n.conflicts = sum(n.conflicts.x, n.conflicts.y, na.rm = TRUE),
+    n.deaths_a = sum(n.deaths_a.x, n.deaths_b.y, na.rm = TRUE),
+    n.deaths_b = sum(n.deaths_b.x, n.deaths_a.y, na.rm = TRUE),
+    n.deaths_civilians = sum(n.deaths_civilians.x, n.deaths_civilians.y, na.rm = TRUE),
+    n.deaths_unknown = sum(n.deaths_unknown.x, n.deaths_unknown.y, na.rm = TRUE),
+    n.deaths = sum(n.deaths.x, n.deaths.y, na.rm = TRUE),
+    territories = sum(territories.x, territories.y, na.rm = TRUE)
+  ) %>%
+  dplyr::ungroup()
+
+# Ensure the total number of conflicts matches the original data
+stopifnot(sum(actor_types1_table$n.conflicts) == nrow(ged201_for_period))
+
+# Generate all possible combinations of actor types for completeness
+all_types1 <- actor_types1 %>% unlist() %>% unique %>% combn(2) %>% t %>% as.data.frame() %>% magrittr::set_colnames(c("side_a", "side_b")) %>%
+  dplyr::slice(rep(1:dplyr::n(), each = 3))
+
+# Add election periods to the combinations
+all_types1 %<>% dplyr::mutate(election = actor_types1_table$election %>% unique %>% rep(nrow(all_types1) / 3))
+
+# Join the complete combinations with the summarized conflict data
+actor_types1_table <- dplyr::bind_rows(
+  all_types1 %>% dplyr::right_join(actor_types1_table, by = c("side_a" = "side_a_type1", "side_b" = "side_b_type1", "election")),
+  all_types1 %>% dplyr::right_join(actor_types1_table, by = c("side_a" = "side_b_type1", "side_b" = "side_a_type1", "election"))
+) %>% dplyr::full_join(all_types1, by = c("side_a", "side_b", "election")) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(election, side_a, side_b)), collapse = ",")) %>% 
+  dplyr::ungroup() %>%
+  dplyr::filter(!duplicated(idx)) %>% 
+  dplyr::select(side_a, side_b, election, n.conflicts, n.deaths, n.deaths_a, n.deaths_b, n.deaths_civilians, n.deaths_unknown, territories) %>%
+  dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), ~tidyr::replace_na(., 0))) %>%
+  dplyr::arrange(side_a, side_b, election) %>%
+  tidyr::separate(election, c("drop", "year"), sep = "_") %>% dplyr::select(-drop) %>%
+  tidyr::pivot_wider(id_cols = c(side_a, side_b), names_from = "year", values_from = c("n.conflicts", "n.deaths_a", "n.deaths_b", "n.deaths_civilians", "n.deaths_unknown", "n.deaths", "territories")) %>%
+  dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), ~tidyr::replace_na(., 0)))
+
+# Calculate total conflicts and deaths across all years
+actor_types1_table %<>% dplyr::rowwise() %>% dplyr::mutate(
+  n.conflicts_total = sum(dplyr::c_across(dplyr::starts_with("n.conflicts_"))),
+  n.deaths_a_total = sum(dplyr::c_across(dplyr::matches("n.deaths_a_\\d{4}"))),
+  n.deaths_b_total = sum(dplyr::c_across(dplyr::matches("n.deaths_b_\\d{4}"))),
+  n.deaths_civilians_total = sum(dplyr::c_across(dplyr::matches("n.deaths_civilians_\\d{4}"))),
+  n.deaths_unknown_total = sum(dplyr::c_across(dplyr::matches("n.deaths_unknown_\\d{4}"))),
+  n.deaths_total = sum(dplyr::c_across(dplyr::matches("n.deaths_\\d{4}"))),
+  territories_total = sum(dplyr::c_across(dplyr::starts_with("territories_")))
+) %>% dplyr::ungroup()
+
+# Ensure the total number of conflicts matches the original data
+stopifnot(sum(actor_types1_table$n.conflicts_total) == nrow(ged201_for_period))
+
+# Reorder and select relevant columns
+actor_types1_table %<>% dplyr::select(side_a, side_b, dplyr::matches("_total$"), side_b, dplyr::matches("_2006$"), side_b, dplyr::matches("_2011$"), side_b, dplyr::matches("_2018$"))
+
+# Add a total row summing all conflicts and deaths
+actor_types1_table %<>% dplyr::bind_rows(
+  actor_types1_table %>% dplyr::summarise(side_a = "Total", dplyr::across(dplyr::matches(c("^n.conflicts", "^n.deaths_(total|\\d{4}$)", "^territories")), sum))
+)
+
+# Load the workbook and get the first sheet
+wb <- xlsx::loadWorkbook(here::here("data/Conflict by actor prototype table.xlsx"))
+sheets <- xlsx::getSheets(wb)
+sheet <- sheets[[1]]
+
+# Add the summarized data to the Excel sheet starting at row 4, column 1
+xlsx::addDataFrame(as.data.frame(actor_types1_table), sheet, col.names = FALSE, row.names = FALSE, startRow = 4, startColumn = 1)
+
+# Save the workbook
+xlsx::saveWorkbook(wb, here::here("results/Conflict by actor table type 1.xlsx"))
+
+###### Actor type 2 ######
+
+# Export conflict data to Excel
+ged201_for_period %>% 
+  dplyr::filter(!is.na(election)) %>% 
+  dplyr::mutate(dyad = paste0(side_a_type2, "_", side_b_type2), election = stringr::str_extract(election, "\\d{4}")) %>%
+  dplyr::select(territory = index.data, dyad, actor1 = side_a, actor2 = side_b, election, n.deaths = best, date_start) %>% 
+  dplyr::arrange(territory, dyad, actor1, actor2, date_start) %>% 
+  writexl::write_xlsx(here::here("results/UCDP_detailed.xlsx"))
+
+# Summarize conflicts and deaths by actor type 2 and election period
+actor_types2_table <- ged201_for_period %>% 
+  dplyr::filter(!is.na(election)) %>%
+  dplyr::select(election, side_a_type2, side_b_type2, n.deaths_a = deaths_a, n.deaths_b = deaths_b, n.deaths_civilians = deaths_civilians, n.deaths_unknown = deaths_unknown, n.deaths = best, index.data) %>% 
+  dplyr::group_by(election, side_a_type2, side_b_type2, index.data) %>%
+  dplyr::summarise(n.conflicts = dplyr::n(), dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)), .groups = "drop") %>% 
+  dplyr::group_by(election, side_a_type2, side_b_type2) %>%
+  dplyr::summarise(n.conflicts = sum(n.conflicts), dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)), territories = dplyr::n(), .groups = "drop")
+
+# Ensure the total number of conflicts matches the original data
+stopifnot(sum(actor_types2_table$n.conflicts) == nrow(ged201_for_period))
+
+# Ensure the sum of deaths matches the total deaths
+with(actor_types2_table, stopifnot(all(n.deaths == n.deaths_a + n.deaths_b + n.deaths_civilians + n.deaths_unknown)))
+
+# Merge conflict data where the actor types are reversed (side_a and side_b switched)
+actor_types2_table %<>% 
+  dplyr::left_join(actor_types2_table %>% dplyr::filter(side_a_type2 != side_b_type2), by = c("election", side_a_type2 = "side_b_type2", side_b_type2 = "side_a_type2")) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(election, side_a_type2, side_b_type2)), collapse = ",")) %>% 
+  dplyr::ungroup() %>%
+  dplyr::filter(!duplicated(idx)) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    n.conflicts = sum(n.conflicts.x, n.conflicts.y, na.rm = TRUE),
+    n.deaths_a = sum(n.deaths_a.x, n.deaths_b.y, na.rm = TRUE),
+    n.deaths_b = sum(n.deaths_b.x, n.deaths_a.y, na.rm = TRUE),
+    n.deaths_civilians = sum(n.deaths_civilians.x, n.deaths_civilians.y, na.rm = TRUE),
+    n.deaths_unknown = sum(n.deaths_unknown.x, n.deaths_unknown.y, na.rm = TRUE),
+    n.deaths = sum(n.deaths.x, n.deaths.y, na.rm = TRUE),
+    territories = sum(territories.x, territories.y, na.rm = TRUE)
+  ) %>%
+  dplyr::ungroup()
+
+# Ensure the total number of conflicts matches the original data
+stopifnot(sum(actor_types2_table$n.conflicts) == nrow(ged201_for_period))
+
+# Generate all possible combinations of actor types for completeness
+all_types2 <- actor_types2 %>% unlist() %>% unique %>% combn(2) %>% t %>% as.data.frame() %>% magrittr::set_colnames(c("side_a", "side_b")) %>%
+  dplyr::slice(rep(1:dplyr::n(), each = 3))
+
+# Add election periods to the combinations
+all_types2 %<>% dplyr::mutate(election = actor_types2_table$election %>% unique %>% rep(nrow(all_types2) / 3))
+
+# Join the complete combinations with the summarized conflict data
+actor_types2_table <- dplyr::bind_rows(
+  all_types2 %>% dplyr::right_join(actor_types2_table, by = c("side_a" = "side_a_type2", "side_b" = "side_b_type2", "election")),
+  all_types2 %>% dplyr::right_join(actor_types2_table, by = c("side_a" = "side_b_type2", "side_b" = "side_a_type2", "election"))
+) %>% dplyr::full_join(all_types2, by = c("side_a", "side_b", "election")) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(election, side_a, side_b)), collapse = ",")) %>% 
+  dplyr::ungroup() %>%
+  dplyr::filter(!duplicated(idx)) %>% 
+  dplyr::select(side_a, side_b, election, n.conflicts, n.deaths, n.deaths_a, n.deaths_b, n.deaths_civilians, n.deaths_unknown, territories) %>%
+  dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), ~tidyr::replace_na(., 0))) %>%
+  dplyr::arrange(side_a, side_b, election) %>%
+  tidyr::separate(election, c("drop", "year"), sep = "_") %>% dplyr::select(-drop) %>%
+  tidyr::pivot_wider(id_cols = c(side_a, side_b), names_from = "year", values_from = c("n.conflicts", "n.deaths_a", "n.deaths_b", "n.deaths_civilians", "n.deaths_unknown", "n.deaths", "territories")) %>%
+  dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), ~tidyr::replace_na(., 0)))
+
+# Calculate total conflicts and deaths across all years
+actor_types2_table %<>% dplyr::rowwise() %>% dplyr::mutate(
+  n.conflicts_total = sum(dplyr::c_across(dplyr::starts_with("n.conflicts_"))),
+  n.deaths_a_total = sum(dplyr::c_across(dplyr::matches("n.deaths_a_\\d{4}"))),
+  n.deaths_b_total = sum(dplyr::c_across(dplyr::matches("n.deaths_b_\\d{4}"))),
+  n.deaths_civilians_total = sum(dplyr::c_across(dplyr::matches("n.deaths_civilians_\\d{4}"))),
+  n.deaths_unknown_total = sum(dplyr::c_across(dplyr::matches("n.deaths_unknown_\\d{4}"))),
+  n.deaths_total = sum(dplyr::c_across(dplyr::matches("n.deaths_\\d{4}"))),
+  territories_total = sum(dplyr::c_across(dplyr::starts_with("territories_")))
+) %>% dplyr::ungroup()
+
+# Ensure the total number of conflicts matches the original data
+stopifnot(sum(actor_types2_table$n.conflicts_total) == nrow(ged201_for_period))
+
+# Reorder and select relevant columns
+actor_types2_table %<>% dplyr::select(side_a, side_b, dplyr::matches("_total$"), side_b, dplyr::matches("_2006$"), side_b, dplyr::matches("_2011$"), side_b, dplyr::matches("_2018$"))
+
+# Add a total row summing all conflicts and deaths
+actor_types2_table %<>% dplyr::bind_rows(
+  actor_types2_table %>% dplyr::summarise(side_a = "Total", dplyr::across(dplyr::matches(c("^n.conflicts", "^n.deaths_(total|\\d{4}$)", "^territories")), sum))
+)
+
+# Load the workbook and get the first sheet
+wb <- xlsx::loadWorkbook(here::here("data/Conflict by actor prototype table.xlsx"))
+sheets <- xlsx::getSheets(wb)
+sheet <- sheets[[1]]
+
+# Add the summarized data to the Excel sheet starting at row 4, column 1
+xlsx::addDataFrame(as.data.frame(actor_types2_table), sheet, col.names = FALSE, row.names = FALSE, startRow = 4, startColumn = 1)
+
+# Save the workbook
+xlsx::saveWorkbook(wb, here::here("results/Conflict by actor table type 2.xlsx"))
+
+###### Actor type 2 by territories #####
+
+# Summarize conflicts and deaths by actor type 2, election period, and territory
+actor_type_2_territories <- ged201_for_period %>% 
+  dplyr::filter(!is.na(election)) %>%
+  dplyr::select(election, side_a_type2, side_b_type2, n.deaths_a = deaths_a, n.deaths_b = deaths_b, n.deaths_civilians = deaths_civilians, n.deaths_unknown = deaths_unknown, n.deaths = best, index.data) %>% 
+  dplyr::group_by(election, side_a_type2, side_b_type2, index.data) %>%
+  dplyr::summarise(n.conflicts = dplyr::n(), dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)), .groups = "drop")
+
+# Merge conflict data where the actor types are reversed (side_a and side_b switched) and within the same territory
+actor_type_2_territories %<>% 
+  dplyr::left_join(actor_type_2_territories %>% dplyr::filter(side_a_type2 != side_b_type2), by = c("election", "index.data", side_a_type2 = "side_b_type2", side_b_type2 = "side_a_type2")) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(index.data, election, side_a_type2, side_b_type2)), collapse = ",")) %>% 
+  dplyr::ungroup() %>%
+  dplyr::filter(!duplicated(idx)) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    n.conflicts = sum(n.conflicts.x, n.conflicts.y, na.rm = TRUE),
+    n.deaths_a = sum(n.deaths_a.x, n.deaths_b.y, na.rm = TRUE),
+    n.deaths_b = sum(n.deaths_b.x, n.deaths_a.y, na.rm = TRUE),
+    n.deaths_civilians = sum(n.deaths_civilians.x, n.deaths_civilians.y, na.rm = TRUE),
+    n.deaths_unknown = sum(n.deaths_unknown.x, n.deaths_unknown.y, na.rm = TRUE),
+    n.deaths = sum(n.deaths.x, n.deaths.y, na.rm = TRUE)
+  ) %>% dplyr::ungroup()
+
+# Generate all possible combinations of actor types for completeness within territories
+all_types2 <- actor_types2 %>% unlist() %>% unique %>% combn(2) %>% t %>% as.data.frame() %>% magrittr::set_colnames(c("side_a", "side_b")) %>%
+  dplyr::slice(rep(1:dplyr::n(), each = 3 * length(unique(actor_type_2_territories$index.data))))
+
+# Add election periods and territories to the combinations
+all_types2 %<>% dplyr::mutate(
+  election = actor_type_2_territories$election %>% unique %>% rep(nrow(all_types2) / (3)),
+  index.data = actor_type_2_territories$index.data %>% unique %>% rep(nrow(all_types2) / (length(unique(actor_type_2_territories$index.data))))
+)
+
+# Join the complete combinations with the summarized conflict data within territories
+actor_type_2_territories <- dplyr::bind_rows(
+  all_types2 %>% dplyr::right_join(actor_type_2_territories, by = c(side_a = "side_a_type2", side_b = "side_b_type2", "election", "index.data")),
+  all_types2 %>% dplyr::right_join(actor_type_2_territories, by = c(side_a = "side_b_type2", side_b = "side_a_type2", "election", "index.data"))
+) %>% dplyr::full_join(all_types2, by = c("side_a", "side_b", "election", "index.data")) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(index.data, election, side_a, side_b)), collapse = ",")) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::filter(!duplicated(idx)) %>%
+  dplyr::select(side_a, side_b, election, index.data, n.conflicts, n.deaths, n.deaths_a, n.deaths_b, n.deaths_civilians, n.deaths_unknown) %>%
+  dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), ~tidyr::replace_na(., 0))) %>%
+  dplyr::arrange(side_a, side_b, election, index.data) %>% 
+  tidyr::separate(election, c("drop", "year"), sep = "_") %>% dplyr::select(-drop) %>%
+  dplyr::mutate(year = as.integer(year))
+
