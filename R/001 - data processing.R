@@ -44,10 +44,10 @@ here::i_am("R/001 - data processing.R", uuid = "e44ebf95-8ba3-4dad-aacf-7356584f
 
 # Read 2006 data
 
-data.2006 <- readxl::read_xlsx("data/2006first_round.xlsx") %>% 
+data.2006 <- readxl::read_xlsx(here::here("data/2006first_round.xlsx")) %>% 
   dplyr::filter(is.na(Province_total)) %>% dplyr::select(-Province_total,-check_row_100) # Filter out province totals
 
-data.2006.2nd.round <- readxl::read_xlsx("data/2006clean.xlsx") %>% 
+data.2006.2nd.round <- readxl::read_xlsx(here::here("data/2006clean.xlsx")) %>% 
   dplyr::filter(is.na(Province_total)) %>% dplyr::select(-Province_total) # Filter out province totals
 
 data.2006 <- data.2006.2nd.round %>% 
@@ -56,15 +56,15 @@ data.2006 <- data.2006.2nd.round %>%
 
 # Read 2011 data
 
-data.2011 <- readxl::read_xlsx("data/2011drc_election_all_clcr_cleaned_stata.xlsx")  %>% 
+data.2011 <- readxl::read_xlsx(here::here("data/2011drc_election_all_clcr_cleaned_stata.xlsx"))  %>% 
   dplyr::filter(`Second Name`!="TOTAL") # Drop totals
 
 # Read 2018 data
 
-data.2018 <- readxl::read_xlsx("data/prs_edited.xlsx")
+data.2018 <- readxl::read_xlsx(here::here("data/prs_edited.xlsx"))
 
 # Join candidate names with 2018 data
-candidates.2018 <- readxl::read_xlsx("data/RESULTAT-PRESIDENTIEL-1.xlsx") %>% dplyr::select(nCANDIDAT,nom,prenom,postnom)
+candidates.2018 <- readxl::read_xlsx(here::here("data/RESULTAT-PRESIDENTIEL-1.xlsx")) %>% dplyr::select(nCANDIDAT,nom,prenom,postnom)
 
 # Candidate ids are different in both files, but are the same in the original pdf. We can recover the original 
 # ids in data.2018 by direct comparison of the data and the original pdf. These are the correspondences.
@@ -1521,7 +1521,7 @@ data %<>% dplyr::mutate(
 # summarytools::stview()
 
 
-##### 7-HARMONIZE MAP AND DATA LOCATIONS #####
+#### 7-HARMONIZE MAP AND DATA LOCATIONS ####
 
 # This section aligns geographic data with the electoral dataset to ensure consistency 
 # in analysis. It performs the following tasks:
@@ -1558,7 +1558,7 @@ data %<>% dplyr::mutate(
 # mapping and spatial analysis of election results.
 
 # Read the detailed shapefile for Congo's territories
-detailed.congo.territoire.border <- sf::st_read("data/Les territoires de Congo (territories of Congo)/data/commondata/data0/Territoire.shp")
+detailed.congo.territoire.border <- sf::st_read(here::here("data/Les territoires de Congo (territories of Congo)/data/commondata/data0/Territoire.shp"))
 
 # Filter the shapefile data to include only Kinshasa regions
 congo.territoire.borders.kinsasha <- detailed.congo.territoire.border %>%
@@ -1581,7 +1581,7 @@ congo.territoire.borders.kinsasha %<>% dplyr::select(index.data = NOM, geometry)
 congo.territoire.borders.kinsasha %<>% dplyr::group_by(index.data) %>% dplyr::summarise()
 
 # Read the main shapefile for Congo's territories
-congo.territoire.borders <- sf::st_read("data/cod_adm2_un/cod_adm2_un.shp")
+congo.territoire.borders <- sf::st_read(here::here("data/cod_adm2_un/cod_adm2_un.shp"))
 
 # Create an index for the map data by standardizing the territory names
 congo.territoire.borders %<>% dplyr::mutate(index.map = adm2_name %>% tolower() %>% stringr::str_squish())
@@ -1681,3 +1681,58 @@ congo.territoire.borders <- dplyr::bind_rows(congo.territoire.borders, congo.ter
 # Clean up the environment, keeping only relevant variables
 rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "data.map.index")))
 
+#### 8-CONFLICT DATA ####
+
+# This section integrates conflict data with geographic boundaries for detailed spatial analysis. It performs the following tasks:
+#   
+#   1. **Load Conflict Data**: Loads the UCDP Georeferenced Event Dataset (GED) for organized violence events.
+# 2. **Set Map Projection**: Obtains the coordinate reference system (CRS) from the Congo territory borders to ensure consistency in spatial analysis.
+# 3. **Georeference Conflict Data**: Converts the conflict data into a spatial format using longitude and latitude coordinates.
+# 4. **Filter Conflicts in DRC**: Filters the conflict events to include only those within the geographic boundaries of the Democratic Republic of Congo (DRC).
+# 5. **Categorize Types of Violence**: Classifies the conflict events into categories based on the type of violence and the involved parties.
+# 6. **Clean Environment**: Retains only relevant variables for further analysis, ensuring a clean workspace.
+# 
+# By integrating and categorizing conflict data within the geographic context of the DRC, this section enhances the dataset's ability to support spatial analysis of organized violence events.
+
+# UCDP Georeferenced Event Dataset (GED) Global version 20.1
+# 
+# This dataset is UCDP's most disaggregated dataset, covering individual events of organized violence (phenomena of lethal violence occurring at a given time and place). These events are sufficiently fine-grained to be geo-coded down to the level of individual villages, with temporal durations disaggregated to single, individual days.
+# 
+# Available as:
+# 
+# CSV  EXCEL  RDATA  STATA  CODEBOOK
+# 
+# Please cite:
+# 
+# • Pettersson, Therese & Magnus Öberg (2020) Organized violence, 1989-2019. Journal of Peace Research 57(4).
+# 
+# • Sundberg, Ralph and Erik Melander (2013) Introducing the UCDP Georeferenced Event Dataset. Journal of Peace Research 50(4).
+#
+# Downloaded from https://ucdp.uu.se/downloads/index.html#ged_global on 2021/01/30
+
+# Load the conflict data from the RData file
+load(here::here("data/ged201.RData"))
+
+# Get the coordinate reference system (CRS) of the Congo territory borders
+map.projection <- sf::st_crs(congo.territoire.borders)
+
+# Georeference the conflict data
+ged201 %<>% sf::st_as_sf(coords = c("longitude", "latitude"), crs = map.projection)
+
+# Filter conflicts in the Democratic Republic of Congo (DRC) by cropping the spatial data to the Congo borders
+ged201 %<>% sf::st_crop(sf::st_bbox(congo.territoire.borders))
+
+# Intersect the conflict data with the Congo territory borders to keep only relevant conflicts
+ged201 %<>% sf::st_intersection(congo.territoire.borders)
+
+# Categorize the types of violence in the conflict data
+ged201 %<>% dplyr::mutate(type = dplyr::case_when(
+  type_of_violence == 2 & side_b != "Civilians" ~ "Non-state vs non-state",
+  type_of_violence == 1 & side_b != "Civilians" ~ "State vs non-state",
+  type_of_violence == 3 & stringr::str_detect(side_a, "Government") & side_b == "Civilians" ~ "State vs civilians",
+  type_of_violence == 3 & !stringr::str_detect(side_a, "Government") & side_b == "Civilians" ~ "Non-state vs civilians",
+  TRUE ~ NA_character_
+))
+
+# Clean up the environment, keeping only relevant variables
+rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "ged201", "data.map.index")))
