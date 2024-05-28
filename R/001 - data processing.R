@@ -1683,16 +1683,25 @@ rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders"
 
 #### 8-CONFLICT DATA ####
 
-# This section integrates conflict data with geographic boundaries for detailed spatial analysis. It performs the following tasks:
+# This section integrates conflict data with geographic boundaries for detailed 
+# spatial analysis. It performs the following tasks:
 #   
-#   1. **Load Conflict Data**: Loads the UCDP Georeferenced Event Dataset (GED) for organized violence events.
-# 2. **Set Map Projection**: Obtains the coordinate reference system (CRS) from the Congo territory borders to ensure consistency in spatial analysis.
-# 3. **Georeference Conflict Data**: Converts the conflict data into a spatial format using longitude and latitude coordinates.
-# 4. **Filter Conflicts in DRC**: Filters the conflict events to include only those within the geographic boundaries of the Democratic Republic of Congo (DRC).
-# 5. **Categorize Types of Violence**: Classifies the conflict events into categories based on the type of violence and the involved parties.
-# 6. **Clean Environment**: Retains only relevant variables for further analysis, ensuring a clean workspace.
+# 1. **Load Conflict Data**: Loads the UCDP Georeferenced Event Dataset (GED) 
+#   for organized violence events.
+# 2. **Set Map Projection**: Obtains the coordinate reference system (CRS) from 
+# the Congo territory borders to ensure consistency in spatial analysis.
+# 3. **Georeference Conflict Data**: Converts the conflict data into a spatial 
+# format using longitude and latitude coordinates.
+# 4. **Filter Conflicts in DRC**: Filters the conflict events to include only 
+# those within the geographic boundaries of the Democratic Republic of Congo (DRC).
+# 5. **Categorize Types of Violence**: Classifies the conflict events into 
+# categories based on the type of violence and the involved parties.
+# 6. **Clean Environment**: Retains only relevant variables for further analysis, 
+# ensuring a clean workspace.
 # 
-# By integrating and categorizing conflict data within the geographic context of the DRC, this section enhances the dataset's ability to support spatial analysis of organized violence events.
+# By integrating and categorizing conflict data within the geographic context of 
+# the DRC, this section enhances the dataset's ability to support spatial 
+# analysis of organized violence events.
 
 # UCDP Georeferenced Event Dataset (GED) Global version 20.1
 # 
@@ -1736,3 +1745,90 @@ ged201 %<>% dplyr::mutate(type = dplyr::case_when(
 
 # Clean up the environment, keeping only relevant variables
 rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "ged201", "data.map.index")))
+
+
+##### 8.1 - AGGREGATE CONFLICT DATA FOR EACH ELECTION AND MAP REGION #####
+
+# This section aggregates conflict data for each election period and map region, 
+# focusing on conflicts from the five years preceding each election. The script 
+# performs the following tasks:
+#   
+# 1. **Assign Election Periods**: Categorizes conflict events into election periods 
+# based on their dates.
+# 2. **Filter Relevant Conflicts**: Retains only conflict events that fall within 
+# the specified election periods.
+# 3. **Group and Nest Data**: Groups conflicts by data area and election period, 
+# nesting the data within each group for further analysis.
+# 4. **Summarize Conflict Data**: Counts the number of conflicts and related 
+# deaths for each election period.
+# 5. **Aggregate by Conflict Type**: Groups and counts conflicts by type of 
+# violence, further categorizing them based on involved parties.
+# 6. **Clean Environment**: Keeps only the relevant variables for further 
+# analysis, ensuring a clean workspace.
+# 
+# By organizing and summarizing conflict data in this manner, this section 
+# facilitates detailed analysis of conflict patterns in relation to election 
+# periods and geographic regions.
+
+# Assign election periods to conflict events based on their dates
+ged201 %<>% dplyr::mutate(election = dplyr::case_when(
+  date_start >= lubridate::ymd("2001-01-17") & date_end <= lubridate::ymd("2006-07-30") ~ "conflicts.data_2006",
+  date_start >= lubridate::ymd("2006-07-31") & date_end <= lubridate::ymd("2011-11-28") ~ "conflicts.data_2011",
+  date_start >= lubridate::ymd("2011-11-29") & date_end <= lubridate::ymd("2018-12-30") ~ "conflicts.data_2018",
+  TRUE ~ NA_character_
+))
+
+# Filter out conflicts that don't fall within the specified election periods
+ged201 %<>% dplyr::filter(!is.na(election)) %>% 
+  dplyr::filter(date_start >= lubridate::ymd("2001-01-17") & date_end <= lubridate::ymd("2018-12-30"))
+
+# Group conflicts by data area and election, and nest the data within each group
+conflict.aggregated <- ged201 %>% as.data.frame() %>%
+  dplyr::filter(!is.na(election)) %>% 
+  tidyr::nest(conflict.data = -c(index.data, election)) %>% 
+  dplyr::filter(purrr::map(conflict.data, ~nrow(.x) > 0) %>% unlist) %>%
+  tidyr::pivot_wider(id_cols = c(index.data), names_from = election, values_from = conflict.data)
+
+# Define a function to summarize deaths in a given dataset
+.summarise_deaths <- function(.x) {
+  if (!is.null(.x)) {
+    .x %>% as.data.frame() %>% dplyr::summarise(r = sum(best, na.rm = TRUE)) %>% dplyr::pull("r")
+  }
+}
+
+# Count the number of conflicts and deaths in each election period
+conflict.aggregated %<>% dplyr::mutate(
+  n.conflicts_2006 = purrr::map(conflicts.data_2006, nrow),
+  n.conflicts_2011 = purrr::map(conflicts.data_2011, nrow),
+  n.conflicts_2018 = purrr::map(conflicts.data_2018, nrow),
+  n.deaths_2006 = purrr::map(conflicts.data_2006, .summarise_deaths),
+  n.deaths_2011 = purrr::map(conflicts.data_2011, .summarise_deaths),
+  n.deaths_2018 = purrr::map(conflicts.data_2018, .summarise_deaths)
+) %>%
+  tidyr::unnest(c(dplyr::starts_with("n.conflicts"), dplyr::starts_with("n.deaths")))
+
+# Aggregate conflicts by type of violence
+conflict.aggregated_by_type <- ged201 %>% dplyr::mutate(type = dplyr::case_when(
+  stringr::str_detect(side_a, "Government of DR Congo") & stringr::str_starts(type, "State") ~ stringr::str_replace(type, "State", "DRC"),
+  !stringr::str_detect(side_a, "Government of DR Congo") & stringr::str_starts(type, "State") ~ stringr::str_replace(type, "State", "Foreign"),
+  TRUE ~ type
+)) %>% as.data.frame() %>%
+  dplyr::filter(!is.na(election)) %>%
+  tidyr::nest(conflict.data = -c(index.data, election, type))
+
+# Count the number of conflicts and deaths by type
+conflict.aggregated_by_type %<>% dplyr::mutate(
+  n.conflicts = purrr::map(conflict.data, nrow),
+  n.deaths = purrr::map(conflict.data, .summarise_deaths)
+) %>%
+  tidyr::unnest(c(dplyr::starts_with("n.conflicts"), dplyr::starts_with("n.deaths")))
+
+# Separate the election column into two parts and convert the year part to integer
+conflict.aggregated_by_type %<>% tidyr::separate(col = election, into = c("drop", "year"), sep = "_") %>% 
+  dplyr::select(-drop) %>% dplyr::mutate(year = as.integer(year))
+
+# Filter out rows with zero conflicts
+conflict.aggregated_by_type %<>% dplyr::filter(n.conflicts > 0)
+
+# Clean up the environment, keeping only relevant variables
+rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "ged201", "conflict.aggregated", "conflict.aggregated_by_type", "data.map.index")))
