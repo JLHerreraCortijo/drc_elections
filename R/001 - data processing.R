@@ -2200,13 +2200,16 @@ if(!file.exists(here::here("data/nightlight.RData"))){
         nightlight <- 1:nrow(congo.territoire.borders) %>% 
           purrr::map(\(i) {
             nightlight %>% raster::crop(congo.territoire.borders %>% dplyr::slice(i))
+
           }) %>% 
+
           purrr::map(\(x) { 
             x %>% raster::rasterToPoints(spatial = TRUE) %>% 
               dplyr::rename(nightlight = 1) %>% 
               dplyr::mutate(year = year)
+
           })
-        
+
         # Convert points to sf objects
         nightlight %<>% purrr::map(sf::st_as_sf)
         
@@ -2236,6 +2239,7 @@ if(!file.exists(here::here("data/nightlight.RData"))){
 ##### 9.2. MEAN #####
 
 
+
 # This section calculates the mean nightlight values and processes the data to analyze trends. 
 # Specifically, it performs the following steps:
 # 
@@ -2253,6 +2257,7 @@ if(!file.exists(here::here("data/nightlight.RData"))){
 
 # Calculate the mean nightlight values
 nightlight_mean <- nightlight %>% purrr::map(\(.x){
+
   # Convert the current data frame to a standard data frame
   .x %>% as.data.frame %>% 
     # Select only the relevant columns: index.data, year, and nightlight
@@ -2287,6 +2292,7 @@ rm(nightlight_gt30)
 
 
 ##### 9.3. TRENDS #####
+
 
 # This section calculates trends in nightlight data over specific periods using linear regression models. 
 # It separates the data into two eras: the DMSP era (up to 2011) and the VIIRS era (from 2014 onwards). 
@@ -2359,3 +2365,4 @@ trends_nightlight_gt30_mean <- nightlight_gt30_mean %>%
 
 
 save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories,file=here::here("results/data.RData"))
+
