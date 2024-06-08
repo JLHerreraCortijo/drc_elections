@@ -1839,6 +1839,30 @@ rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders"
 
 ##### 8.2 - RECODING CONFLICT ACTORS #####
 
+# This section processes conflict data to categorize and summarize conflicts by 
+# actor types, ensuring all actors are accounted for and correctly classified. The steps include:
+#   
+# 1. **Read Actor Types**: Loads data on conflict actors and their classifications 
+# from an Excel file.
+# 2. **Filter Conflict Data**: Ensures that the conflict dataset only includes 
+# actors present in the actor types list.
+# 3. **Add Actor Type Information**: Merges actor type classifications into the 
+# conflict data.
+# 4. **Summarize Conflicts by Actor Type 1 and 2**: Aggregates conflicts and death 
+# counts by actor type and election period, ensuring data consistency and completeness.
+# For actor type 2, data is also summarized by territory.
+# 5. **Merge Reversed Actor Types**: Combines conflict data where actor roles 
+# (side_a and side_b) are reversed.
+# 6. **Generate Actor Type Combinations**: Creates all possible combinations of 
+# actor types for comprehensive analysis.
+# 7. **Calculate Total Conflicts and Deaths**: Aggregates total counts across all 
+# years and ensures consistency with the original data.
+# 8. **Export Results**: Summarizes the data and exports it to an Excel file for 
+# further analysis.
+# 
+# This process standardizes conflict actor data and provides a structured summary 
+# for analyzing the impact of different actor types in conflicts.
+
 # Read actor types data from an Excel file
 actor_types <- readxl::read_excel(here::here("data/DRC armed groups in UCDP dataset Rwanda and Uganda.xlsx"))
 
@@ -2117,3 +2141,221 @@ actor_type_2_territories <- dplyr::bind_rows(
   tidyr::separate(election, c("drop", "year"), sep = "_") %>% dplyr::select(-drop) %>%
   dplyr::mutate(year = as.integer(year))
 
+
+#### 9 - NIGHTLIGHT DATA ####
+
+##### 9.1. READ DATA #####
+
+# Raw nightlight data obtained from Li, X., Zhou, Y., Zhao, M. et al. A harmonized 
+# global nighttime light dataset 1992–2018. Sci Data 7, 168 (2020).
+#  https://doi.org/10.1038/s41597-020-0510-y
+# 
+# Raw globe-wide nightlight data (Harmonized_DN_NTL_[year]_calDMSP.tif and 
+# Harmonized_DN_NTL_[year]_simVIIRS.tif files) is not redistributed with this paper, 
+# but can be downloaded from the paper above at https://doi.org/10.6084/m9.figshare.9828827.v2. 
+# Then the DRC data can be extracted for the 2001-2008 period using the following code.
+# 
+# The DRC extracted data is provided as an RData file, which is a 175 Mb file 
+# stored using Git Large File Storage on GitHub. Extra steps may be required
+# for retrieval, please check this repository README file.
+
+# Please modify the next line with your current nightlight data folder path
+nightlight_data_folder <- here::here("data/nighttime_lights/9828827/")
+
+# Check if the nightlight RData file already exists
+if(!file.exists(here::here("data/nightlight.RData"))){
+  # Define a temporary folder for processing files
+  temp_files_folder <- here::here("data/nightlight/")
+  
+  # Create the temporary folder if it doesn't exist
+  if(!dir.exists(temp_files_folder)){
+    dir.create(temp_files_folder)
+  }
+  
+  # List all files in the nightlight data folder matching the pattern "Harmonized*.tif"
+  files <- list.files(nightlight_data_folder, "Harmonized.*\\.tif$", recursive = TRUE, full.names = TRUE)
+  
+  # Process each file in the list
+  nightlight <- files %>% purrr::map(~{
+    # Update the file to the current file being processed
+    file <- .x
+    nightlight <- NULL
+    # Extract the year from the file name and convert it to a numeric value
+    year <- stringr::str_match(basename(file), "(\\d{4})")[,2] %>% as.numeric
+    # Define the output file path
+    outfile <- here::here(sprintf("%snightlight_%d.RData", temp_files_folder, year))
+    
+    # If the output file doesn't exist, process the data
+    if(!file.exists(outfile)){
+      # Check if the year is between 2001 and 2018
+      if(dplyr::between(year, 2001, 2018)){
+        print(year)  
+        # Load the raster file
+        nightlight <- raster::raster(file)
+        
+        # Crop the raster to the Congo borders
+        nightlight %<>% raster::crop(congo.territoire.borders)
+        
+        # Further crop the raster to each territory border and convert to points
+        nightlight <- 1:nrow(congo.territoire.borders) %>% 
+          purrr::map(\(i) {
+            nightlight %>% raster::crop(congo.territoire.borders %>% dplyr::slice(i))
+          }) %>% 
+          purrr::map(\(x) { 
+            x %>% raster::rasterToPoints(spatial = TRUE) %>% 
+              dplyr::rename(nightlight = 1) %>% 
+              dplyr::mutate(year = year)
+          })
+        
+        # Convert points to sf objects
+        nightlight %<>% purrr::map(sf::st_as_sf)
+        
+        # Intersect the sf objects with the Congo territory borders
+        nightlight %<>% purrr::map2(1:length(.), ~ .x %>% sf::st_intersection(congo.territoire.borders %>% dplyr::slice(.y)))
+        
+        # Combine all the processed data into a single data frame
+        nightlight %<>% dplyr::bind_rows()
+        # Save the processed data to the output file
+        save(nightlight, file = outfile)  
+      }
+    } else {
+      # Load the existing output file if it exists
+      load(outfile)
+    }
+    nightlight
+  }) %>% purrr::compact
+  
+  # Save the combined nightlight data to the main RData file
+  save(nightlight, file = here::here("data/nightlight.RData"))
+} else {
+  # Load the main RData file if it exists
+  load(here::here("data/nightlight.RData"))
+}
+
+
+##### 9.2. MEAN #####
+
+
+# This section calculates the mean nightlight values and processes the data to analyze trends. 
+# Specifically, it performs the following steps:
+# 
+# 1. **Calculate Mean Nightlight Values**: For each geographic index and year, it calculates 
+# the mean nightlight intensity, ignoring missing values. This helps in understanding the 
+# average nightlight levels over time.
+# 
+# 2. **Threshold Adjustment**: It creates a modified dataset where nightlight values less 
+# than 30 are set to zero, to focus on significant nightlight intensities. This adjustment 
+# is useful for distinguishing areas with notable nightlight activity from those with minimal 
+# or no activity.
+# 
+# 3. **Calculate Mean for Adjusted Data**: Similar to step 1, it calculates the mean nightlight 
+# values for the adjusted dataset to analyze trends in significant nightlight intensities.
+
+# Calculate the mean nightlight values
+nightlight_mean <- nightlight %>% purrr::map(\(.x){
+  # Convert the current data frame to a standard data frame
+  .x %>% as.data.frame %>% 
+    # Select only the relevant columns: index.data, year, and nightlight
+    dplyr::select(index.data, year, nightlight) %>% 
+    # Group the data by index.data and year
+    dplyr::group_by(index.data, year) %>% 
+    # Calculate the mean nightlight value, removing NA values, and drop the grouping
+    dplyr::summarise(nightlight_mean = mean(nightlight, na.rm = TRUE), .groups = "drop")
+}) %>% dplyr::bind_rows()
+
+# Create a new dataset where nightlight values less than 30 are set to 0
+nightlight_gt30 <- nightlight %>% purrr::map(~ 
+                                               .x %>% dplyr::mutate(nightlight = dplyr::case_when(nightlight < 30 ~ 0, TRUE ~ nightlight))
+)
+# Remove the original nightlight data to free up memory
+rm(nightlight)
+
+# Calculate the mean nightlight values for the modified dataset (values >= 30)
+nightlight_gt30_mean <- nightlight_gt30 %>% purrr::map(~{
+  # Convert the current data frame to a standard data frame
+  .x %>% as.data.frame %>% 
+    # Select only the relevant columns: index.data, year, and nightlight
+    dplyr::select(index.data, year, nightlight) %>% 
+    # Group the data by index.data and year
+    dplyr::group_by(index.data, year) %>% 
+    # Calculate the mean nightlight value, removing NA values, and drop the grouping
+    dplyr::summarise(nightlight_mean = mean(nightlight, na.rm = TRUE), .groups = "drop")
+}) %>% dplyr::bind_rows()
+
+# Remove the modified nightlight data to free up memory
+rm(nightlight_gt30)
+
+
+##### 9.3. TRENDS #####
+
+# This section calculates trends in nightlight data over specific periods using linear regression models. 
+# It separates the data into two eras: the DMSP era (up to 2011) and the VIIRS era (from 2014 onwards). 
+# For each era, it fits separate linear models to determine the trends in nightlight intensity. 
+# The calculated trends are then combined into a single dataset, providing insights into changes in 
+# nightlight intensity over time. Similar calculations are performed for both the original nightlight 
+# data and the modified dataset where nightlight values below 30 are set to zero. This helps to 
+# understand the impact of low-intensity nightlight values on overall trends.
+
+# Calculate trends for nightlight_mean data
+trends_nightlight_mean <- nightlight_mean %>% 
+  # Nest data by index.data
+  tidyr::nest(data = -c(index.data)) %>% 
+  # Apply function to each nested data frame
+  dplyr::mutate(data = purrr::map(data, ~{
+    
+    # Filter data for years <= 2011 (DMSP era)
+    x_DMSP <- .x %>% as.data.frame() %>% dplyr::filter(year <= 2011)
+    
+    # Fit linear model for DMSP era with a breakpoint at 2006
+    m_DMSP <- lm(nightlight_mean ~ I((year - 2006) * (year <= 2006)) + I((year - 2006) * (year >= 2006)), data = x_DMSP)
+    
+    # Filter data for years >= 2014 (VIIRS era)
+    x_VIIRS <- .x %>% as.data.frame() %>% dplyr::filter(year >= 2014)
+    
+    # Fit linear model for VIIRS era
+    m_VIIRS <- lm(nightlight_mean ~ year, data = x_VIIRS)
+    
+    # Extract coefficients and create output data frame
+    .out <- coefficients(m_DMSP) %>% t %>% as.data.frame() %>% 
+      magrittr::set_colnames(c("Intercept", "NL.trend.2001_2006", "NL.trend.2006_2011")) %>% 
+      dplyr::select(-Intercept) %>% 
+      dplyr::mutate(NL.trend.2014_2018 = coefficients(m_VIIRS)["year"])
+    
+    .out
+    
+  })) %>% tidyr::unnest(data)
+
+# Calculate trends for nightlight_gt30_mean data
+trends_nightlight_gt30_mean <- nightlight_gt30_mean %>% 
+  # Nest data by index.data
+  tidyr::nest(data = -c(index.data)) %>% 
+  # Apply function to each nested data frame
+  dplyr::mutate(data = purrr::map(data, ~{
+    
+    # Filter data for years <= 2011 (DMSP era)
+    x_DMSP <- .x %>% as.data.frame() %>% dplyr::filter(year <= 2011)
+    
+    # Fit linear model for DMSP era with a breakpoint at 2006
+    m_DMSP <- lm(nightlight_mean ~ I((year - 2006) * (year <= 2006)) + I((year - 2006) * (year >= 2006)), data = x_DMSP)
+    
+    # Filter data for years >= 2014 (VIIRS era)
+    x_VIIRS <- .x %>% as.data.frame() %>% dplyr::filter(year >= 2014)
+    
+    # Fit linear model for VIIRS era
+    m_VIIRS <- lm(nightlight_mean ~ year, data = x_VIIRS)
+    
+    # Extract coefficients and create output data frame
+    .out <- coefficients(m_DMSP) %>% t %>% as.data.frame() %>% 
+      magrittr::set_colnames(c("Intercept", "NL.trend.2001_2006", "NL.trend.2006_2011")) %>% 
+      dplyr::select(-Intercept) %>% 
+      dplyr::mutate(NL.trend.2014_2018 = coefficients(m_VIIRS)["year"])
+    
+    .out
+    
+  })) %>% tidyr::unnest(data)
+
+
+##### SAVE DATA #####
+
+
+save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories,file=here::here("results/data.RData"))
