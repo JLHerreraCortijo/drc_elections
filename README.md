@@ -360,3 +360,40 @@ That way, in the end, we have an index of villes matches across elections, even 
  2. **Generate Summary Statistics**: Although commented out, the script includes 
  code to generate summary statistics for the calculated turnout rates, providing 
  insights into the distribution of turnout across the datasets.
+ 
+ 
+### 7-HARMONIZE MAP AND DATA LOCATIONS
+
+ This section aligns geographic data with the electoral dataset to ensure consistency 
+ in analysis. It performs the following tasks:
+   
+   1. **Read Detailed Shapefiles**: Loads detailed shapefiles for Congo's 
+   territories to get precise geographic boundaries. [ref shapefiles](data/Les territoires de Congo (rerritories of Congo)/CONTENIDOS.txt)
+ 2. **Filter and Standardize Kinshasa Regions**: Filters the shapefile data to 
+ include only Kinshasa regions and standardizes names by replacing hyphens 
+ with spaces.
+ 3. **Update and Summarize Geometry Data**: Updates the Kinshasa shapefile data 
+ with standardized names, selects relevant columns, groups by names, and 
+ summarizes geometries.
+ 4. **Read Main Shapefiles**: Loads the main shapefile for Congo's territories 
+ and creates an index by standardizing territory names.
+ 5. **Exclude Kinshasa**: Excludes Kinshasa from the main shapefile data.
+ 6. **Create Indices for Matching**: Extracts and standardizes names from both 
+ the map and data for matching purposes.
+ 7. **Manual Name Matching**: Applies manual name corrections for regions and 
+ cities to ensure consistency between map and data.
+ 8. **Match Indices**: Matches data names with map names and identifies 
+ unmatched names.
+ 9. **Create Index DataFrame**: Creates a DataFrame to link data and map 
+ indices, ensuring unique matches.
+ 10. **Join and Summarize Map Data**: Joins the map data with matched indices, 
+ updates index names, and groups by index to summarize geometries.
+ 11. **Transform Projections**: Ensures the geographic projections of Kinshasa 
+ borders match the main dataset.
+ 12. **Combine Borders**: Combines Kinshasa borders with the main territory 
+ borders.
+ 13. **Clean Environment**: Removes unnecessary variables, keeping only the 
+ relevant ones for further analysis.
+ 
+ This section harmonizes geographic and electoral data, facilitating accurate 
+ mapping and spatial analysis of election results.
