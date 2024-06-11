@@ -1,0 +1,41 @@
+# Dataset Title
+Les territoires de Congo (territories of Congo)
+
+
+# URL
+http://databasin.org/datasets/13e9b3ccf4e64c4cb4122ca174526c4b
+
+
+# Dataset Type
+ArcGIS
+
+
+# Credits
+[Le Referential Geographique Commun](http://www.rgc.cd/document.php?id_cat=2)
+
+
+# Uploaded By
+[Conservation Biology Institute](http://databasin.org/people/consbio)
+
+
+# Description
+Limites du troisième niveau d&#39;entitésadministratives de la RDC : territoires (ruraux) et communes (urbaines).  
+  
+Le fichier est issu de la digitalisation par UNOCHA de l&#39;atlas del&#39;organisation administrative de la RDC réalisé parle père Léon de Saint Moulin. Lorsque les limites deterritoires sont définies par un cours d&#39;eau, lagéométrie a été partagée. Unevalidation topologique a été effectuée par UNDP etles limites de communes de Kinshasa ont étéajoutées. L&#39;ensemble des communes de 19 autres villes sontdétourées au moyen d&#39;un seul polygone. La toponymiea été validée par l&#39;INS.  
+  
+Boundaries of the third level administrative units of the DemocraticRepublic of Congo: the rural territories and urban communities.  
+  
+These data were digitized by UNOCHA from the atlas of the administrativeorganizations of the Democratic Republic of Congo by father Leon deSaint Moulin. The territory boundaries are defined by waterways,geometry and subdividions. A topological validation was done by UNDP andthe community boundaries of Kinshasa were added. The collection ofcommunities and of 19 other cities were cut into the middle of a singlepolygon. The toponomy was validated by the INS.
+
+
+# Use Constraints
+This work is licensed under a Creative Commons Attribution-Noncommercial 3.0 License.
+
+
+### Original Metadata
+metadata/metadata1_original.xml
+
+
+### Data Basin Metadata
+metadata/metadata1.xml
+

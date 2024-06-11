@@ -10,17 +10,21 @@ This project uses git large file storage to store the nightlight data. Please, m
  it for further analysis. Specifically, it handles data from the years 2006, 2011, 
  and 2018, sourced from multiple Excel files.
  
- 2006 Data: The script reads two sets of data for 2006. The first dataset is filtered 
- to remove rows representing provincial totals and select columns are excluded. 
- The second dataset, labeled as second round, undergoes a similar cleaning process. 
- These datasets are then merged based on a common column related to geographical divisions.
- 2011 Data: Data from the 2011 elections is read and rows containing aggregated 
- totals are excluded to ensure the dataset only contains individual record entries.
- 2018 Data: The script first reads the primary dataset for 2018. It then reads a 
- separate file containing candidate names and IDs, which are necessary to match 
- candidate details correctly across different datasets. Due to discrepancies in 
- candidate IDs between different sources, the script includes a manual mapping of IDs 
- to align them correctly based on a comparison with the original data source (a PDF file). 
+ **2006 Data**: The script reads two sets of data for 2006. The first dataset 
+ (```data/2006first_round.xlsx```) is filtered to remove rows representing provincial 
+ totals and related columns are excluded. The second dataset (```data/2006clean.xlsx```), 
+ labeled as second round, undergoes a similar cleaning process. 
+ These datasets are then merged based on the Territoire/ville column.
+ 
+ **2011 Data**: Data from the 2011 elections (```data/2011drc_election_all_clcr_cleaned_stata.xlsx```) 
+ is read and rows containing aggregated totals are excluded.
+ 
+ **2018 Data**: The script first reads the primary dataset for 2018 (```data/prs_edited.xlsx```). 
+ It then reads a separate file containing candidate names and IDs (```data/RESULTAT-PRESIDENTIEL-1.xlsx```), 
+ which are necessary to match candidate details correctly across different datasets. 
+ Due to discrepancies in candidate IDs between different sources, the script includes a 
+ manual mapping of IDs ```("1001_44_10"="20","1001_48_14"="4","1001_84_158"="13")``` 
+ to align them correctly based on a comparison with the original data source. 
  Once the IDs are aligned, the candidate details are merged into the main 2018 dataset.
 
 ### 2-RENAME COLUMNS AND NEST VOTES FOR EACH CANDIDATE
@@ -56,10 +60,10 @@ This project uses git large file storage to store the nightlight data. Please, m
  and electoral constituencies. It aims to facilitate easier data comparison and 
  analysis across different election years:
    
-   1. **Nesting and Index Creation**: The script nests voting site data within 
-   each constituency for the 2018 dataset. For all years, it establishes indexes 
-   based on geographic identifiers like city names and constituency names, which 
-   are standardized to lower case and stripped of extra spaces for uniformity.
+ 1. **Nesting and Index Creation**: The script nests voting site data within 
+ each constituency for the 2018 dataset. For all years, it establishes indexes 
+ based on geographic identifiers like city names and constituency names, which 
+ are standardized to lower case and stripped of extra spaces for uniformity.
  
  2. **Labeling and Manual Adjustments**: The script also assigns labels to each 
  entry for clearer identification and resolves inconsistencies in geographic names 
@@ -90,7 +94,7 @@ This project uses git large file storage to store the nightlight data. Please, m
  
  1. **Initial Extraction and Naming**: The script extracts names of cities or 
  constituencies (referred to as villes/circonscriptions) from each year's dataset 
- and assigns them as names to character vectors. This unique approach uses the 
+ and assigns them as names to character vectors. This approach uses the 
  names of these vectors for matching, ensuring that the actual content remains unchanged.
  
  2. **Iterative Matching Process**: The matching process involves several iterative 
@@ -111,14 +115,16 @@ This project uses git large file storage to store the nightlight data. Please, m
  years can be aligned and analyzed consistently, addressing challenges posed by 
  changes in geographic names and administrative boundaries over time.
 
-There are some missing Circonscriptions in 2011. At Kinshasa, because we don't have enough detail in 2011 data, 
-we are limited to use the subprovince level.
-The strategy followed is to extract the names of the villes/circonscriptions into a named character vector. Matching is done
-in several steps because there are differences across elections in the way the villes are named.
+Details: There are some missing Circonscriptions in 2011. At Kinshasa, because we don't have 
+enough detail in 2011 data, we are limited to use the subprovince level.
+The strategy followed is to extract the names of the villes/circonscriptions into 
+a named character vector. Matching is done in several steps because there are 
+differences across elections in the way the villes are named.
 First, the names of the vector are set equal to the vector contents. 
 We will use the names and not the contents to match the villes across elections. 
-In each step trying to match the data, we modify the names of the vector, leaving the vector contents untouched.
-That way, in the end, we have an index of villes matches across elections, even if the actual names are different.
+In each step trying to match the data, we modify the names of the vector, 
+leaving the vector contents untouched.That way, in the end, we have an index of 
+villes matches across elections, even if the actual names are different.
 
 
 ### 5-MERGE DATA ACROSS ELECTIONS
@@ -165,12 +171,12 @@ That way, in the end, we have an index of villes matches across elections, even 
  calculate the number of registered voters based on the available data, such as 
  valid votes and participation percentages.
 
- 2. **Voter Estimation**: Using the data on valid votes and the percentage of 
+ 2. **Voter Estimation (2006 only)**: Using the data on valid votes and the percentage of 
  participation, the script estimates the total number of registered voters at 
  different levels (e.g., circonscription, ville territoire) by reversing the 
  calculation of valid votes from participation rates.
 
- 3. **Aggregation**: After calculating the registered voters at the lowest levels, 
+ 3. **Aggregation**: After obtaining the registered voters at the lowest levels, 
  these figures are summed up through the nested structures to provide total counts 
  at higher administrative levels, ensuring that each region’s total reflects all 
  underlying data.
@@ -193,9 +199,8 @@ That way, in the end, we have an index of villes matches across elections, even 
  of transformations to calculate the total voters within each administrative level, 
  such as circonscriptions and voting sites.
 
- 2. **Nested Calculations**: Utilizing the `purrr::map` function, the script navigates 
- through nested structures (circonscription to voting sites) to aggregate 
- voters at various levels.
+ 2. **Nested Calculations**: The script navigates through nested structures 
+ (circonscription to voting sites) to aggregate voters at various levels.
 
  3. **Summation and Aggregation**: After extracting the voters for smaller 
  units, the script sums these voters to compute total figures for larger geographic 
@@ -204,9 +209,8 @@ That way, in the end, we have an index of villes matches across elections, even 
 
  4. **Data Integration and Unnesting**: The sums of voters are then integrated 
  back into the main dataset, ensuring that each administrative unit's total voters 
- are reflected in the final dataset. The use of `tidyr::unnest` helps in flattening 
- nested lists into simpler dataframe structures.
-
+ are reflected in the final dataset.
+ 
 #### 6.3-TOTAL VOTES IN EACH LEVEL
 
 
@@ -214,11 +218,7 @@ That way, in the end, we have an index of villes matches across elections, even 
  (referred to as "total votes") across different administrative levels for the 
  election years 2006, 2011, and 2018. Here’s a concise breakdown of the process:
 
- 1. **Data Preparation**: For each year, the data is initially checked for null 
- values to ensure only valid data is processed. This step is crucial for maintaining 
- data integrity.
-
- 2. **Vote Calculation**:
+ 1. **Vote Calculation**:
     - For 2006, the script directly assigns the number of valid votes ('Votes valables') 
     from the data to a new column called 'total.votes' for each circonscription. 
     It then sums these votes to get a total count for each higher administrative level.
@@ -229,14 +229,12 @@ That way, in the end, we have an index of villes matches across elections, even 
     sites within each ville and territoire. This involves multiple layers of 
     mapping and summing to aggregate votes all the way up from the most detailed levels.
 
- 3. **Data Aggregation**: After calculating the total votes at the lowest necessary 
+ 2. **Data Aggregation**: After calculating the total votes at the lowest necessary 
  levels, the script aggregates these totals to provide comprehensive vote counts 
  for larger geographic or administrative areas.
 
- 4. **Integration and Unnesting**: The aggregated total votes are then integrated 
- back into the main dataset. The use of `tidyr::unnest()` simplifies the data 
- structure, making it more accessible for further analysis.
- 
+ 3. **Integration and Unnesting**: The aggregated total votes are then integrated 
+ back into the main dataset.
  
 #### 6.4-VOTES AND PERCENTAGE FOR KABILA IN EACH LEVEL
 
@@ -245,37 +243,32 @@ That way, in the end, we have an index of villes matches across elections, even 
  various administrative levels across the election years 2006, 2011, and 2018. 
  The method involves several steps:
  
- 1. **Data Filtering and Extraction**:
-   - For each year, the data undergoes a check to ensure it is not null, which 
-   is crucial for maintaining accuracy.
- - The votes specifically for Kabila (or Ramazani in 2018) are extracted from 
- nested data structures by filtering for the candidate's name within each voting 
- site or circonscription.
+ 1. **Data Extraction**:
+    - The votes specifically for Kabila (or Ramazani in 2018) are extracted from 
+    nested data structures by filtering for the candidate's name within each voting 
+    site or circonscription.
  
  2. **Vote Calculation**:
     - The valid votes for Kabila are aggregated first within the smallest units 
     (voting sites or circonscriptions) and then summed up to provide totals for 
     larger administrative areas.
-    - This process involves mapping through nested data structures and applying 
-    filters and summation functions to accurately compile the votes.
  
  3. **Percentage Calculation**:
     - The percentage of votes received by Kabila or Ramazani is calculated by 
     dividing their total votes by the total votes of all candidates at each 
-    administrative level. This step provides insight into the candidate's 
-    performance relative to others.
- - The calculation is done post-aggregation to ensure it reflects the comprehensive 
- vote share.
+    administrative level. 
+    - The calculation is done post-aggregation to ensure it reflects the comprehensive 
+    vote share.
  
  4. **Data Aggregation and Unnesting**:
    - After calculating the total votes and percentages, these metrics are nested 
-   back into the main dataset. Using `tidyr::unnest()`, the nested lists are 
-   simplified into standard columns for ease of analysis.
+   back into the main dataset. Then nested lists are simplified into standard 
+   columns for ease of analysis.
  
  5. **Result Integration**:
    - The final step involves integrating the calculated votes and percentages 
    into the main dataset, enhancing the dataset with key electoral metrics for 
-   Kabila and Ramazani, which are pivotal for electoral analysis.
+   Kabila and Ramazani.
  
 #### 6.5-BALLOT BOXES IN EACH LEVEL (2011,2018 ONLY)
 
@@ -283,34 +276,26 @@ That way, in the end, we have an index of villes matches across elections, even 
  boxes counted at various administrative levels during the 2011 and 2018 elections. 
  The approach involves multiple steps to ensure accurate aggregation of data:
  
- 1. **Data Validation**: Each dataset is checked to confirm that it is not null, 
- ensuring that only valid data is processed. This step is crucial to avoid 
- errors during data manipulation.
- 
- 2. **Mapping and Summation**:
-   - For each entry in the dataset, the script uses `purrr::map()` to apply 
-   functions at different nesting levels, calculating the sum of ballot boxes 
+ 1. **Mapping and Summation**:
+   - For each entry in the dataset, the script calculates the sum of ballot boxes 
    counted within each administrative unit, such as circonscriptions or voting sites.
- - This involves iterating over each circonscription and, for the 2018 data, 
+   - This involves iterating over each circonscription and, for the 2018 data, 
  each ville.territoire within the circonscriptions, to aggregate the counts 
  from the smallest units upwards.
  
- 3. **Data Aggregation**:
+ 2. **Data Aggregation**:
    - The aggregated counts of ballot boxes from the smaller units (voting sites 
    or circonscriptions) are further summed to provide totals for larger areas.
- - This is performed using nested `purrr::map()` functions that apply the summation 
- across the nested data structures.
  
- 4. **Flattening and Integration**:
-   - The nested results are flattened using `tidyr::unnest()` to integrate the 
-   summed ballot box counts back into the main dataframe. This transformation 
-   simplifies the nested list into a standard column format within the main dataset.
+ 3. **Flattening and Integration**:
+   - The nested results are flattened to simplify the nested lists into a standard 
+   column format within the main dataset.
  
- 5. **Final Aggregation and Calculation**:
+ 4. **Final Aggregation and Calculation**:
    - After processing individual entries, a final summation is performed across 
    all entries for each election year to calculate the total number of ballot 
    boxes counted across all circonscriptions.
- - The results are added to the dataframe, providing a clear overview of ballot 
+    - The results are added to the dataframe, providing a clear overview of ballot 
  box distribution and availability during the elections.
  
 #### 6.6-VOTING SITES WITH ZERO VOTERS (2018 ONLY)
@@ -320,7 +305,7 @@ That way, in the end, we have an index of villes matches across elections, even 
    
  1. **Filtering Voting Sites**: The script navigates through multiple nested 
  data structures, filtering out voting sites where the number of voters is not 
- available or is zero.
+ available.
  2. **Counting Voting Sites**: For each administrative level (e.g., circonscription, 
  ville.territoire), it counts the number of voting sites that reported zero voters.
  3. **Aggregating Data**: These counts are aggregated at higher administrative 
@@ -357,18 +342,14 @@ That way, in the end, we have an index of villes matches across elections, even 
  1. **Calculate Turnout Rates**: It computes the turnout rate for each year by 
  dividing the number of voters by the number of registered voters for 2006, 
  2011, and 2018.
- 2. **Generate Summary Statistics**: Although commented out, the script includes 
- code to generate summary statistics for the calculated turnout rates, providing 
- insights into the distribution of turnout across the datasets.
- 
  
 ### 7-HARMONIZE MAP AND DATA LOCATIONS
 
  This section aligns geographic data with the electoral dataset to ensure consistency 
  in analysis. It performs the following tasks:
    
-   1. **Read Detailed Shapefiles**: Loads detailed shapefiles for Congo's 
-   territories to get precise geographic boundaries. [ref shapefiles](data/Les territoires de Congo (rerritories of Congo)/CONTENIDOS.txt)
+ 1. **Read Detailed Shapefiles**: Loads detailed shapefiles for Congo's 
+   territories to get precise geographic boundaries. Please see data/Les territoires de Congo (territories of Congo)/CONTENTS.html for more details about the boundaries used.
  2. **Filter and Standardize Kinshasa Regions**: Filters the shapefile data to 
  include only Kinshasa regions and standardizes names by replacing hyphens 
  with spaces.
@@ -376,7 +357,7 @@ That way, in the end, we have an index of villes matches across elections, even 
  with standardized names, selects relevant columns, groups by names, and 
  summarizes geometries.
  4. **Read Main Shapefiles**: Loads the main shapefile for Congo's territories 
- and creates an index by standardizing territory names.
+ (data/cod_adm2_un/cod_adm2_un.shp) and creates an index by standardizing territory names.
  5. **Exclude Kinshasa**: Excludes Kinshasa from the main shapefile data.
  6. **Create Indices for Matching**: Extracts and standardizes names from both 
  the map and data for matching purposes.
@@ -392,8 +373,143 @@ That way, in the end, we have an index of villes matches across elections, even 
  borders match the main dataset.
  12. **Combine Borders**: Combines Kinshasa borders with the main territory 
  borders.
- 13. **Clean Environment**: Removes unnecessary variables, keeping only the 
- relevant ones for further analysis.
  
  This section harmonizes geographic and electoral data, facilitating accurate 
  mapping and spatial analysis of election results.
+ 
+ 
+### 8-CONFLICT DATA
+
+ This section integrates conflict data with geographic boundaries for detailed 
+ spatial analysis. It performs the following tasks:
+   
+ 1. **Load Conflict Data**: Loads the UCDP Georeferenced Event Dataset (GED) 
+   for organized violence events (see below for more information on the data used).
+ 2. **Set Map Projection**: Obtains the coordinate reference system (CRS) from 
+ the Congo territory borders to ensure consistency in spatial analysis.
+ 3. **Georeference Conflict Data**: Converts the conflict data into a spatial 
+ format using longitude and latitude coordinates.
+ 4. **Filter Conflicts in DRC**: Filters the conflict events to include only 
+ those within the geographic boundaries of the Democratic Republic of Congo (DRC).
+ 5. **Categorize Types of Violence**: Classifies the conflict events into 
+ categories based on the type of violence and the involved parties.
+ 
+    - **Non-state vs non-state**: type_of_violence is 2 and side_b is not "Civilians"
+    - **State vs non-state**: type_of_violence is 1 and side_b is not "Civilians"
+    - **State vs civilians**: type_of_violence is 3 and side_a contains "Government" and side_b is "Civilians"
+    - **Non-state vs civilians**: type_of_violence is 3 and side_a does not contain "Government", and side_b is "Civilians".
+ 
+ By integrating and categorizing conflict data within the geographic context of 
+ the DRC, this section enhances the dataset's ability to support spatial 
+ analysis of organized violence events.
+
+#### UCDP Georeferenced Event Dataset (GED) Global version 20.1
+ 
+ This dataset is UCDP's most disaggregated dataset, covering individual events of organized violence (phenomena of lethal violence occurring at a given time and place). These events are sufficiently fine-grained to be geo-coded down to the level of individual villages, with temporal durations disaggregated to single, individual days.
+ 
+ Available as:
+ 
+ CSV  EXCEL  RDATA  STATA  CODEBOOK
+ 
+ Please cite:
+ 
+ • Pettersson, Therese & Magnus Öberg (2020) Organized violence, 1989-2019. Journal of Peace Research 57(4).
+ 
+ • Sundberg, Ralph and Erik Melander (2013) Introducing the UCDP Georeferenced Event Dataset. Journal of Peace Research 50(4).
+
+ Downloaded from https://ucdp.uu.se/downloads/index.htmlged_global on 2021/01/30
+ 
+ 
+#### 8.1 - AGGREGATE CONFLICT DATA FOR EACH ELECTION AND MAP REGION
+
+ This section aggregates conflict data for each election period and map region, 
+ focusing on conflicts from the five years preceding each election. The script 
+ performs the following tasks:
+   
+ 1. **Assign Election Periods**: Categorizes conflict events into election periods 
+ based on their dates.
+ 2. **Filter Relevant Conflicts**: Retains only conflict events that fall within 
+ the specified election periods.
+ 3. **Group and Nest Data**: Groups conflicts by data area and election period, 
+ nesting the data within each group for further analysis.
+ 4. **Summarize Conflict Data**: Counts the number of conflicts and related 
+ deaths for each election period.
+ 5. **Aggregate by Conflict Type**: Groups and counts conflicts by type of 
+ violence, further categorizing them based on involved parties.
+ 6. **Clean Environment**: Keeps only the relevant variables for further 
+ analysis, ensuring a clean workspace.
+ 
+ By organizing and summarizing conflict data in this manner, this section 
+ facilitates detailed analysis of conflict patterns in relation to election 
+ periods and geographic regions. 
+ 
+#### 8.2 - RECODING CONFLICT ACTORS
+
+ This section processes conflict data to categorize and summarize conflicts by 
+ actor types, ensuring all actors are accounted for and correctly classified. The steps include:
+   
+ 1. **Read Actor Types**: Loads data on conflict actors and their classifications 
+ from an Excel file.
+ 2. **Filter Conflict Data**: Ensures that the conflict dataset only includes 
+ actors present in the actor types list.
+ 3. **Add Actor Type Information**: Merges actor type classifications into the 
+ conflict data.
+ 4. **Summarize Conflicts by Actor Type 1 and 2**: Aggregates conflicts and death 
+ counts by actor type and election period, ensuring data consistency and completeness.
+ For actor type 2, data is also summarized by territory.
+ 5. **Merge Reversed Actor Types**: Combines conflict data where actor roles 
+ (side_a and side_b) are reversed.
+ 6. **Generate Actor Type Combinations**: Creates all possible combinations of 
+ actor types for comprehensive analysis.
+ 7. **Calculate Total Conflicts and Deaths**: Aggregates total counts across all 
+ years and ensures consistency with the original data.
+ 8. **Export Results**: Summarizes the data and exports it to an Excel file for 
+ further analysis.
+ 
+ This process standardizes conflict actor data and provides a structured summary 
+ for analyzing the impact of different actor types in conflicts.
+ 
+### 9 - NIGHTLIGHT DATA
+
+#### 9.1. READ DATA
+
+ Raw nightlight data obtained from Li, X., Zhou, Y., Zhao, M. et al. A harmonized 
+ global nighttime light dataset 1992–2018. Sci Data 7, 168 (2020).
+  https://doi.org/10.1038/s41597-020-0510-y
+ 
+ Raw globe-wide nightlight data (Harmonized_DN_NTL_[year]_calDMSP.tif and 
+ Harmonized_DN_NTL_[year]_simVIIRS.tif files) is not redistributed with this paper, 
+ but can be downloaded from the paper above at https://doi.org/10.6084/m9.figshare.9828827.v2. 
+ Then the DRC data can be extracted for the 2001-2008 period using the following code.
+ 
+ The DRC extracted data is provided as an RData file, which is a 175 Mb file 
+ stored using Git Large File Storage on GitHub. Extra steps may be required
+ for retrieval, please check this repository README file.
+ 
+#### 9.2. MEAN
+
+ This section calculates the mean nightlight values and processes the data to analyze trends. 
+ Specifically, it performs the following steps:
+ 
+ 1. **Calculate Mean Nightlight Values**: For each geographic index and year, it calculates 
+ the mean nightlight intensity, ignoring missing values. This helps in understanding the 
+ average nightlight levels over time.
+ 
+ 2. **Threshold Adjustment**: It creates a modified dataset where nightlight values less 
+ than 30 are set to zero, to focus on significant nightlight intensities. This adjustment 
+ is useful for distinguishing areas with notable nightlight activity from those with minimal 
+ or no activity.
+ 
+ 3. **Calculate Mean for Adjusted Data**: Similar to step 1, it calculates the mean nightlight 
+ values for the adjusted dataset to analyze trends in significant nightlight intensities.
+ 
+#### 9.3. TRENDS
+
+
+ This section calculates trends in nightlight data over specific periods using linear regression models. 
+ It separates the data into two eras: the DMSP era (up to 2011) and the VIIRS era (from 2014 onwards). 
+ For each era, it fits separate linear models to determine the trends in nightlight intensity. 
+ The calculated trends are then combined into a single dataset, providing insights into changes in 
+ nightlight intensity over time. Similar calculations are performed for both the original nightlight 
+ data and the modified dataset where nightlight values below 30 are set to zero. This helps to 
+ understand the impact of low-intensity nightlight values on overall trends.

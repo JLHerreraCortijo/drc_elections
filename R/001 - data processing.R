@@ -529,7 +529,7 @@ merged %<>% dplyr::full_join(merged.2011_2006,by="index.2006")
 # Clean vars no longer needed
 rm(list=setdiff(ls(),c("merged","kinshasa.subprov")))
 
-# Arrange the data and save
+# Arrange the data
 
 data <- merged %>% dplyr::mutate(
   province=dplyr::case_when(!is.na(index.2018)~province.2018, # Create common index across years
@@ -1206,7 +1206,7 @@ data %<>%  dplyr::mutate(
 #   
 # 1. **Filtering Voting Sites**: The script navigates through multiple nested 
 # data structures, filtering out voting sites where the number of voters is not 
-# available or is zero.
+# available.
 # 2. **Counting Voting Sites**: For each administrative level (e.g., circonscription, 
 # ville.territoire), it counts the number of voting sites that reported zero voters.
 # 3. **Aggregating Data**: These counts are aggregated at higher administrative 
