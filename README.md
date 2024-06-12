@@ -1,8 +1,51 @@
 ## Large File Storage Support
 
-This project uses git large file storage to store the nightlight data. Please, make sure that support for git large file storage is installed before cloning it. Please check for more information at https://docs.github.com/en/repositories/working-with-files/managing-large-files
+This project uses git large file storage to store the nightlight data. Please, 
+make sure that support for git large file storage is installed before cloning it. 
+Please check for more information at 
+https://docs.github.com/en/repositories/working-with-files/managing-large-files
 
 ## Preprocessing
+
+The preprocessing script (R/001 - data processing) is designed to meticulously 
+prepare election data spanning three different years—2006, 2011, and 2018—for 
+subsequent analysis. Given the diverse nature of the data sources and the specific 
+requirements of electoral studies, this section employs a series of detailed 
+steps to ensure data consistency, accuracy, and usability. The primary focus is 
+on handling discrepancies across datasets, normalizing data structures, and 
+creating a unified framework that supports robust and comprehensive analysis.
+
+The data preprocessing involves several key steps:
+1. **Data Reading and Cleaning**: This step includes importing data from various 
+Excel files, removing irrelevant rows and columns, and merging datasets where 
+necessary. Specific adjustments are made to handle unique identifiers and ensure 
+alignment across different datasets.
+2. **Column Renaming and Nesting**: The data is reorganized to nest information 
+about candidates and votes in a structured format. This involves standardizing 
+column names for consistency and clarity across the datasets from different years.
+3. **Geographic Organization and Indexing**: Election data is indexed and nested 
+by geographic and administrative divisions, such as provinces, cities, and 
+constituencies. This step addresses inconsistencies in geographic names and ensures 
+that data is uniformly formatted for easier comparison.
+4. **Data Matching Across Elections**: A multi-step process is implemented to 
+match geographic names across different years, accommodating variations in naming 
+conventions and ensuring that data can be accurately compared.
+5. **Data Merging**: Utilizing the established indexes, datasets from different 
+years are merged to create a comprehensive view that supports longitudinal analysis.
+6. **Derived Quantities Calculation**: This involves estimating and aggregating 
+registered voters, total votes, and specific candidate votes across various 
+administrative levels, enhancing the dataset's analytical depth.
+7. **Geographic Harmonization**: Geographic data is aligned with the electoral 
+dataset, ensuring consistency in spatial analysis.
+8. **Conflict Data Integration**: Conflict data is integrated to provide a 
+contextual understanding of the election periods, categorized by types of 
+violence and involved parties.
+9. **Nightlight Data Analysis**: Nightlight data is processed to analyze trends 
+over time, providing additional context for the electoral analysis.
+
+Each of these steps is critical in transforming raw election data into a 
+structured and analyzable format, facilitating a thorough and nuanced 
+understanding of electoral trends and patterns.
 
 ### 1-READ DATA
 
@@ -423,11 +466,16 @@ villes matches across elections, even if the actual names are different.
 #### 8.1 - AGGREGATE CONFLICT DATA FOR EACH ELECTION AND MAP REGION
 
  This section aggregates conflict data for each election period and map region, 
- focusing on conflicts from the five years preceding each election. The script 
+ focusing on conflicts from the years preceding each election. The script 
  performs the following tasks:
    
  1. **Assign Election Periods**: Categorizes conflict events into election periods 
  based on their dates.
+ 
+    - 2006: from 2001-01-17 to 2006-07-30
+    - 2011: from 2006-07-31 to 2011-11-28
+    - 2018: from 2011-11-29 to 2018-12-30
+ 
  2. **Filter Relevant Conflicts**: Retains only conflict events that fall within 
  the specified election periods.
  3. **Group and Nest Data**: Groups conflicts by data area and election period, 
@@ -435,9 +483,9 @@ villes matches across elections, even if the actual names are different.
  4. **Summarize Conflict Data**: Counts the number of conflicts and related 
  deaths for each election period.
  5. **Aggregate by Conflict Type**: Groups and counts conflicts by type of 
- violence, further categorizing them based on involved parties.
- 6. **Clean Environment**: Keeps only the relevant variables for further 
- analysis, ensuring a clean workspace.
+ violence, further categorizing them based on involved parties. side_a is modified
+ to aggregate non DRC State participants as "Foreign" and DRC State participants as
+ "DRC."
  
  By organizing and summarizing conflict data in this manner, this section 
  facilitates detailed analysis of conflict patterns in relation to election 
@@ -449,7 +497,7 @@ villes matches across elections, even if the actual names are different.
  actor types, ensuring all actors are accounted for and correctly classified. The steps include:
    
  1. **Read Actor Types**: Loads data on conflict actors and their classifications 
- from an Excel file.
+ from an Excel file (data/DRC armed groups in UCDP dataset Rwanda and Uganda.xlsx).
  2. **Filter Conflict Data**: Ensures that the conflict dataset only includes 
  actors present in the actor types list.
  3. **Add Actor Type Information**: Merges actor type classifications into the 
@@ -464,7 +512,7 @@ villes matches across elections, even if the actual names are different.
  7. **Calculate Total Conflicts and Deaths**: Aggregates total counts across all 
  years and ensures consistency with the original data.
  8. **Export Results**: Summarizes the data and exports it to an Excel file for 
- further analysis.
+ further analysis (results/Conflict by actor table type 1.xlsx, results/Conflict by actor table type 2.xlsx, ).
  
  This process standardizes conflict actor data and provides a structured summary 
  for analyzing the impact of different actor types in conflicts.
@@ -473,18 +521,18 @@ villes matches across elections, even if the actual names are different.
 
 #### 9.1. READ DATA
 
- Raw nightlight data obtained from Li, X., Zhou, Y., Zhao, M. et al. A harmonized 
+ Raw nightlight data was obtained from Li, X., Zhou, Y., Zhao, M. et al. A harmonized 
  global nighttime light dataset 1992–2018. Sci Data 7, 168 (2020).
   https://doi.org/10.1038/s41597-020-0510-y
  
  Raw globe-wide nightlight data (Harmonized_DN_NTL_[year]_calDMSP.tif and 
  Harmonized_DN_NTL_[year]_simVIIRS.tif files) is not redistributed with this paper, 
- but can be downloaded from the paper above at https://doi.org/10.6084/m9.figshare.9828827.v2. 
+ but can be downloaded from the cited paper above at https://doi.org/10.6084/m9.figshare.9828827.v2. 
  Then the DRC data can be extracted for the 2001-2008 period using the following code.
  
  The DRC extracted data is provided as an RData file, which is a 175 Mb file 
  stored using Git Large File Storage on GitHub. Extra steps may be required
- for retrieval, please check this repository README file.
+ for retrieval, please check the Large File Storage Support section on this README file.
  
 #### 9.2. MEAN
 
@@ -495,10 +543,8 @@ villes matches across elections, even if the actual names are different.
  the mean nightlight intensity, ignoring missing values. This helps in understanding the 
  average nightlight levels over time.
  
- 2. **Threshold Adjustment**: It creates a modified dataset where nightlight values less 
- than 30 are set to zero, to focus on significant nightlight intensities. This adjustment 
- is useful for distinguishing areas with notable nightlight activity from those with minimal 
- or no activity.
+ 2. **Threshold Adjustment for Urban Areas**: It creates a modified dataset where nightlight values less 
+ than 30 are set to zero. This threshold is suggested by Li et al. (2020) to identify urban areas.
  
  3. **Calculate Mean for Adjusted Data**: Similar to step 1, it calculates the mean nightlight 
  values for the adjusted dataset to analyze trends in significant nightlight intensities.
@@ -511,5 +557,4 @@ villes matches across elections, even if the actual names are different.
  For each era, it fits separate linear models to determine the trends in nightlight intensity. 
  The calculated trends are then combined into a single dataset, providing insights into changes in 
  nightlight intensity over time. Similar calculations are performed for both the original nightlight 
- data and the modified dataset where nightlight values below 30 are set to zero. This helps to 
- understand the impact of low-intensity nightlight values on overall trends.
+ data and the modified dataset where nightlight values below 30 are set to zero.

@@ -2247,10 +2247,8 @@ if(!file.exists(here::here("data/nightlight.RData"))){
 # the mean nightlight intensity, ignoring missing values. This helps in understanding the 
 # average nightlight levels over time.
 # 
-# 2. **Threshold Adjustment**: It creates a modified dataset where nightlight values less 
-# than 30 are set to zero, to focus on significant nightlight intensities. This adjustment 
-# is useful for distinguishing areas with notable nightlight activity from those with minimal 
-# or no activity.
+# 2. **Threshold Adjustment for Urban Areas**: It creates a modified dataset where nightlight values less 
+# than 30 are set to zero. This threshold is suggested by Li et al. (2020) to identify urban areas.
 # 
 # 3. **Calculate Mean for Adjusted Data**: Similar to step 1, it calculates the mean nightlight 
 # values for the adjusted dataset to analyze trends in significant nightlight intensities.
@@ -2299,8 +2297,7 @@ rm(nightlight_gt30)
 # For each era, it fits separate linear models to determine the trends in nightlight intensity. 
 # The calculated trends are then combined into a single dataset, providing insights into changes in 
 # nightlight intensity over time. Similar calculations are performed for both the original nightlight 
-# data and the modified dataset where nightlight values below 30 are set to zero. This helps to 
-# understand the impact of low-intensity nightlight values on overall trends.
+# data and the modified dataset where nightlight values below 30 are set to zero. 
 
 # Calculate trends for nightlight_mean data
 trends_nightlight_mean <- nightlight_mean %>% 
