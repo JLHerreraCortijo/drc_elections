@@ -1751,7 +1751,7 @@ ged201 %<>% dplyr::mutate(type = dplyr::case_when(
 rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "ged201", "data.map.index")))
 
 
-##### 8.1 - AGGREGATE CONFLICT DATA FOR EACH ELECTION AND MAP REGION #####
+##### 8.1-AGGREGATE CONFLICT DATA FOR EACH ELECTION AND MAP REGION #####
 
 # This section aggregates conflict data for each election period and map region, 
 # focusing on conflicts from the five years preceding each election. The script 
@@ -1837,7 +1837,7 @@ conflict.aggregated_by_type %<>% dplyr::filter(n.conflicts > 0)
 # Clean up the environment, keeping only relevant variables
 rm(list = setdiff(ls(), c("data", "kinshasa.subprov", "congo.territoire.borders", "ged201", "conflict.aggregated", "conflict.aggregated_by_type", "data.map.index")))
 
-##### 8.2 - RECODING CONFLICT ACTORS #####
+##### 8.2-RECODING CONFLICT ACTORS #####
 
 # This section processes conflict data to categorize and summarize conflicts by 
 # actor types, ensuring all actors are accounted for and correctly classified. The steps include:
@@ -2141,8 +2141,39 @@ actor_type_2_territories <- dplyr::bind_rows(
   tidyr::separate(election, c("drop", "year"), sep = "_") %>% dplyr::select(-drop) %>%
   dplyr::mutate(year = as.integer(year))
 
+# This fragment ensures that each unique side pair is consistently 
+# represented, sums numeric conflict data within each group, and verifies 
+# that the transformation does not alter the number of rows in the dataset.
 
-#### 9 - NIGHTLIGHT DATA ####
+
+# Store the original number of rows for later validation
+nrow_orig <- nrow(actor_type_2_territories)
+
+# Sort the data by side_a and side_b
+actor_type_2_territories %<>% dplyr::arrange(side_a, side_b) %>% 
+  # Create a unique identifier for each side pair by sorting and concatenating side_a and side_b
+  dplyr::mutate(side_pair = apply(actor_type_2_territories[c("side_a", "side_b")], 1, function(x) paste(sort(x), collapse = "-"))) %>%
+  # Group by year, index.data, and the side_pair identifier
+  dplyr::group_by(year, index.data, side_pair) %>%
+  # Summarize the numeric columns by summing them within each group
+  dplyr::summarise(dplyr::across(tidyselect:::where(is.numeric), sum), .groups = 'drop') %>%
+  # Row-wise operation to split the side_pair back into side_a and side_b
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    side_a = stringr::str_split(side_pair, "-")[[1]][1],
+    side_b = stringr::str_split(side_pair, "-")[[1]][2]
+  ) %>%
+  # Select relevant columns and arrange by side_a, side_b, year, and index.data
+  dplyr::select(side_a, side_b, year, index.data, tidyselect:::where(is.numeric)) %>% 
+  dplyr::arrange(side_a, side_b, year, index.data)
+
+# Validate that the number of rows remains the same as the original
+stopifnot(nrow(actor_type_2_territories) == nrow_orig)
+
+
+
+
+#### 9-NIGHTLIGHT DATA ####
 
 ##### 9.1. READ DATA #####
 
@@ -2357,9 +2388,214 @@ trends_nightlight_gt30_mean <- nightlight_gt30_mean %>%
     
   })) %>% tidyr::unnest(data)
 
+#### 10-ACLED data ####
+
+# This section processes the ACLED conflict event data for the Democratic Republic 
+# of Congo from 2001 to 2018. 
+# It performs several key tasks:
+# 
+# 1. **Data Loading and Filtering**: The ACLED data is loaded from a CSV file, 
+# dates are converted to a standard format, and events within the specified date 
+# range are retained.
+# 2. **Categorizing Time Periods**: Events are categorized into three time periods: 
+# 2001-2006, 2006-2011, and 2011-2018.
+# 3. **Standardizing Location Names**: The admin2 column is cleaned and standardized 
+# to create a consistent index for geographic locations.
+# 4. **Assigning Actor Types**: Actor type data is read from an external Excel 
+# file and matched with event actors to categorize them into predefined groups.
+# 5. **Summarizing Events**: The data is filtered for specific event types and 
+# summarized to calculate the number of deaths and conflicts for each period, location, and event type.
+# 6. **Data Validation**: Checks are performed to ensure data integrity and 
+# correctness after transformations.
+# 7. **Exporting Data**: The processed and filtered data is exported to an Excel 
+# file for further analysis and reporting.
+# 
+# Raleigh, C., Kishi, R. & Linke, A. Political instability patterns are obscured by conflict
+# dataset scope conditions, sources, and coding choices. Humanit Soc Sci Commun 10,
+# 74 (2023). https://doi.org/10.1057/s41599-023-01559-4
+# 
+# From https://acleddata.com/download/35181/ :
+# If using ACLED data in a visual, graphic, or map of your own, please attribute the source
+# data clearly and prominently on the visual itself or within the key/legend and include a link
+# to ACLED’s website. This can be in small print on the bottom of the image. Please note your
+# date of data access. These citations should be included for both standalone infographics as
+# well as for tables/figures within a larger report. If unable to include a link on a static visual
+# file, please note “acleddata.com” as the source URL. When sharing such an image on social
+# media, please (1) be sure that the citation is not cut off, and (2) please tag ACLED (Twitter;
+#                                                                                       Facebook; LinkedIn).
+
+# Load ACLED data from a CSV file
+ACLED_data <- data.table::fread(here::here("data/ACLED data/1900-01-01-2022-12-20-Democratic_Republic_of_Congo.csv"))
+
+# Convert the event_date column to Date format
+ACLED_data %<>% dplyr::mutate(event_date = lubridate::dmy(event_date))
+
+# Filter the data for events between January 17, 2001, and December 30, 2018
+ACLED_data %<>% dplyr::filter(event_date >= lubridate::ymd("2001-01-17") & event_date <= lubridate::ymd("2018-12-30"))
+
+# Add a time period column based on event_date
+ACLED_data %<>% dplyr::mutate(time_period = dplyr::case_when(
+  dplyr::between(event_date, lubridate::ymd("2001-01-17"), lubridate::ymd("2006-07-30")) ~ "01-06",
+  dplyr::between(event_date, lubridate::ymd("2006-07-31"), lubridate::ymd("2011-11-28")) ~ "06-11",
+  dplyr::between(event_date, lubridate::ymd("2011-11-29"), lubridate::ymd("2018-12-30")) ~ "11-18",
+  TRUE ~ NA_character_
+))
+
+
+# ACLED_data %$% table(time_period,useNA = "ifany")
+# time_period
+# 01-06 06-11 11-18 
+# 1696  2579  7655 
+
+# event_type
+
+# ACLED_data %$% table(event_type)
+# event_type
+# Battles Explosions/Remote violence                   Protests 
+# 4990                        108                        865 
+# Riots     Strategic developments Violence against civilians 
+# 714                       1269                       3984 
+
+# sub_event_type
+
+# ACLED_data %$% table(sub_event_type)
+# sub_event_type
+# Abduction/forced disappearance                           Agreement 
+# 730                                 141 
+# Air/drone strike                         Armed clash 
+# 21                                4121 
+# Arrests                              Attack 
+# 60                                2847 
+# Change to group/activity               Disrupted weapons use 
+# 339                                  10 
+# Excessive force against protesters        Government regains territory 
+# 80                                 552 
+# Grenade    Headquarters or base established 
+# 26                                 102 
+# Looting/property destruction                        Mob violence 
+# 317                                 220 
+# Non-state actor overtakes territory   Non-violent transfer of territory 
+# 317                                 237 
+# Other                    Peaceful protest 
+# 63                                 590 
+# Protest with intervention       Remote explosive/landmine/IED 
+# 195                                  20 
+# Sexual violence   Shelling/artillery/missile attack 
+# 407                                  40 
+# Suicide bomb               Violent demonstration 
+# 1                                 494                                1                                 494 
+
+# fatalities
+
+# ACLED_data$fatalities %>% summary
+# Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+# 0.000    0.000    0.000    3.162    1.000 1037.000 
+
+# Clean the admin2 column to create a standardized index
+ACLED_data %<>% dplyr::mutate(index = stringr::str_to_lower(admin2)) %>%
+  dplyr::mutate(index = dplyr::case_when(
+    index == "bunia" ~ "irumu",
+    index == "aba" ~ "faradje",
+    index == "isiro" ~ "rungu",
+    index == "bangu" ~ "songololo",
+    index == "kalima" ~ "kailo",
+    index == "kaoze" ~ "moba",
+    index == "namoya" ~ "kabambare",
+    index == "tshimbulu" ~ "dibaya",
+    index == "makanza" ~ "mankanza",
+    index == "" ~ "kinshasa",
+    TRUE ~ index
+  ))
+
+# Read actor type data from an Excel file
+actor_type2 <- readxl::read_excel("data/DRC armed groups in ACLED dataset.xlsx", 2) %>% dplyr::select(actor, type2)
+# Create a named vector for actor types
+actor_type2 <- actor_type2$type2 %>% magrittr::set_names(actor_type2$actor)
+
+# Ensure all actor1 and actor2 values are in the actor_type2 vector
+stopifnot(all(unique(ACLED_data$actor1) %in% names(actor_type2)))
+stopifnot(all(unique(ACLED_data$actor2) %in% c("", names(actor_type2))))
+
+# Add actor type columns to the data
+ACLED_data %<>% dplyr::mutate(actor1_type2 = actor_type2[actor1])
+ACLED_data %<>% dplyr::mutate(actor2_type2 = actor_type2[actor2])
+
+# ACLED_data %>% dplyr::pull("event_type") %>% unique
+# [1] "Riots"                      "Strategic developments"     "Protests"                  
+# [4] "Violence against civilians" "Battles"                    "Explosions/Remote violence"
+
+# Filter data for specific event types and summarize the results
+ACLED_data_models <- ACLED_data %>% dplyr::filter(event_type %in% c(
+  "Riots", "Violence against civilians", "Battles", "Explosions/Remote violence"
+)) %>% dplyr::group_by(time_period, index, event_type) %>%
+  dplyr::summarise(n.deaths = sum(fatalities, na.rm = TRUE), n.conflicts = dplyr::n(), .groups = "drop") %>%
+  dplyr::mutate(year = c("01-06" = 2006, "06-11" = 2011, "11-18" = 2018)[time_period])
+
+# Filter for specific event types and ensure the data is correct
+ACLED_actor_type_2_territories <- ACLED_data %>% dplyr::filter(event_type %in% c(
+  "Riots", "Violence against civilians", "Battles", "Explosions/Remote violence"
+))
+
+# Test that the filtered data contains the correct event types
+stopifnot(all(unique(ACLED_actor_type_2_territories$event_type) %in% c(
+  "Riots", "Violence against civilians", "Battles", "Explosions/Remote violence"
+)))
+
+# Add a new column 'year' based on 'time_period'
+ACLED_actor_type_2_territories %<>% dplyr::mutate(year = c("01-06" = 2006, "06-11" = 2011, "11-18" = 2018)[time_period])
+
+# Test that the new column 'year' has been added and has correct values
+stopifnot(all(names(ACLED_actor_type_2_territories) == c(
+  'data_id', 'iso', 'event_id_cnty', 'event_id_no_cnty', 'event_date', 'year', 'time_precision', 
+  'event_type', 'sub_event_type', 'actor1', 'assoc_actor_1', 'inter1', 'actor2', 'assoc_actor_2', 
+  'inter2', 'interaction', 'region', 'country', 'admin1', 'admin2', 'admin3', 'location', 'latitude', 
+  'longitude', 'geo_precision', 'source', 'source_scale', 'notes', 'fatalities', 'timestamp', 'iso3', 
+  'time_period', 'index', 'actor1_type2', 'actor2_type2'
+)))
+stopifnot(all(unique(ACLED_actor_type_2_territories$year) %in% c(2006, 2011, 2018)))
+
+# Select required columns for analysis
+ACLED_actor_type_2_territories %<>% dplyr::select(
+  index.data = index, side_a = actor1_type2, side_b = actor2_type2, year, fatalities
+)
+
+# Test that only the required columns remain
+stopifnot(all(names(ACLED_actor_type_2_territories) == c('index.data', 'side_a', 'side_b', 'year', 'fatalities')))
+
+# Save initial total deaths and count before group_by and summarise
+initial_total_deaths <- sum(ACLED_actor_type_2_territories$fatalities, na.rm = TRUE)
+initial_total_count <- nrow(ACLED_actor_type_2_territories)
+
+# Group by side_a, side_b, year, and index.data, then summarise the data
+ACLED_actor_type_2_territories %<>% dplyr::group_by(side_a, side_b, year, index.data) %>% 
+  dplyr::summarise(n.deaths = sum(fatalities, na.rm = TRUE), n.conflicts = dplyr::n(), .groups = "drop")
+
+# Check that total deaths and count are still the same after group_by and summarise
+final_total_deaths <- sum(ACLED_actor_type_2_territories$n.deaths)
+final_total_count <- sum(ACLED_actor_type_2_territories$n.conflicts)
+
+stopifnot(initial_total_deaths == final_total_deaths)
+stopifnot(initial_total_count == final_total_count)
+
+# Test that the data is grouped correctly and summarisation has been done
+stopifnot(length(unique(paste(
+  ACLED_actor_type_2_territories$side_a, 
+  ACLED_actor_type_2_territories$side_b, 
+  ACLED_actor_type_2_territories$year, 
+  ACLED_actor_type_2_territories$index.data
+))) == nrow(ACLED_actor_type_2_territories))
+
+# Export detailed ACLED data to an Excel file
+ACLED_data %>% dplyr::filter(event_type %in% c(
+  "Riots", "Violence against civilians", "Battles", "Explosions/Remote violence"
+) & !is.na(actor2)) %>%
+  dplyr::mutate(election = c("01-06" = 2006, "06-11" = 2011, "11-18" = 2018)[time_period], dyad = paste0(actor1_type2, "_", actor2_type2)) %>%
+  dplyr::select(territory = index, dyad, actor1, actor2, election, notes, fatalities, event_date) %>%
+  dplyr::arrange(territory, dyad, actor1, actor2, event_date) %>% writexl::write_xlsx("results/ACLED_detailed.xlsx")
+
 
 ##### SAVE DATA #####
 
 
-save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories,file=here::here("results/data.RData"))
+save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,file=here::here("results/data.RData"))
 

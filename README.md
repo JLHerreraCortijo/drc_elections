@@ -37,7 +37,7 @@ registered voters, total votes, and specific candidate votes across various
 administrative levels, enhancing the dataset's analytical depth.
 7. **Geographic Harmonization**: Geographic data is aligned with the electoral 
 dataset, ensuring consistency in spatial analysis.
-8. **Conflict Data Integration**: Conflict data is integrated to provide a 
+8. **Conflict Data Integration**: Conflict data (UCDP and ACLED) is integrated to provide a 
 contextual understanding of the election periods, categorized by types of 
 violence and involved parties.
 9. **Nightlight Data Analysis**: Nightlight data is processed to analyze trends 
@@ -558,3 +558,39 @@ villes matches across elections, even if the actual names are different.
  The calculated trends are then combined into a single dataset, providing insights into changes in 
  nightlight intensity over time. Similar calculations are performed for both the original nightlight 
  data and the modified dataset where nightlight values below 30 are set to zero.
+ 
+### 10-ACLED data
+
+This section processes the ACLED conflict event data for the Democratic Republic 
+of Congo from 2001 to 2018. 
+It performs several key tasks:
+
+1. **Data Loading and Filtering**: The ACLED data is loaded from ```data/ACLED data/1900-01-01-2022-12-20-Democratic_Republic_of_Congo.csv```, 
+dates are converted to a standard format, and events within the specified date 
+range are retained.
+2. **Categorizing Time Periods**: Events are categorized into three time periods: 
+2001-2006, 2006-2011, and 2011-2018.
+3. **Standardizing Location Names**: The admin2 column is cleaned and standardized 
+to create a consistent index for geographic locations.
+4. **Assigning Actor Types**: Actor type data is read from ```data/DRC armed groups in ACLED dataset.xlsx``` and matched with event actors to categorize them into predefined groups.
+5. **Summarizing Events**: The data is filtered for specific event types and 
+summarized to calculate the number of deaths and conflicts for each period, location, and event type.
+6. **Data Validation**: Checks are performed to ensure data integrity and 
+correctness after transformations.
+7. **Exporting Data**: The processed and filtered data is exported to ```results/ACLED_detailed.xlsx``` for further analysis and reporting.
+
+
+Raleigh, C., Kishi, R. & Linke, A. Political instability patterns are obscured by conflict
+dataset scope conditions, sources, and coding choices. Humanit Soc Sci Commun 10,
+74 (2023). https://doi.org/10.1057/s41599-023-01559-4
+
+
+From https://acleddata.com/download/35181/ :
+If using ACLED data in a visual, graphic, or map of your own, please attribute the source
+data clearly and prominently on the visual itself or within the key/legend and include a link
+to ACLED’s website. This can be in small print on the bottom of the image. Please note your
+date of data access. These citations should be included for both standalone infographics as
+well as for tables/figures within a larger report. If unable to include a link on a static visual
+file, please note “acleddata.com” as the source URL. When sharing such an image on social
+media, please (1) be sure that the citation is not cut off, and (2) please tag ACLED (Twitter;
+                                                                                      Facebook; LinkedIn).
