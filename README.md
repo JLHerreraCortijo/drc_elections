@@ -592,5 +592,21 @@ to ACLED’s website. This can be in small print on the bottom of the image. Ple
 date of data access. These citations should be included for both standalone infographics as
 well as for tables/figures within a larger report. If unable to include a link on a static visual
 file, please note “acleddata.com” as the source URL. When sharing such an image on social
-media, please (1) be sure that the citation is not cut off, and (2) please tag ACLED (Twitter;
-                                                                                      Facebook; LinkedIn).
+media, please (1) be sure that the citation is not cut off, and (2) please tag ACLED (Twitter; Facebook; LinkedIn).
+
+### 11-MERGE VILLES INTO THEIR TERRITORIES
+
+This section identifies and merges smaller administrative regions (villes) into 
+their larger surrounding territories for more accurate data analysis. The process involves:
+
+  1. **Identifying Intersections**: Checking which villes should be merged by 
+analyzing geographic intersections of territory borders.
+  2. **Creating Plots for Manual Checking**: Generating plots of intersection 
+geometries for manual verification.
+  3. **Defining Merges**: Specifying which villes should be merged into which territories.
+  4. **Updating Labels**: Adjusting the labels for the villes being merged.
+  5. **Merging Data**: Using a custom function to merge the data of specified villes 
+into their corresponding territories.
+6. **Summarizing Results**: Aggregating various metrics such as voter counts 
+and election results for the merged territories, and calculating additional 
+percentages and turnout rates.

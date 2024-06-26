@@ -2593,9 +2593,105 @@ ACLED_data %>% dplyr::filter(event_type %in% c(
   dplyr::select(territory = index, dyad, actor1, actor2, election, notes, fatalities, event_date) %>%
   dplyr::arrange(territory, dyad, actor1, actor2, event_date) %>% writexl::write_xlsx("results/ACLED_detailed.xlsx")
 
+#### 11-MERGE VILLES INTO THEIR TERRITORIES ####
 
-##### SAVE DATA #####
+# This section identifies and merges smaller administrative regions (villes) into 
+# their larger surrounding territories for more accurate data analysis. The process involves:
+# 
+# 1. **Identifying Intersections**: Checking which villes should be merged by 
+# analyzing geographic intersections of territory borders.
+# 2. **Creating Plots for Manual Checking**: Generating plots of intersection 
+# geometries for manual verification.
+# 3. **Defining Merges**: Specifying which villes should be merged into which territories.
+# 4. **Updating Labels**: Adjusting the labels for the villes being merged.
+# 5. **Merging Data**: Using a custom function to merge the data of specified villes 
+# into their corresponding territories.
+# 6. **Summarizing Results**: Aggregating various metrics such as voter counts 
+# and election results for the merged territories, and calculating additional 
+# percentages and turnout rates.
+
+# Check which villes should be merged into their surrounding territories. Uncomment and run once
+
+# Calculate intersections of Congo territory borders and filter those with exactly 2 overlaps
+# territory_intersections <- sf::st_intersection(congo.territoire.borders) %>% dplyr::filter(n.overlaps == 2)
+
+# Filter out invalid geometries from the intersections
+# territory_intersections %<>% dplyr::filter(sf::st_is_valid(territory_intersections))
+
+# Extract geometries of the intersections
+# intersections_geometries <- territory_intersections %>% dplyr::pull("origins") %>% purrr::map(~{
+#   congo.territoire.borders %>% dplyr::slice(.x)
+# })
+
+# Create directory for saving intersection plots if it doesn't exist
+# if (!dir.exists(here::here("manuscript/intersections/"))) dir.create(here::here("manuscript/intersections/"))
+
+# Plot and save each intersection geometry for manual checking
+# intersections_geometries %>% purrr::walk2(1:length(.), ~{
+#   ggplot2::ggplot(.x) + ggplot2::geom_sf()
+#   ggplot2::ggsave(here::here(paste0("manuscript/intersections/", .y, ".png")))
+# })
+
+# Define villes that should be merged into their surrounding territories
+villes_to_merge <- c(
+  "beni ville" = "beni",
+  "kikwit" = "bulungu",
+  "kindu" = "kailo",
+  "likasi" = "kambove",
+  "mbuji-mayi" = "lupatapata",
+  "kolwezi" = "mutshatsha",
+  "mwene-ditu" = "luilu",
+  "tshela" = "luozi"
+)
+
+# Create a vector of labels for the villes to be merged
+villes_labels <- data %>% dplyr::filter(index %in% c(names(villes_to_merge), villes_to_merge)) %>%
+  dplyr::mutate(out = label %>% magrittr::set_names(index)) %>% dplyr::pull("out")
+
+# Update labels for villes to be merged
+villes_labels[names(villes_to_merge)] <- villes_labels[villes_to_merge]
+
+# Define a function to merge villes into their surrounding territories
+merge_villes <- function(df, labels = NA, index = "index") {
+  df %<>% dplyr::rename_with(.fn = ~ paste0(".index"), .cols = dplyr::one_of(index))
+  if (!is.na(labels)) {
+    df %<>% dplyr::mutate(dplyr::across(dplyr::one_of(labels), ~ dplyr::case_when(.index %in% names(villes_labels) ~ villes_labels[.index], TRUE ~ .)))
+  }
+  df %>%
+    dplyr::mutate(.index = dplyr::case_when(.index %in% names(villes_to_merge) ~ villes_to_merge[.index], TRUE ~ .index)) %>%
+    dplyr::rename_with(.fn = ~ paste0(index), .cols = dplyr::one_of(".index"))
+}
+
+# Apply the merge_villes function to the data and summarize the results
+data_villes_merged <- data %>% merge_villes("label") %>% dplyr::group_by(index) %>% dplyr::summarise(
+  label = unique(label),
+  province = unique(province),
+  dplyr::across(dplyr::starts_with("registered.voters_"), sum),
+  dplyr::across(dplyr::starts_with("voters_"), sum),
+  dplyr::across(dplyr::starts_with("total.votes_"), sum),
+  dplyr::across(dplyr::starts_with("kabila.votes_"), sum),
+  dplyr::across(dplyr::starts_with("ramazani.votes_"), sum),
+  dplyr::across(dplyr::starts_with("ballot.boxes_counted_"), sum),
+  dplyr::across(dplyr::starts_with("n.voting.sites_"), sum),
+  dplyr::across(dplyr::starts_with("zero.voters.sites_"), sum),
+  dplyr::across(dplyr::starts_with("fayulu.votes_"), sum),
+  dplyr::across(dplyr::starts_with("tshisekedi.votes_"), sum),
+  .groups = "drop"
+) %>% dplyr::mutate(
+  kabila.percent_2006 = kabila.votes_2006 / total.votes_2006,
+  kabila.percent_2011 = kabila.votes_2011 / total.votes_2011,
+  ramazani.percent_2018 = ramazani.votes_2018 / total.votes_2018,
+  fayulu.percent_2018 = fayulu.votes_2018 / total.votes_2018,
+  tshisekedi.percent_2018 = tshisekedi.votes_2018 / total.votes_2018,
+  turnout_2006 = total.votes_2006 / registered.voters_2006,
+  turnout_2011 = total.votes_2011 / registered.voters_2011,
+  turnout_2018 = total.votes_2018 / registered.voters_2018
+)
+
+rm(merge_villes, villes_to_merge, villes_labels)
+
+#### 12-SAVE DATA ####
 
 
-save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,file=here::here("results/data.RData"))
+save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,data_villes_merged,file=here::here("results/data.RData"))
 

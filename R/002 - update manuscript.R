@@ -137,8 +137,10 @@ make_dyad_labels <- function(df,var) df %>%
 
 document_path <- here::here("manuscript/main_CONFLICT.docx")
 
-# Figures are stored in the document/figures folder as png files. Figure files are updated only
+# Figures are stored in the manuscript/figures folder as png files. Figure files are updated only
 # if the corresponding update_FigX is TRUE
+
+figures_path <- here::here("manuscript/figures")
 
 update_Fig1 <- F
 fig1_width <- 6.5 # inches
@@ -267,85 +269,89 @@ dyad_labels <- names(dyad_labels) %>% purrr::map(~stringr::str_split(.x,"_") %>%
 dyad_labels <-  dyad_labels[unique(names(dyad_labels))]
 
 
-#### MAIN BODY ####
+#### FIGURES ####
+
+# Check that we have all the necessary subfolders
+
+if(!dir.exists(figures_path)) dir.create(figures_path)
 
 # Load data
 
-load(here::here("data/data.RData"))
+load(here::here("results/data.RData"))
+
+##### FIGURE 1 #####
+
+# This section processes election data to visualize the percentage of votes received 
+# by candidates Kabila and Ramazani in the years 2006, 2011, and 2018. 
+# The data is first filtered to include only relevant columns. 
+# Percentages of votes for each candidate in each year are then calculated. 
+# The data is restructured to have a single column for percentages and another 
+# for the corresponding year.
+# Percentages are scaled from 0 to 100, and non-administrative units like lakes 
+# are marked as not available.
+# The processed data is then merged with geographical shapefile data of the 
+# Congo territories.
+# Lakes are separated out for special coloring in the visualization.
+# Finally, the section generates and saves a plot showing the percentage of votes 
+# by territory for each year, with appropriate color scales and legends.
 
 
+# Select relevant columns from the data for analysis
+percentages <- dplyr::select(data, index, total.votes_2006, total.votes_2011, total.votes_2018, kabila.votes_2006, kabila.votes_2011, ramazani.votes_2018)
 
-stop("move to preprocess")
-# Check which  territories should be merged
+# Now, compute the percentages
+# Calculate the percentage of votes for each year and select relevant columns
+percentages %<>% dplyr::mutate(
+  # Calculate the percentage of Kabila votes in 2006
+  percentage_2006 = kabila.votes_2006 / total.votes_2006,
+  # Calculate the percentage of Kabila votes in 2011
+  percentage_2011 = kabila.votes_2011 / total.votes_2011,
+  # Calculate the percentage of Ramazani votes in 2018
+  percentage_2018 = ramazani.votes_2018 / total.votes_2018
+  # Select the index and all columns starting with "perc"
+) %>% dplyr::select(index, dplyr::starts_with("perc")) %>% dplyr::ungroup()
 
-# x <- sf::st_intersection(congo.territoire.borders) %>% dplyr::filter(n.overlaps ==2)
-# 
-# x %<>% dplyr::filter(sf::st_is_valid(x))
-# 
-# y <- x %>% dplyr::pull("origins") %>% purrr::map(~{
-#   congo.territoire.borders %>% dplyr::slice(.x)
-# })
-# 
-# y %>%  purrr::walk2(1:length(.),~{
-#   ggplot2::ggplot(.x) + geom_sf()
-#   ggsave(here::here(paste0("document/intersections/",.y,".png")))
-#   })
-# 
-# y[c(8,116,118,146,241,271,281,358,417)] %>% purrr::map(~.x %>% dplyr::mutate(area=st_area(.x)))
+# Pivot the data to have one map per year
+percentages %<>% tidyr::pivot_longer(cols = -c(index), names_to = "var", values_to = "percent")
 
-villes_to_merge <- c(
-  "beni ville"="beni",
-  "kikwit"="bulungu",
-  "kindu"="kailo",
-  "likasi"="kambove",
-  "mbuji-mayi"="lupatapata",
-  "kolwezi"="mutshatsha",
-  "mwene-ditu"="luilu",
-  "tshela"="luozi"
-)
+# Separate the year from the variable name
+percentages %<>% tidyr::separate(var, c("drop", "year"), sep = "_")
 
-villes_labels <- data %>% dplyr::filter(index %in% c(names(villes_to_merge),villes_to_merge)) %>%
-  dplyr::mutate(out=label %>% magrittr::set_names(index)) %>% dplyr::pull("out")
+# Convert the percentages to a scale from 0 to 100
+percentages %<>% dplyr::mutate(percent = percent * 100)
 
-villes_labels[names(villes_to_merge)] <- villes_labels[villes_to_merge]
+# Lakes are not administrative units, so show them as NAs
+percentages %<>% dplyr::bind_rows(data.frame(index = "administrative unit not available", year = c("2006", "2011", "2018")))
 
-merge_villes <- function(df,labels=NA,index="index"){
-  df %<>% dplyr::rename_with(.fn = ~ paste0(".index"),.cols = dplyr::one_of(index))
-  if(!is.na(labels)){
-    
-    df %<>% dplyr::mutate(dplyr::across(dplyr::one_of(labels),~dplyr::case_when(.index %in% names(villes_labels) ~ villes_labels[.index], TRUE ~ .)))
-  }
-  df %>% 
-    dplyr::mutate(.index=dplyr::case_when(.index %in% names(villes_to_merge) ~ villes_to_merge[.index], TRUE ~ .index)) %>% 
-    dplyr::rename_with(.fn = ~ paste0(index),.cols = dplyr::one_of(".index"))
-} 
+# Join percentages with shapefile data for mapping
+percentages.map <- dplyr::full_join(congo.territoire.borders, percentages, by = c("index.data" = "index"))
 
+# Extract lakes to plot them in a different color
+lakes <- dplyr::filter(percentages.map, index.data == "administrative unit not available")
 
+# Remove lakes from the main map data
+percentages.map %<>% dplyr::filter(index.data != "administrative unit not available")
 
-data_villes_merged <- data %>% merge_villes("label") %>% dplyr::group_by(index) %>% dplyr::summarise(
-  label=unique(label),
-  province=unique(province),
-  # dplyr::across(dplyr::starts_with("data_"),~purrr::map(.,~dplyr::bind_rows(.x))),
-  dplyr::across(dplyr::starts_with("registered.voters_"),sum),
-  dplyr::across(dplyr::starts_with("voters_"),sum),
-  dplyr::across(dplyr::starts_with("total.votes_"),sum),
-  dplyr::across(dplyr::starts_with("kabila.votes_"),sum),
-  dplyr::across(dplyr::starts_with("ramazani.votes_"),sum),
-  dplyr::across(dplyr::starts_with("ballot.boxes_counted_"),sum),
-  dplyr::across(dplyr::starts_with("n.voting.sites_"),sum),
-  dplyr::across(dplyr::starts_with("zero.voters.sites_"),sum),
-  dplyr::across(dplyr::starts_with("fayulu.votes_"),sum),
-  dplyr::across(dplyr::starts_with("tshisekedi.votes_"),sum),
-  .groups="drop"
-  
-) %>% dplyr::mutate(
-  kabila.percent_2006=kabila.votes_2006/total.votes_2006,
-  kabila.percent_2011=kabila.votes_2011/total.votes_2011,
-  ramazani.percent_2018=ramazani.votes_2018/total.votes_2018,
-  fayulu.percent_2018=fayulu.votes_2018/total.votes_2018,
-  tshisekedi.percent_2018=tshisekedi.votes_2018/total.votes_2018,
-  turnout_2006=total.votes_2006/registered.voters_2006,
-  turnout_2011=total.votes_2011/registered.voters_2011,
-  turnout_2018=total.votes_2018/registered.voters_2018
-)
+# Plot and save the figure
+Figure_1 <- ggplot2::ggplot(percentages.map, ggplot2::aes(fill = percent, color = "")) +
+  ggplot2::geom_sf() + # Plot the main map data
+  ggplot2::geom_sf(data = lakes, fill = "white") + # Plot lakes in white color
+  ggplot2::scale_color_manual(values = "gray30") + # Set the color scale for map outlines
+  ggplot2::scale_fill_gradient(name = "% Votes", guide = "colourbar", na.value = "gray50") + # Set the fill gradient for percentage votes
+  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) + # Customize legend for missing data
+  ggplot2::facet_wrap(~year, ncol = 2) + # Create separate panels for each year
+  ggplot2::theme_void() + # Remove background and axis
+  ggplot2::theme(
+    legend.position = "inside", # Position legend inside the plot
+    legend.position.inside = c(0.75, 0.25), # Coordinates for the legend position
+    strip.text = ggplot2::element_text(size = 18), # Customize the size of the strip text
+    legend.text = ggplot2::element_text(size = 12), # Customize the size of the legend text
+    legend.title = ggplot2::element_text(size = 14) # Customize the size of the legend title
+  )
+
+# Save the figure if update_Fig1 is TRUE
+if (update_Fig1) {
+  ggplot2::ggsave(file.path(figures_path, "Figure1.png"), Figure_1, width = fig1_width, height = fig1_height, units = "in", dpi = 300)
+}
+
 
