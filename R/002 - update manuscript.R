@@ -354,4 +354,68 @@ if (update_Fig1) {
   ggplot2::ggsave(file.path(figures_path, "Figure1.png"), Figure_1, width = fig1_width, height = fig1_height, units = "in", dpi = 300)
 }
 
+##### FIGURE 2#####
+
+# This section prepares data for Figure 2 by performing the following steps:
+
+# - Selects specific columns and converts the data into a data frame.
+# - Reshapes the data from long to wide format to compare percentages across different years.
+# - Calculates the percentage differences between years and removes the original year columns.
+# - Reshapes the data back to long format.
+# - Adds rows for administrative units with unavailable data.
+# - Merges this data with geographic borders.
+# - Separates out and handles lake data where administrative units are not available.
+# - Creates a plot using ggplot2, with customized aesthetics and themes, and saves it if required.
+
+# Select relevant columns and convert to data frame
+percentage.differences <- percentages.map %>%
+  dplyr::select(index.data, year, percent) %>%  # Select the columns 'index.data', 'year', and 'percent'
+  as.data.frame() %>%  # Convert to a data frame
+  dplyr::select(-geometry) %>%  # Remove the 'geometry' column
+  
+  # Reshape data from long to wide format
+  tidyr::pivot_wider(names_from = "year", values_from = "percent") %>%  # Spread 'year' column into multiple columns, with values from 'percent'
+  
+  # Calculate differences between years
+  dplyr::mutate(`2006-2011` = `2011` - `2006`, `2011-2018` = `2018` - `2011`) %>%  # Create new columns for year differences
+  
+  # Remove the original year columns
+  dplyr::select(-c(`2006`, `2011`, `2018`)) %>%  # Remove the original '2006', '2011', and '2018' columns
+  
+  # Reshape data back to long format
+  tidyr::pivot_longer(cols = -index.data, names_to = "period", values_to = "difference")  # Gather the year difference columns into 'period' and 'difference' columns
+
+# Add a row for administrative units not available
+percentage.differences %<>% dplyr::bind_rows(data.frame(index.data = "administrative unit not available", period = c("2006-2011", "2011-2018")))  # Append rows for missing administrative units
+
+# Join the differences with the geographic data
+percentage.differences.map <- congo.territoire.borders %>%
+  dplyr::full_join(percentage.differences, by = "index.data")  # Perform a full join to merge geographic borders with the percentage differences
+
+# Extract lake data (administrative units not available)
+lakes <- percentage.differences.map %>%
+  dplyr::filter(index.data == "administrative unit not available")  # Filter rows where 'index.data' is "administrative unit not available"
+
+# Filter out administrative units not available from the main map data
+percentage.differences.map %<>%
+  dplyr::filter(index.data != "administrative unit not available")  # Keep rows where 'index.data' is not "administrative unit not available"
+
+# Create the plot using ggplot2
+Figure_2 <- ggplot2::ggplot(percentage.differences.map, ggplot2::aes(fill = difference, color = "")) +  # Initialize ggplot with the map data and aesthetic mappings
+  ggplot2::geom_sf() +  # Add the main map layer
+  ggplot2::geom_sf(data = lakes, fill = "white") +  # Add lakes layer with white fill
+  ggplot2::scale_color_manual(values = "gray30") +  # Manually set the color scale
+  ggplot2::scale_fill_gradient2(name = "Change", guide = "colourbar", na.value = "gray50") +  # Set the fill gradient for the differences
+  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) +  # Add a legend for missing data
+  ggplot2::facet_wrap(~period, ncol = 2) +  # Create separate plots for each period
+  ggplot2::theme_void() +  # Use a theme with no background or axes
+  ggplot2::theme(legend.position = "bottom",
+                 strip.text = ggplot2::element_text(size = 18),
+                 legend.text = ggplot2::element_text(size = 12),
+                 legend.title = ggplot2::element_text(size = 14))  # Customize theme elements
+
+# Save the plot if update_Fig2 is TRUE
+if (update_Fig2) {
+  ggplot2::ggsave(file.path(figures_path,"Figure2.png"), Figure_2, width = fig2_width, height = fig2_height)  # Save the plot to a file
+}
 
