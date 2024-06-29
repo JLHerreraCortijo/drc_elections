@@ -1,0 +1,620 @@
+{
+  "index": {
+    "type": ["character"],
+    "description": ["Identifier for the territorial units used in the analysis."]
+  },
+  "label": {
+    "type": ["character"],
+    "description": ["Label associated with the territorial unit identifier."]
+  },
+  "province": {
+    "type": ["character"],
+    "description": ["The name of the province."]
+  },
+  "index.2006": {
+    "type": ["character"],
+    "description": ["Identifier for the territorial units used in the 2006 analysis."]
+  },
+  "data_2006": {
+    "circonscription": {
+      "Province": {
+        "type": ["character"],
+        "description": ["The name of the province."]
+      },
+      "Subprovince": {
+        "type": ["character"],
+        "description": ["The name of the subprovince or district within the province."]
+      },
+      "Territoire/ville": {
+        "type": ["character"],
+        "description": ["The name of the territory or city."]
+      },
+      "Votes valables": {
+        "type": ["numeric"],
+        "description": ["The number of valid votes cast."]
+      },
+      "Percent_participation": {
+        "type": ["numeric"],
+        "description": ["The percentage of voter participation."]
+      },
+      "votes.data": {
+        "candidate": {
+          "type": ["character"],
+          "description": ["The name of the candidate."]
+        },
+        "votes": {
+          "type": ["numeric"],
+          "description": ["The number of votes received by the candidate."]
+        },
+        "percent": {
+          "type": ["numeric"],
+          "description": ["The percentage of votes received by the candidate."]
+        }
+      },
+      "index": {
+        "type": ["character"],
+        "description": ["Identifier for the territorial units used in the analysis of the circonscription."]
+      },
+      "label": {
+        "type": ["character"],
+        "description": ["Label associated with the territorial unit identifier for the circonscription."]
+      },
+      "total.votes": {
+        "type": ["numeric"],
+        "description": ["The total number of votes cast."]
+      },
+      "kabila.votes": {
+        "type": ["numeric"],
+        "description": ["The number of votes received by candidate Kabila."]
+      },
+      "kabila.percent": {
+        "type": ["numeric"],
+        "description": ["The percentage of votes received by candidate Kabila."]
+      }
+    },
+    "index": {
+      "type": ["character"],
+      "description": ["Identifier for the territorial units used in the 2006 analysis."]
+    },
+    "label": {
+      "type": ["character"],
+      "description": ["Label associated with the territorial unit identifier for the 2006 analysis."]
+    },
+    "registered.voters": {
+      "type": ["numeric"],
+      "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2006 election."]
+    },
+    "voters": {
+      "type": ["numeric"],
+      "description": ["The number of voters who participated in the election."]
+    },
+    "total.votes": {
+      "type": ["numeric"],
+      "description": ["The total number of valid votes cast in the 2006 election, calculated by summing the votes cast across all administrative levels."]
+    },
+    "kabila.votes": {
+      "type": ["numeric"],
+      "description": ["The number of votes received by candidate Kabila in the election."]
+    },
+    "kabila.percent": {
+      "type": ["numeric"],
+      "description": ["The percentage of votes received by candidate Kabila in the election."]
+    }
+  },
+  "index.2011": {
+    "type": ["character"],
+    "description": ["Identifier for the territorial units used in the 2011 analysis."]
+  },
+  "data_2011": {
+    "circonscription": {
+      "Province": {
+        "type": ["character"],
+        "description": ["The name of the province."]
+      },
+      "Ville": {
+        "type": ["character"],
+        "description": ["The name of the city."]
+      },
+      "registered.voters": {
+        "type": ["numeric"],
+        "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2011 election."]
+      },
+      "voters": {
+        "type": ["numeric"],
+        "description": ["The number of voters who participated in the election."]
+      },
+      "ballot.boxes": {
+        "type": ["numeric"],
+        "description": ["The number of ballot boxes used in the election."]
+      },
+      "ballot.boxes_counted": {
+        "type": ["numeric"],
+        "description": ["The number of ballot boxes counted in the election."]
+      },
+      "votes.data": {
+        "candidate": {
+          "type": ["character"],
+          "description": ["The name of the candidate."]
+        },
+        "votes": {
+          "type": ["numeric"],
+          "description": ["The number of votes received by the candidate."]
+        },
+        "Candidate Number": {
+          "type": ["numeric"],
+          "description": ["The candidate's number."]
+        },
+        "First Name": {
+          "type": ["character"],
+          "description": ["The candidate's first name."]
+        },
+        "Second Name": {
+          "type": ["character"],
+          "description": ["The candidate's second name."]
+        },
+        "Third Name": {
+          "type": ["character"],
+          "description": ["The candidate's third name."]
+        },
+        "Fourth Name": {
+          "type": ["character"],
+          "description": ["The candidate's fourth name."]
+        },
+        "Fifth Name": {
+          "type": ["character"],
+          "description": ["The candidate's fifth name."]
+        },
+        "Percent": {
+          "type": ["character"],
+          "description": ["The percentage of votes received by the candidate."]
+        }
+      },
+      "index": {
+        "type": ["character"],
+        "description": ["Identifier for the territorial units used in the analysis of the circonscription."]
+      },
+      "label": {
+        "type": ["character"],
+        "description": ["Label associated with the territorial unit identifier for the circonscription."]
+      },
+      "total.votes": {
+        "type": ["numeric"],
+        "description": ["The total number of valid votes cast in the 2011 election, calculated by summing the votes cast across all administrative levels."]
+      },
+      "kabila.votes": {
+        "type": ["numeric"],
+        "description": ["The number of votes received by candidate Kabila."]
+      },
+      "kabila.percent": {
+        "type": ["numeric"],
+        "description": ["The percentage of votes received by candidate Kabila."]
+      }
+    },
+    "index": {
+      "type": ["character"],
+      "description": ["Identifier for the territorial units used in the 2011 analysis."]
+    },
+    "label": {
+      "type": ["character"],
+      "description": ["Label associated with the territorial unit identifier for the 2011 analysis."]
+    },
+    "registered.voters": {
+      "type": ["numeric"],
+      "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2011 election."]
+    },
+    "voters": {
+      "type": ["numeric"],
+      "description": ["The number of voters who participated in the election."]
+    },
+    "total.votes": {
+      "type": ["numeric"],
+      "description": ["The total number of valid votes cast in the 2011 election, calculated by summing the votes cast across all administrative levels."]
+    },
+    "kabila.votes": {
+      "type": ["numeric"],
+      "description": ["The number of votes received by candidate Kabila in the election."]
+    },
+    "kabila.percent": {
+      "type": ["numeric"],
+      "description": ["The percentage of votes received by candidate Kabila in the election."]
+    },
+    "ballot.boxes_counted": {
+      "type": ["numeric"],
+      "description": ["The number of ballot boxes counted in the election."]
+    }
+  },
+  "index.2018": {
+    "type": ["character"],
+    "description": ["Identifier for the territorial units used in the 2018 analysis."]
+  },
+  "data_2018": {
+    "circonscription": {
+      "ville.territoire": {
+        "province_id": {
+          "type": ["numeric"],
+          "description": ["The ID of the province."]
+        },
+        "province": {
+          "type": ["character"],
+          "description": ["The name of the province."]
+        },
+        "clcr_id": {
+          "type": ["numeric"],
+          "description": ["The ID of the local constituency."]
+        },
+        "clcr": {
+          "type": ["character"],
+          "description": ["The name of the local constituency."]
+        },
+        "circonscription_id": {
+          "type": ["numeric"],
+          "description": ["The ID of the electoral district."]
+        },
+        "circonscription": {
+          "type": ["character"],
+          "description": ["The name of the electoral district."]
+        },
+        "siege": {
+          "type": ["numeric"],
+          "description": ["The number of seats allocated to the district."]
+        },
+        "voting.sites": {
+          "site_vote_id": {
+            "type": ["numeric"],
+            "description": ["The ID of the voting site."]
+          },
+          "nom_sv": {
+            "type": ["character"],
+            "description": ["The name of the voting site."]
+          },
+          "adresse_sv": {
+            "type": ["character"],
+            "description": ["The address of the voting site."]
+          },
+          "ballot.boxes": {
+            "type": ["numeric"],
+            "description": ["The number of ballot boxes at the voting site."]
+          },
+          "ballot.boxes_counted": {
+            "type": ["numeric"],
+            "description": ["The number of ballot boxes counted at the voting site."]
+          },
+          "registered.voters": {
+            "type": ["numeric"],
+            "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level at the voting site in the 2018 election."]
+          },
+          "voters": {
+            "type": ["numeric"],
+            "description": ["The number of voters who participated in the election at the voting site."]
+          },
+          "votes.data": {
+            "candidate": {
+              "type": ["character"],
+              "description": ["The name of the candidate."]
+            },
+            "votes": {
+              "type": ["numeric"],
+              "description": ["The number of votes received by the candidate."]
+            },
+            "candidat_id": {
+              "type": ["numeric"],
+              "description": ["The ID of the candidate."]
+            },
+            "nom": {
+              "type": ["character"],
+              "description": ["The candidate's last name."]
+            },
+            "prenom": {
+              "type": ["character"],
+              "description": ["The candidate's first name."]
+            },
+            "postnom": {
+              "type": ["character"],
+              "description": ["The candidate's middle name."]
+            }
+          },
+          "total.votes": {
+            "type": ["numeric"],
+            "description": ["The total number of valid votes cast at the voting site, calculated by summing the votes cast across all nested administrative levels."]
+          },
+          "ramazani.votes": {
+            "type": ["numeric"],
+            "description": ["The number of votes received by candidate Ramazani."]
+          },
+          "ramazani.percent": {
+            "type": ["numeric"],
+            "description": ["The percentage of votes received by candidate Ramazani."]
+          },
+          "fayulu.votes": {
+            "type": ["numeric"],
+            "description": ["The number of votes received by candidate Fayulu."]
+          },
+          "fayulu.percent": {
+            "type": ["numeric"],
+            "description": ["The percentage of votes received by candidate Fayulu."]
+          },
+          "tshisekedi.votes": {
+            "type": ["numeric"],
+            "description": ["The number of votes received by candidate Tshisekedi."]
+          },
+          "tshisekedi.percent": {
+            "type": ["numeric"],
+            "description": ["The percentage of votes received by candidate Tshisekedi."]
+          }
+        },
+        "index": {
+          "type": ["character"],
+          "description": ["Identifier for the territorial units used in the analysis of the circonscription."]
+        },
+        "label": {
+          "type": ["character"],
+          "description": ["Label associated with the territorial unit identifier for the circonscription."]
+        },
+        "registered.voters": {
+          "type": ["numeric"],
+          "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2018 election."]
+        },
+        "voters": {
+          "type": ["numeric"],
+          "description": ["The number of voters who participated in the election."]
+        },
+        "total.votes": {
+          "type": ["numeric"],
+          "description": ["The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels."]
+        },
+        "ramazani.votes": {
+          "type": ["numeric"],
+          "description": ["The number of votes received by candidate Ramazani."]
+        },
+        "ramazani.percent": {
+          "type": ["numeric"],
+          "description": ["The percentage of votes received by candidate Ramazani."]
+        },
+        "ballot.boxes_counted": {
+          "type": ["numeric"],
+          "description": ["The number of ballot boxes counted."]
+        },
+        "n.voting.sites": {
+          "type": ["integer"],
+          "description": ["The number of voting sites."]
+        },
+        "zero.voters.sites": {
+          "type": ["integer"],
+          "description": ["The number of voting sites with zero voters."]
+        },
+        "fayulu.votes": {
+          "type": ["numeric"],
+          "description": ["The number of votes received by candidate Fayulu."]
+        },
+        "fayulu.percent": {
+          "type": ["numeric"],
+          "description": ["The percentage of votes received by candidate Fayulu."]
+        },
+        "tshisekedi.votes": {
+          "type": ["numeric"],
+          "description": ["The number of votes received by candidate Tshisekedi."]
+        },
+        "tshisekedi.percent": {
+          "type": ["numeric"],
+          "description": ["The percentage of votes received by candidate Tshisekedi."]
+        }
+      },
+      "index": {
+        "type": ["character"],
+        "description": ["Identifier for the territorial units used in the 2018 analysis."]
+      },
+      "label": {
+        "type": ["character"],
+        "description": ["Label associated with the territorial unit identifier for the 2018 analysis."]
+      },
+      "registered.voters": {
+        "type": ["numeric"],
+        "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2018 election."]
+      },
+      "voters": {
+        "type": ["numeric"],
+        "description": ["The number of voters who participated in the 2018 election."]
+      },
+      "total.votes": {
+        "type": ["numeric"],
+        "description": ["The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels."]
+      },
+      "ramazani.votes": {
+        "type": ["numeric"],
+        "description": ["The number of votes received by candidate Ramazani in the 2018 election."]
+      },
+      "ramazani.percent": {
+        "type": ["numeric"],
+        "description": ["The percentage of votes received by candidate Ramazani in the 2018 election."]
+      },
+      "ballot.boxes_counted": {
+        "type": ["numeric"],
+        "description": ["The number of ballot boxes counted in the 2018 election."]
+      },
+      "n.voting.sites": {
+        "type": ["integer"],
+        "description": ["The number of voting sites in the 2018 election."]
+      },
+      "zero.voters.sites": {
+        "type": ["integer"],
+        "description": ["The number of voting sites with zero voters in the 2018 election."]
+      },
+      "fayulu.votes": {
+        "type": ["numeric"],
+        "description": ["The number of votes received by candidate Fayulu in the 2018 election."]
+      },
+      "fayulu.percent": {
+        "type": ["numeric"],
+        "description": ["The percentage of votes received by candidate Fayulu in the 2018 election."]
+      },
+      "tshisekedi.votes": {
+        "type": ["numeric"],
+        "description": ["The number of votes received by candidate Tshisekedi in the 2018 election."]
+      },
+      "tshisekedi.percent": {
+        "type": ["numeric"],
+        "description": ["The percentage of votes received by candidate Tshisekedi in the 2018 election."]
+      }
+    },
+    "index": {
+      "type": ["character"],
+      "description": ["Identifier for the territorial units used in the 2018 analysis."]
+    },
+    "label": {
+      "type": ["character"],
+      "description": ["Label associated with the territorial unit identifier for the 2018 analysis."]
+    },
+    "registered.voters": {
+      "type": ["numeric"],
+      "description": ["The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2018 election."]
+    },
+    "voters": {
+      "type": ["numeric"],
+      "description": ["The number of voters who participated in the 2018 election."]
+    },
+    "total.votes": {
+      "type": ["numeric"],
+      "description": ["The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels."]
+    },
+    "ramazani.votes": {
+      "type": ["numeric"],
+      "description": ["The number of votes received by candidate Ramazani in the 2018 election."]
+    },
+    "ramazani.percent": {
+      "type": ["numeric"],
+      "description": ["The percentage of votes received by candidate Ramazani in the 2018 election."]
+    },
+    "ballot.boxes_counted": {
+      "type": ["numeric"],
+      "description": ["The number of ballot boxes counted in the 2018 election."]
+    },
+    "n.voting.sites": {
+      "type": ["integer"],
+      "description": ["The number of voting sites in the 2018 election."]
+    },
+    "zero.voters.sites": {
+      "type": ["integer"],
+      "description": ["The number of voting sites with zero voters in the 2018 election."]
+    },
+    "fayulu.votes": {
+      "type": ["numeric"],
+      "description": ["The number of votes received by candidate Fayulu in the 2018 election."]
+    },
+    "fayulu.percent": {
+      "type": ["numeric"],
+      "description": ["The percentage of votes received by candidate Fayulu in the 2018 election."]
+    },
+    "tshisekedi.votes": {
+      "type": ["numeric"],
+      "description": ["The number of votes received by candidate Tshisekedi in the 2018 election."]
+    },
+    "tshisekedi.percent": {
+      "type": ["numeric"],
+      "description": ["The percentage of votes received by candidate Tshisekedi in the 2018 election."]
+    }
+  },
+  "registered.voters_2006": {
+    "type": ["numeric"],
+    "description": ["The number of registered voters calculated for the 2006 election by summing up the registered voters from all nested administrative levels."]
+  },
+  "registered.voters_2011": {
+    "type": ["numeric"],
+    "description": ["The number of registered voters calculated for the 2011 election by summing up the registered voters from all nested administrative levels."]
+  },
+  "registered.voters_2018": {
+    "type": ["numeric"],
+    "description": ["The number of registered voters calculated for the 2018 election by summing up the registered voters from all nested administrative levels."]
+  },
+  "voters_2006": {
+    "type": ["numeric"],
+    "description": ["The number of voters who participated in the 2006 election, calculated by summing the valid votes cast across all administrative levels."]
+  },
+  "voters_2011": {
+    "type": ["numeric"],
+    "description": ["The number of voters who participated in the 2011 election, calculated by summing the valid votes cast across all administrative levels."]
+  },
+  "voters_2018": {
+    "type": ["numeric"],
+    "description": ["The number of voters who participated in the 2018 election, calculated by summing the valid votes cast across all administrative levels."]
+  },
+  "total.votes_2006": {
+    "type": ["numeric"],
+    "description": ["The total number of valid votes cast in the 2006 election, calculated by summing the votes cast across all administrative levels."]
+  },
+  "total.votes_2011": {
+    "type": ["numeric"],
+    "description": ["The total number of valid votes cast in the 2011 election, calculated by summing the votes cast across all administrative levels."]
+  },
+  "total.votes_2018": {
+    "type": ["numeric"],
+    "description": ["The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels."]
+  },
+  "kabila.votes_2006": {
+    "type": ["numeric"],
+    "description": ["The number of votes received by candidate Kabila in the 2006 election."]
+  },
+  "kabila.percent_2006": {
+    "type": ["numeric"],
+    "description": ["The percentage of votes received by candidate Kabila in the 2006 election."]
+  },
+  "kabila.votes_2011": {
+    "type": ["numeric"],
+    "description": ["The number of votes received by candidate Kabila in the 2011 election."]
+  },
+  "kabila.percent_2011": {
+    "type": ["numeric"],
+    "description": ["The percentage of votes received by candidate Kabila in the 2011 election."]
+  },
+  "ramazani.votes_2018": {
+    "type": ["numeric"],
+    "description": ["The number of votes received by candidate Ramazani in the 2018 election."]
+  },
+  "ramazani.percent_2018": {
+    "type": ["numeric"],
+    "description": ["The percentage of votes received by candidate Ramazani in the 2018 election."]
+  },
+  "ballot.boxes_counted_2011": {
+    "type": ["numeric"],
+    "description": ["The number of ballot boxes counted in the 2011 election."]
+  },
+  "ballot.boxes_counted_2018": {
+    "type": ["numeric"],
+    "description": ["The number of ballot boxes counted in the 2018 election."]
+  },
+  "n.voting.sites_2018": {
+    "type": ["integer"],
+    "description": ["The number of voting sites in the 2018 election."]
+  },
+  "zero.voters.sites_2018": {
+    "type": ["integer"],
+    "description": ["The number of voting sites with zero voters in the 2018 election."]
+  },
+  "fayulu.votes_2018": {
+    "type": ["numeric"],
+    "description": ["The number of votes received by candidate Fayulu in the 2018 election."]
+  },
+  "fayulu.percent_2018": {
+    "type": ["numeric"],
+    "description": ["The percentage of votes received by candidate Fayulu in the 2018 election."]
+  },
+  "tshisekedi.votes_2018": {
+    "type": ["numeric"],
+    "description": ["The number of votes received by candidate Tshisekedi in the 2018 election."]
+  },
+  "tshisekedi.percent_2018": {
+    "type": ["numeric"],
+    "description": ["The percentage of votes received by candidate Tshisekedi in the 2018 election."]
+  },
+  "turnout_2006": {
+    "type": ["numeric"],
+    "description": ["The voter turnout percentage for the 2006 election."]
+  },
+  "turnout_2011": {
+    "type": ["numeric"],
+    "description": ["The voter turnout percentage for the 2011 election."]
+  },
+  "turnout_2018": {
+    "type": ["numeric"],
+    "description": ["The voter turnout percentage for the 2018 election."]
+  }
+}
