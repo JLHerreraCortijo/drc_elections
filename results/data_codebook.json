@@ -212,15 +212,15 @@
     },
     "kabila.votes": {
       "type": ["numeric"],
-      "description": ["The number of votes received by candidate Kabila in the election."]
+      "description": ["The number of votes received by candidate Kabila in the 2011 election."]
     },
     "kabila.percent": {
       "type": ["numeric"],
-      "description": ["The percentage of votes received by candidate Kabila in the election."]
+      "description": ["The percentage of votes received by candidate Kabila in the 2011 election."]
     },
     "ballot.boxes_counted": {
       "type": ["numeric"],
-      "description": ["The number of ballot boxes counted in the election."]
+      "description": ["The number of ballot boxes counted in the 2011 election."]
     }
   },
   "index.2018": {
@@ -607,14 +607,14 @@
   },
   "turnout_2006": {
     "type": ["numeric"],
-    "description": ["The voter turnout percentage for the 2006 election."]
+    "description": ["The voter turnout percentage for the 2006 election, calculated by dividing the number of voters by the number of registered voters."]
   },
   "turnout_2011": {
     "type": ["numeric"],
-    "description": ["The voter turnout percentage for the 2011 election."]
+    "description": ["The voter turnout percentage for the 2011 election, calculated by dividing the number of voters by the number of registered voters."]
   },
   "turnout_2018": {
     "type": ["numeric"],
-    "description": ["The voter turnout percentage for the 2018 election."]
+    "description": ["The voter turnout percentage for the 2018 election, calculated by dividing the number of voters by the number of registered voters."]
   }
 }

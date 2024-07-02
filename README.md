@@ -610,3 +610,172 @@ into their corresponding territories.
 6. **Summarizing Results**: Aggregating various metrics such as voter counts 
 and election results for the merged territories, and calculating additional 
 percentages and turnout rates.
+
+# data.RData
+
+results/data.RData contains several variables used across the repository. Here we describe some of them.
+
+## Data Frame `data` Description
+
+The `data` data frame contains information on presidential elections in the Democratic Republic of Congo (DRC) from 2006, 2011, and 2018. It includes identifiers, labels, and detailed results at various administrative levels.
+
+### Main Columns
+- `index` (character): Identifier for the territorial units used in the analysis.
+- `label` (character): Label associated with the territorial unit identifier.
+- `province` (character): The name of the province.
+- `index.2006` (character): Identifier for the territorial units used in the 2006 analysis.
+- `index.2011` (character): Identifier for the territorial units used in the 2011 analysis.
+- `index.2018` (character): Identifier for the territorial units used in the 2018 analysis.
+
+### Nested Columns for 2006 Election
+#### `data_2006`
+- `circonscription`
+  - `Province` (character): The name of the province.
+  - `Subprovince` (character): The name of the subprovince or district within the province.
+  - `Territoire/ville` (character): The name of the territory or city.
+  - `Votes valables` (numeric): The number of valid votes cast.
+  - `Percent_participation` (numeric): The percentage of voter participation.
+  - `votes.data`
+    - `candidate` (character): The name of the candidate.
+    - `votes` (numeric): The number of votes received by the candidate.
+    - `percent` (numeric): The percentage of votes received by the candidate.
+  - `index` (character): Identifier for the territorial units used in the analysis of the circonscription.
+  - `label` (character): Label associated with the territorial unit identifier for the circonscription.
+  - `total.votes` (numeric): The total number of votes cast.
+  - `kabila.votes` (numeric): The number of votes received by candidate Kabila.
+  - `kabila.percent` (numeric): The percentage of votes received by candidate Kabila.
+
+- `index` (character): Identifier for the territorial units used in the 2006 analysis.
+- `label` (character): Label associated with the territorial unit identifier for the 2006 analysis.
+- `registered.voters` (numeric): The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2006 election.
+- `voters` (numeric): The number of voters who participated in the election.
+- `total.votes` (numeric): The total number of valid votes cast in the 2006 election, calculated by summing the votes cast across all administrative levels.
+- `kabila.votes` (numeric): The number of votes received by candidate Kabila in the election.
+- `kabila.percent` (numeric): The percentage of votes received by candidate Kabila in the election.
+
+### Nested Columns for 2011 Election
+#### `data_2011`
+- `circonscription`
+  - `Province` (character): The name of the province.
+  - `Ville` (character): The name of the city.
+  - `registered.voters` (numeric): The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2011 election.
+  - `voters` (numeric): The number of voters who participated in the election.
+  - `ballot.boxes` (numeric): The number of ballot boxes used in the election.
+  - `ballot.boxes_counted` (numeric): The number of ballot boxes counted in the election.
+  - `votes.data`
+    - `candidate` (character): The name of the candidate.
+    - `votes` (numeric): The number of votes received by the candidate.
+    - `Candidate Number` (numeric): The candidate's number.
+    - `First Name` (character): The candidate's first name.
+    - `Second Name` (character): The candidate's second name.
+    - `Third Name` (character): The candidate's third name.
+    - `Fourth Name` (character): The candidate's fourth name.
+    - `Fifth Name` (character): The candidate's fifth name.
+    - `Percent` (character): The percentage of votes received by the candidate.
+  - `index` (character): Identifier for the territorial units used in the analysis of the circonscription.
+  - `label` (character): Label associated with the territorial unit identifier for the circonscription.
+  - `total.votes` (numeric): The total number of valid votes cast in the 2011 election.
+  - `kabila.votes` (numeric): The number of votes received by candidate Kabila.
+  - `kabila.percent` (numeric): The percentage of votes received by candidate Kabila.
+
+- `index` (character): Identifier for the territorial units used in the 2011 analysis.
+- `label` (character): Label associated with the territorial unit identifier for the 2011 analysis.
+- `registered.voters` (numeric): The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2011 election.
+- `voters` (numeric): The number of voters who participated in the election.
+- `total.votes` (numeric): The total number of valid votes cast in the 2011 election, calculated by summing the votes cast across all administrative levels.
+- `kabila.votes` (numeric): The number of votes received by candidate Kabila in the 2011 election.
+- `kabila.percent` (numeric): The percentage of votes received by candidate Kabila in the 2011 election.
+- `ballot.boxes_counted` (numeric): The number of ballot boxes counted in the 2011 election.
+
+### Nested Columns for 2018 Election
+#### `data_2018`
+- `circonscription`
+  - `ville.territoire`
+    - `province_id` (numeric): The ID of the province.
+    - `province` (character): The name of the province.
+    - `clcr_id` (numeric): The ID of the local constituency.
+    - `clcr` (character): The name of the local constituency.
+    - `circonscription_id` (numeric): The ID of the electoral district.
+    - `circonscription` (character): The name of the electoral district.
+    - `siege` (numeric): The number of seats allocated to the district.
+    - `voting.sites`
+      - `site_vote_id` (numeric): The ID of the voting site.
+      - `nom_sv` (character): The name of the voting site.
+      - `adresse_sv` (character): The address of the voting site.
+      - `ballot.boxes` (numeric): The number of ballot boxes at the voting site.
+      - `ballot.boxes_counted` (numeric): The number of ballot boxes counted at the voting site.
+      - `registered.voters` (numeric): The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level at the voting site in the 2018 election.
+      - `voters` (numeric): The number of voters who participated in the election at the voting site.
+      - `votes.data`
+        - `candidate` (character): The name of the candidate.
+        - `votes` (numeric): The number of votes received by the candidate.
+        - `candidat_id` (numeric): The ID of the candidate.
+        - `nom` (character): The candidate's last name.
+        - `prenom` (character): The candidate's first name.
+        - `postnom` (character): The candidate's middle name.
+      - `total.votes` (numeric): The total number of valid votes cast at the voting site, calculated by summing the votes cast across all nested administrative levels.
+      - `ramazani.votes` (numeric): The number of votes received by candidate Ramazani.
+      - `ramazani.percent` (numeric): The percentage of votes received by candidate Ramazani.
+      - `fayulu.votes` (numeric): The number of votes received by candidate Fayulu.
+      - `fayulu.percent` (numeric): The percentage of votes received by candidate Fayulu.
+      - `tshisekedi.votes` (numeric): The number of votes received by candidate Tshisekedi.
+      - `tshisekedi.percent` (numeric): The percentage of votes received by candidate Tshisekedi.
+    - `index` (character): Identifier for the territorial units used in the analysis of the circonscription.
+    - `label` (character): Label associated with the territorial unit identifier for the circonscription.
+    - `registered.voters` (numeric): The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2018 election.
+    - `voters` (numeric): The number of voters who participated in the 2018 election.
+    - `total.votes` (numeric): The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels.
+    - `ramazani.votes` (numeric): The number of votes received by candidate Ramazani in the 2018 election.
+    - `ramazani.percent` (numeric): The percentage of votes received by candidate Ramazani in the 2018 election.
+    - `ballot.boxes_counted` (numeric): The number of ballot boxes counted in the 2018 election.
+    - `n.voting.sites` (integer): The number of voting sites in the 2018 election.
+    - `zero.voters.sites
+
+` (integer): The number of voting sites with zero voters in the 2018 election.
+    - `fayulu.votes` (numeric): The number of votes received by candidate Fayulu in the 2018 election.
+    - `fayulu.percent` (numeric): The percentage of votes received by candidate Fayulu in the 2018 election.
+    - `tshisekedi.votes` (numeric): The number of votes received by candidate Tshisekedi in the 2018 election.
+    - `tshisekedi.percent` (numeric): The percentage of votes received by candidate Tshisekedi in the 2018 election.
+
+- `index` (character): Identifier for the territorial units used in the 2018 analysis.
+- `label` (character): Label associated with the territorial unit identifier for the 2018 analysis.
+- `registered.voters` (numeric): The number of registered voters calculated by aggregating valid votes and participation percentages for each administrative level in the 2018 election.
+- `voters` (numeric): The number of voters who participated in the 2018 election.
+- `total.votes` (numeric): The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels.
+- `ramazani.votes` (numeric): The number of votes received by candidate Ramazani in the 2018 election.
+- `ramazani.percent` (numeric): The percentage of votes received by candidate Ramazani in the 2018 election.
+- `ballot.boxes_counted` (numeric): The number of ballot boxes counted in the 2018 election.
+- `n.voting.sites` (integer): The number of voting sites in the 2018 election.
+- `zero.voters.sites` (integer): The number of voting sites with zero voters in the 2018 election.
+- `fayulu.votes` (numeric): The number of votes received by candidate Fayulu in the 2018 election.
+- `fayulu.percent` (numeric): The percentage of votes received by candidate Fayulu in the 2018 election.
+- `tshisekedi.votes` (numeric): The number of votes received by candidate Tshisekedi in the 2018 election.
+- `tshisekedi.percent` (numeric): The percentage of votes received by candidate Tshisekedi in the 2018 election.
+
+### Summary Columns
+- `registered.voters_2006` (numeric): The number of registered voters calculated for the 2006 election by summing up the registered voters from all nested administrative levels.
+- `registered.voters_2011` (numeric): The number of registered voters calculated for the 2011 election by summing up the registered voters from all nested administrative levels.
+- `registered.voters_2018` (numeric): The number of registered voters calculated for the 2018 election by summing up the registered voters from all nested administrative levels.
+- `voters_2006` (numeric): The number of voters who participated in the 2006 election, calculated by summing the valid votes cast across all administrative levels.
+- `voters_2011` (numeric): The number of voters who participated in the 2011 election, calculated by summing the valid votes cast across all administrative levels.
+- `voters_2018` (numeric): The number of voters who participated in the 2018 election, calculated by summing the valid votes cast across all administrative levels.
+- `total.votes_2006` (numeric): The total number of valid votes cast in the 2006 election, calculated by summing the votes cast across all administrative levels.
+- `total.votes_2011` (numeric): The total number of valid votes cast in the 2011 election, calculated by summing the votes cast across all administrative levels.
+- `total.votes_2018` (numeric): The total number of valid votes cast in the 2018 election, calculated by summing the votes cast across all administrative levels.
+- `kabila.votes_2006` (numeric): The number of votes received by candidate Kabila in the 2006 election.
+- `kabila.percent_2006` (numeric): The percentage of votes received by candidate Kabila in the 2006 election.
+- `kabila.votes_2011` (numeric): The number of votes received by candidate Kabila in the 2011 election.
+- `kabila.percent_2011` (numeric): The percentage of votes received by candidate Kabila in the 2011 election.
+- `ramazani.votes_2018` (numeric): The number of votes received by candidate Ramazani in the 2018 election.
+- `ramazani.percent_2018` (numeric): The percentage of votes received by candidate Ramazani in the 2018 election.
+- `ballot.boxes_counted_2011` (numeric): The number of ballot boxes counted in the 2011 election.
+- `ballot.boxes_counted_2018` (numeric): The number of ballot boxes counted in the 2018 election.
+- `n.voting.sites_2018` (integer): The number of voting sites in the 2018 election.
+- `zero.voters.sites_2018` (integer): The number of voting sites with zero voters in the 2018 election.
+- `fayulu.votes_2018` (numeric): The number of votes received by candidate Fayulu in the 2018 election.
+- `fayulu.percent_2018` (numeric): The percentage of votes received by candidate Fayulu in the 2018 election.
+- `tshisekedi.votes_2018` (numeric): The number of votes received by candidate Tshisekedi in the 2018 election.
+- `tshisekedi.percent_2018` (numeric): The percentage of votes received by candidate Tshisekedi in the 2018 election.
+- `turnout_2006` (numeric): The voter turnout percentage for the 2006 election, calculated by dividing the number of voters by the number of registered voters.
+- `turnout_2011` (numeric): The voter turnout percentage for the 2011 election, calculated by dividing the number of voters by the number of registered voters.
+- `turnout_2018` (numeric): The voter turnout percentage for the 2018 election, calculated by dividing the number of voters by the number of registered voters.
