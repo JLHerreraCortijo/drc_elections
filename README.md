@@ -778,3 +778,7 @@ The `data` data frame contains information on presidential elections in the Demo
 - `turnout_2006` (numeric): The voter turnout percentage for the 2006 election, calculated by dividing the number of voters by the number of registered voters.
 - `turnout_2011` (numeric): The voter turnout percentage for the 2011 election, calculated by dividing the number of voters by the number of registered voters.
 - `turnout_2018` (numeric): The voter turnout percentage for the 2018 election, calculated by dividing the number of voters by the number of registered voters.
+
+# Figures
+
+![**Figure 1: Visualization of Presidential Vote Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018**](manuscript/figures/Figure1.png "Figure 1: Visualization of Presidential Vote Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018")
