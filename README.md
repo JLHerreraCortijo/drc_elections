@@ -782,3 +782,8 @@ The `data` data frame contains information on presidential elections in the Demo
 # Figures
 
 ![**Figure 1: Visualization of Presidential Vote Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018**](manuscript/figures/Figure1.png "Figure 1: Visualization of Presidential Vote Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018")
+
+![**Figure 2: Visualization of Changes in Presidential Vote Percentages in the Democratic Republic of Congo between 2006-2011 and 2011-2018**](manuscript/figures/Figure2.png "Figure 2: Visualization of Changes in Presidential Vote Percentages in the Democratic Republic of Congo between 2006-2011 and 2011-2018")
+
+
+![**Figure 3: Histogram of Changes in Presidential Vote Share in the Democratic Republic of Congo for Election Periods 2006-2011 and 2011-2018**](manuscript/figures/Figure3.png "Figure 3: Histogram of Changes in Presidential Vote Share in the Democratic Republic of Congo for Election Periods 2006-2011 and 2011-2018")
