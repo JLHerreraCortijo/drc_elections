@@ -10,7 +10,7 @@ here::i_am("R/002 - update manuscript.R")
 #' Purpose: Updates word document with tables and figures
 #' Notes:
 #' 
-#' Figures are stored in the document/figures folder as png files. Figure files are updated only
+#' Figures are stored in the manuscript/figures folder as png files. Figure files are updated only
 #' if the corresponding update_FigX un the user section is TRUE.
 #' 
 #' Figures width and height in inches can be set in the user section.
@@ -26,9 +26,10 @@ here::i_am("R/002 - update manuscript.R")
 #' The script assumes the following folder structure:
 #' Scripts are stored in "[project folder]/R"
 #' Data are stored in "[project folder]/data"
-#' Document is stored in "[project folder]/document"
+#' Document is stored in "[project folder]/manuscript"
 ###############################################################################
 
+library(magrittr)
 
 #### FUNCTIONS ####
 
@@ -268,6 +269,9 @@ dyad_labels <- names(dyad_labels) %>% purrr::map(~stringr::str_split(.x,"_") %>%
 
 dyad_labels <-  dyad_labels[unique(names(dyad_labels))]
 
+# Load data
+
+load(here::here("results/data.RData"))
 
 #### FIGURES ####
 
@@ -275,147 +279,204 @@ dyad_labels <-  dyad_labels[unique(names(dyad_labels))]
 
 if(!dir.exists(figures_path)) dir.create(figures_path)
 
-# Load data
 
-load(here::here("results/data.RData"))
 
 ##### FIGURE 1 #####
 
-# This section processes election data to visualize the percentage of votes received 
-# by candidates Kabila and Ramazani in the years 2006, 2011, and 2018. 
-# The data is first filtered to include only relevant columns. 
-# Percentages of votes for each candidate in each year are then calculated. 
-# The data is restructured to have a single column for percentages and another 
-# for the corresponding year.
-# Percentages are scaled from 0 to 100, and non-administrative units like lakes 
-# are marked as not available.
-# The processed data is then merged with geographical shapefile data of the 
-# Congo territories.
-# Lakes are separated out for special coloring in the visualization.
-# Finally, the section generates and saves a plot showing the percentage of votes 
-# by territory for each year, with appropriate color scales and legends.
+# This section processes election data to calculate the percentage of votes received 
+# by key candidates in 2006, 2011, and 2018. 
+# It reshapes the data to facilitate comparison across these years and integrates 
+# it with geographical information for mapping. The script handles missing data for 
+# administrative units such as lakes by marking them appropriately. 
+# Finally, it creates and saves a series of maps that visualize the vote percentages 
+# across different regions for each election year, with a clear distinction for 
+# areas without available data.
 
 
-# Select relevant columns from the data for analysis
-percentages <- dplyr::select(data, index, total.votes_2006, total.votes_2011, total.votes_2018, kabila.votes_2006, kabila.votes_2011, ramazani.votes_2018)
+# Select relevant columns from the data frame for further analysis
+percentages <- data %>% 
+  dplyr::select(index, total.votes_2006, total.votes_2011, total.votes_2018, kabila.votes_2006, kabila.votes_2011, ramazani.votes_2018)
 
-# Now, compute the percentages
-# Calculate the percentage of votes for each year and select relevant columns
-percentages %<>% dplyr::mutate(
-  # Calculate the percentage of Kabila votes in 2006
-  percentage_2006 = kabila.votes_2006 / total.votes_2006,
-  # Calculate the percentage of Kabila votes in 2011
-  percentage_2011 = kabila.votes_2011 / total.votes_2011,
-  # Calculate the percentage of Ramazani votes in 2018
-  percentage_2018 = ramazani.votes_2018 / total.votes_2018
-  # Select the index and all columns starting with "perc"
-) %>% dplyr::select(index, dplyr::starts_with("perc")) %>% dplyr::ungroup()
+# Compute the percentages of votes for each year and select the relevant columns
+percentages %<>% 
+  dplyr::mutate(
+    percentage_2006 = kabila.votes_2006 / total.votes_2006,  # Calculate percentage for 2006
+    percentage_2011 = kabila.votes_2011 / total.votes_2011,  # Calculate percentage for 2011
+    percentage_2018 = ramazani.votes_2018 / total.votes_2018 # Calculate percentage for 2018
+  ) %>% 
+  dplyr::select(index, starts_with("perc")) %>%  # Select columns that start with 'perc'
+  dplyr::ungroup()
 
-# Pivot the data to have one map per year
-percentages %<>% tidyr::pivot_longer(cols = -c(index), names_to = "var", values_to = "percent")
+# Pivot the data frame to have one column for the year and another for the percentage
+percentages %<>% 
+  tidyr::pivot_longer(cols = -c(index), names_to = "var", values_to = "percent")
 
-# Separate the year from the variable name
-percentages %<>% tidyr::separate(var, c("drop", "year"), sep = "_")
+# Separate the 'var' column into two columns: one to drop and another for the year
+percentages %<>% 
+  tidyr::separate(var, c("drop", "year"), sep = "_")
 
-# Convert the percentages to a scale from 0 to 100
-percentages %<>% dplyr::mutate(percent = percent * 100)
+# Convert percentages to a scale of 0 to 100
+percentages %<>% 
+  dplyr::mutate(percent = percent * 100)
 
-# Lakes are not administrative units, so show them as NAs
-percentages %<>% dplyr::bind_rows(data.frame(index = "administrative unit not available", year = c("2006", "2011", "2018")))
+# Add rows for administrative units that are not available, indicating lakes
+percentages %<>% 
+  dplyr::bind_rows(data.frame(index = "administrative unit not available", year = c("2006", "2011", "2018")))
 
-# Join percentages with shapefile data for mapping
-percentages.map <- dplyr::full_join(congo.territoire.borders, percentages, by = c("index.data" = "index"))
+# Join the percentages data with the shapefile data for mapping
+percentages.map <- congo.territoire.borders %>% 
+  dplyr::full_join(percentages, by = c("index.data" = "index"))
 
-# Extract lakes to plot them in a different color
-lakes <- dplyr::filter(percentages.map, index.data == "administrative unit not available")
+# Extract lakes for plotting them in a different color
+lakes <- percentages.map %>% 
+  dplyr::filter(index.data == "administrative unit not available")
 
-# Remove lakes from the main map data
-percentages.map %<>% dplyr::filter(index.data != "administrative unit not available")
+# Filter out the lakes from the main map data
+percentages.map %<>% 
+  dplyr::filter(index.data != "administrative unit not available")
 
-# Plot and save the figure
+# Plot and save the figure using ggplot2
 Figure_1 <- ggplot2::ggplot(percentages.map, ggplot2::aes(fill = percent, color = "")) +
-  ggplot2::geom_sf() + # Plot the main map data
-  ggplot2::geom_sf(data = lakes, fill = "white") + # Plot lakes in white color
-  ggplot2::scale_color_manual(values = "gray30") + # Set the color scale for map outlines
-  ggplot2::scale_fill_gradient(name = "% Votes", guide = "colourbar", na.value = "gray50") + # Set the fill gradient for percentage votes
-  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) + # Customize legend for missing data
-  ggplot2::facet_wrap(~year, ncol = 2) + # Create separate panels for each year
-  ggplot2::theme_void() + # Remove background and axis
+  ggplot2::geom_sf() +  # Plot the main map
+  ggplot2::geom_sf(data = lakes, fill = "white") +  # Overlay lakes with white color
+  ggplot2::scale_color_manual(values = "gray30") +  # Set color for the 'No data' category
+  ggplot2::scale_fill_gradient(name = "% Votes", guide = "colourbar", na.value = "gray50") +  # Define fill gradient for percentage votes
+  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) +  # Customize legend for 'No data'
+  ggplot2::facet_wrap(~year, ncol = 2) +  # Create a separate map for each year
+  ggplot2::theme_void() +  # Use a minimalistic theme with no background
   ggplot2::theme(
     legend.position = "inside", # Position legend inside the plot
     legend.position.inside = c(0.75, 0.25), # Coordinates for the legend position
-    strip.text = ggplot2::element_text(size = 18), # Customize the size of the strip text
-    legend.text = ggplot2::element_text(size = 12), # Customize the size of the legend text
-    legend.title = ggplot2::element_text(size = 14) # Customize the size of the legend title
+    strip.text = ggplot2::element_text(size = 18),  # Customize strip text size
+    legend.text = ggplot2::element_text(size = 12),  # Customize legend text size
+    legend.title = ggplot2::element_text(size = 14)  # Customize legend title size
   )
 
-# Save the figure if update_Fig1 is TRUE
+# Save the figure if the update_Fig1 flag is set to TRUE
 if (update_Fig1) {
-  ggplot2::ggsave(file.path(figures_path, "Figure1.png"), Figure_1, width = fig1_width, height = fig1_height, units = "in", dpi = 300)
+  ggplot2::ggsave(
+    here::here("manuscript/figures/Figure1.png"),  # Specify the file path
+    Figure_1,  # The plot to save
+    width = fig1_width,  # Width of the saved figure
+    height = fig1_height,  # Height of the saved figure
+    units = "in",  # Units for width and height
+    dpi = 300  # Resolution of the saved figure
+  )
 }
 
-##### FIGURE 2#####
 
-# This section prepares data for Figure 2 by performing the following steps:
+##### FIGURE 2 #####
 
-# - Selects specific columns and converts the data into a data frame.
-# - Reshapes the data from long to wide format to compare percentages across different years.
-# - Calculates the percentage differences between years and removes the original year columns.
-# - Reshapes the data back to long format.
-# - Adds rows for administrative units with unavailable data.
-# - Merges this data with geographic borders.
-# - Separates out and handles lake data where administrative units are not available.
-# - Creates a plot using ggplot2, with customized aesthetics and themes, and saves it if required.
+# This section processes election data to visualize the changes in voting percentages over time. 
+# First, it selects the relevant columns and reshapes the data to compare election results 
+# between 2006, 2011, and 2018. It calculates the differences in voting percentages between 
+# these years and prepares the data for visualization. Additionally, it ensures that 
+# non-administrative areas (lakes) are accounted for in the analysis. Finally, it creates 
+# a plot that illustrates these changes in voting patterns over the specified periods and 
+# saves the resulting figure as a PNG file.
 
-# Select relevant columns and convert to data frame
-percentage.differences <- percentages.map %>%
-  dplyr::select(index.data, year, percent) %>%  # Select the columns 'index.data', 'year', and 'percent'
-  as.data.frame() %>%  # Convert to a data frame
-  dplyr::select(-geometry) %>%  # Remove the 'geometry' column
-  
-  # Reshape data from long to wide format
-  tidyr::pivot_wider(names_from = "year", values_from = "percent") %>%  # Spread 'year' column into multiple columns, with values from 'percent'
-  
-  # Calculate differences between years
-  dplyr::mutate(`2006-2011` = `2011` - `2006`, `2011-2018` = `2018` - `2011`) %>%  # Create new columns for year differences
-  
-  # Remove the original year columns
-  dplyr::select(-c(`2006`, `2011`, `2018`)) %>%  # Remove the original '2006', '2011', and '2018' columns
-  
-  # Reshape data back to long format
-  tidyr::pivot_longer(cols = -index.data, names_to = "period", values_to = "difference")  # Gather the year difference columns into 'period' and 'difference' columns
+# Select the relevant columns and convert to data frame, excluding geometry
+percentage.differences <- percentages.map %>% 
+  dplyr::select(index.data, year, percent) %>% 
+  as.data.frame() %>% 
+  dplyr::select(-geometry) %>% 
+  # Pivot the data to have one column per year
+  tidyr::pivot_wider(names_from = "year", values_from = "percent") %>% 
+  # Calculate the differences between years
+  dplyr::mutate(
+    `2006-2011` = `2011` - `2006`,
+    `2011-2018` = `2018` - `2011`
+  ) %>% 
+  # Select only the difference columns
+  dplyr::select(-c(`2006`, `2011`, `2018`)) %>% 
+  # Pivot the data back to long format
+  tidyr::pivot_longer(cols = -index.data, names_to = "period", values_to = "difference")
 
-# Add a row for administrative units not available
-percentage.differences %<>% dplyr::bind_rows(data.frame(index.data = "administrative unit not available", period = c("2006-2011", "2011-2018")))  # Append rows for missing administrative units
+# Adding rows for lakes to be shown as NAs since lakes are not administrative units
+percentage.differences %<>% 
+  dplyr::bind_rows(
+    data.frame(index.data = "administrative unit not available", period = c("2006-2011", "2011-2018"))
+  )
 
-# Join the differences with the geographic data
-percentage.differences.map <- congo.territoire.borders %>%
-  dplyr::full_join(percentage.differences, by = "index.data")  # Perform a full join to merge geographic borders with the percentage differences
+# Join the percentage differences data with the shapefile data
+percentage.differences.map <- congo.territoire.borders %>% 
+  dplyr::full_join(percentage.differences, by = "index.data")
 
-# Extract lake data (administrative units not available)
-lakes <- percentage.differences.map %>%
-  dplyr::filter(index.data == "administrative unit not available")  # Filter rows where 'index.data' is "administrative unit not available"
+# Extract rows for lakes to plot them separately
+lakes <- percentage.differences.map %>% 
+  dplyr::filter(index.data == "administrative unit not available")
 
-# Filter out administrative units not available from the main map data
-percentage.differences.map %<>%
-  dplyr::filter(index.data != "administrative unit not available")  # Keep rows where 'index.data' is not "administrative unit not available"
+# Filter out rows corresponding to lakes from the main data
+percentage.differences.map %<>% 
+  dplyr::filter(index.data != "administrative unit not available")
 
-# Create the plot using ggplot2
-Figure_2 <- ggplot2::ggplot(percentage.differences.map, ggplot2::aes(fill = difference, color = "")) +  # Initialize ggplot with the map data and aesthetic mappings
-  ggplot2::geom_sf() +  # Add the main map layer
-  ggplot2::geom_sf(data = lakes, fill = "white") +  # Add lakes layer with white fill
-  ggplot2::scale_color_manual(values = "gray30") +  # Manually set the color scale
-  ggplot2::scale_fill_gradient2(name = "Change", guide = "colourbar", na.value = "gray50") +  # Set the fill gradient for the differences
-  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) +  # Add a legend for missing data
-  ggplot2::facet_wrap(~period, ncol = 2) +  # Create separate plots for each period
-  ggplot2::theme_void() +  # Use a theme with no background or axes
-  ggplot2::theme(legend.position = "bottom",
-                 strip.text = ggplot2::element_text(size = 18),
-                 legend.text = ggplot2::element_text(size = 12),
-                 legend.title = ggplot2::element_text(size = 14))  # Customize theme elements
+# Plot and save the figure
+Figure_2 <- ggplot2::ggplot(percentage.differences.map, ggplot2::aes(fill = difference, color = "")) +
+  # Plot the main shapefile data with fill representing the difference in percentages
+  ggplot2::geom_sf() + 
+  # Plot the lakes data separately with white fill
+  ggplot2::geom_sf(data = lakes, fill = "white") +
+  # Manually set the color scale for the plot, using gray for unspecified data
+  ggplot2::scale_color_manual(values = "gray30") +
+  # Set the gradient scale for the fill representing the change in percentage votes
+  ggplot2::scale_fill_gradient2(
+    name = "Change", 
+    guide = "colourbar", 
+    na.value = "gray50"
+  ) +
+  # Customize the legend to show "No data" for unspecified data
+  ggplot2::guides(
+    colour = ggplot2::guide_legend(
+      "No data", 
+      override.aes = list(color = "gray50", fill = "gray50")
+    )
+  ) +
+  # Facet the plot by the period of change (2006-2011 and 2011-2018)
+  ggplot2::facet_wrap(~period, ncol = 2) + 
+  # Apply a void theme, which removes background and axes
+  ggplot2::theme_void() +
+  # Customize the theme for the plot
+  ggplot2::theme(
+    legend.position = "bottom",  # Position the legend at the bottom
+    strip.text = ggplot2::element_text(size = 18),  # Set the size of the facet strip text
+    legend.text = ggplot2::element_text(size = 12),  # Set the size of the legend text
+    legend.title = ggplot2::element_text(size = 14)  # Set the size of the legend title
+  )
 
-# Save the plot if update_Fig2 is TRUE
+# Save the figure if the condition is met
 if (update_Fig2) {
-  ggplot2::ggsave(file.path(figures_path,"Figure2.png"), Figure_2, width = fig2_width, height = fig2_height)  # Save the plot to a file
+  ggplot2::ggsave(here::here("manuscript/figures/Figure2.png"), Figure_2, width = fig2_width, height = fig2_height)
 }
 
+
+
+##### FIGURE 3 #####
+
+# This section creates a histogram to visualize the distribution of changes in vote share 
+# between different election periods (2006-2011 and 2011-2018). 
+# The script calculates the number of bins for the histogram using Sturges' formula to 
+# ensure an appropriate level of detail. It then generates the histogram with distinct 
+# panels for each period, labeling the x-axis accordingly. 
+# If the condition to update the figure is met, it saves the histogram as a PNG file.
+
+
+# Create a histogram plot of the percentage differences
+Figure_3 <- ggplot2::ggplot(percentage.differences, ggplot2::aes(x = difference)) +
+  
+  # Add a histogram with dynamically calculated number of bins
+  ggplot2::geom_histogram(
+    bins = round(1 + 3.322 * log10(nrow(percentage.differences))),  # Calculate number of bins using Sturges' formula
+    color = "black",  # Set border color of the bars
+    fill = "red"  # Set fill color of the bars
+  ) +
+  
+  # Create separate panels for each period
+  ggplot2::facet_wrap(~period, ncol = 2) +
+  
+  # Set the x-axis label
+  ggplot2::xlab("Change in vote share")
+
+# Save the figure if the condition is met
+if (update_Fig3) {
+  ggplot2::ggsave(here::here("manuscript/figures/Figure3.png"), Figure_3, width = fig3_width, height = fig3_height, units = "in")
+}
