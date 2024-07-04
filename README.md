@@ -730,9 +730,7 @@ The `data` data frame contains information on presidential elections in the Demo
     - `ramazani.percent` (numeric): The percentage of votes received by candidate Ramazani in the 2018 election.
     - `ballot.boxes_counted` (numeric): The number of ballot boxes counted in the 2018 election.
     - `n.voting.sites` (integer): The number of voting sites in the 2018 election.
-    - `zero.voters.sites
-
-` (integer): The number of voting sites with zero voters in the 2018 election.
+    - `zero.voters.sites` (integer): The number of voting sites with zero voters in the 2018 election.
     - `fayulu.votes` (numeric): The number of votes received by candidate Fayulu in the 2018 election.
     - `fayulu.percent` (numeric): The percentage of votes received by candidate Fayulu in the 2018 election.
     - `tshisekedi.votes` (numeric): The number of votes received by candidate Tshisekedi in the 2018 election.
