@@ -16,6 +16,7 @@ on handling discrepancies across datasets, normalizing data structures, and
 creating a unified framework that supports robust and comprehensive analysis.
 
 The data preprocessing involves several key steps:
+
 1. **Data Reading and Cleaning**: This step includes importing data from various 
 Excel files, removing irrelevant rows and columns, and merging datasets where 
 necessary. Specific adjustments are made to handle unique identifiers and ensure 

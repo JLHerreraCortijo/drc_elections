@@ -368,36 +368,44 @@ section employs a series of detailed steps to ensure data consistency,
 accuracy, and usability. The primary focus is on handling discrepancies
 across datasets, normalizing data structures, and creating a unified
 framework that supports robust and comprehensive analysis.</p>
-<p>The data preprocessing involves several key steps: 1. <strong>Data
-Reading and Cleaning</strong>: This step includes importing data from
-various Excel files, removing irrelevant rows and columns, and merging
-datasets where necessary. Specific adjustments are made to handle unique
-identifiers and ensure alignment across different datasets. 2.
-<strong>Column Renaming and Nesting</strong>: The data is reorganized to
-nest information about candidates and votes in a structured format. This
-involves standardizing column names for consistency and clarity across
-the datasets from different years. 3. <strong>Geographic Organization
-and Indexing</strong>: Election data is indexed and nested by geographic
-and administrative divisions, such as provinces, cities, and
-constituencies. This step addresses inconsistencies in geographic names
-and ensures that data is uniformly formatted for easier comparison. 4.
-<strong>Data Matching Across Elections</strong>: A multi-step process is
-implemented to match geographic names across different years,
+<p>The data preprocessing involves several key steps:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Data Reading and Cleaning</strong>: This step includes
+importing data from various Excel files, removing irrelevant rows and
+columns, and merging datasets where necessary. Specific adjustments are
+made to handle unique identifiers and ensure alignment across different
+datasets.</li>
+<li><strong>Column Renaming and Nesting</strong>: The data is
+reorganized to nest information about candidates and votes in a
+structured format. This involves standardizing column names for
+consistency and clarity across the datasets from different years.</li>
+<li><strong>Geographic Organization and Indexing</strong>: Election data
+is indexed and nested by geographic and administrative divisions, such
+as provinces, cities, and constituencies. This step addresses
+inconsistencies in geographic names and ensures that data is uniformly
+formatted for easier comparison.</li>
+<li><strong>Data Matching Across Elections</strong>: A multi-step
+process is implemented to match geographic names across different years,
 accommodating variations in naming conventions and ensuring that data
-can be accurately compared. 5. <strong>Data Merging</strong>: Utilizing
-the established indexes, datasets from different years are merged to
-create a comprehensive view that supports longitudinal analysis. 6.
-<strong>Derived Quantities Calculation</strong>: This involves
+can be accurately compared.</li>
+<li><strong>Data Merging</strong>: Utilizing the established indexes,
+datasets from different years are merged to create a comprehensive view
+that supports longitudinal analysis.</li>
+<li><strong>Derived Quantities Calculation</strong>: This involves
 estimating and aggregating registered voters, total votes, and specific
 candidate votes across various administrative levels, enhancing the
-dataset’s analytical depth. 7. <strong>Geographic
-Harmonization</strong>: Geographic data is aligned with the electoral
-dataset, ensuring consistency in spatial analysis. 8. <strong>Conflict
-Data Integration</strong>: Conflict data is integrated to provide a
-contextual understanding of the election periods, categorized by types
-of violence and involved parties. 9. <strong>Nightlight Data
-Analysis</strong>: Nightlight data is processed to analyze trends over
-time, providing additional context for the electoral analysis.</p>
+dataset’s analytical depth.</li>
+<li><strong>Geographic Harmonization</strong>: Geographic data is
+aligned with the electoral dataset, ensuring consistency in spatial
+analysis.</li>
+<li><strong>Conflict Data Integration</strong>: Conflict data (UCDP and
+ACLED) is integrated to provide a contextual understanding of the
+election periods, categorized by types of violence and involved
+parties.</li>
+<li><strong>Nightlight Data Analysis</strong>: Nightlight data is
+processed to analyze trends over time, providing additional context for
+the electoral analysis.</li>
+</ol>
 <p>Each of these steps is critical in transforming raw election data
 into a structured and analyzable format, facilitating a thorough and
 nuanced understanding of electoral trends and patterns.</p>
@@ -1003,6 +1011,416 @@ single dataset, providing insights into changes in nightlight intensity
 over time. Similar calculations are performed for both the original
 nightlight data and the modified dataset where nightlight values below
 30 are set to zero.</p>
+</div>
+</div>
+<div id="acled-data" class="section level3">
+<h3>10-ACLED data</h3>
+<p>This section processes the ACLED conflict event data for the
+Democratic Republic of Congo from 2001 to 2018. It performs several key
+tasks:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Data Loading and Filtering</strong>: The ACLED data is
+loaded from
+<code>data/ACLED data/1900-01-01-2022-12-20-Democratic_Republic_of_Congo.csv</code>,
+dates are converted to a standard format, and events within the
+specified date range are retained.</li>
+<li><strong>Categorizing Time Periods</strong>: Events are categorized
+into three time periods: 2001-2006, 2006-2011, and 2011-2018.</li>
+<li><strong>Standardizing Location Names</strong>: The admin2 column is
+cleaned and standardized to create a consistent index for geographic
+locations.</li>
+<li><strong>Assigning Actor Types</strong>: Actor type data is read from
+<code>data/DRC armed groups in ACLED dataset.xlsx</code> and matched
+with event actors to categorize them into predefined groups.</li>
+<li><strong>Summarizing Events</strong>: The data is filtered for
+specific event types and summarized to calculate the number of deaths
+and conflicts for each period, location, and event type.</li>
+<li><strong>Data Validation</strong>: Checks are performed to ensure
+data integrity and correctness after transformations.</li>
+<li><strong>Exporting Data</strong>: The processed and filtered data is
+exported to <code>results/ACLED_detailed.xlsx</code> for further
+analysis and reporting.</li>
+</ol>
+<p>Raleigh, C., Kishi, R. &amp; Linke, A. Political instability patterns
+are obscured by conflict dataset scope conditions, sources, and coding
+choices. Humanit Soc Sci Commun 10, 74 (2023). <a href="https://doi.org/10.1057/s41599-023-01559-4" class="uri">https://doi.org/10.1057/s41599-023-01559-4</a></p>
+<p>From <a href="https://acleddata.com/download/35181/" class="uri">https://acleddata.com/download/35181/</a> : If using ACLED
+data in a visual, graphic, or map of your own, please attribute the
+source data clearly and prominently on the visual itself or within the
+key/legend and include a link to ACLED’s website. This can be in small
+print on the bottom of the image. Please note your date of data access.
+These citations should be included for both standalone infographics as
+well as for tables/figures within a larger report. If unable to include
+a link on a static visual file, please note “acleddata.com” as the
+source URL. When sharing such an image on social media, please (1) be
+sure that the citation is not cut off, and (2) please tag ACLED
+(Twitter; Facebook; LinkedIn).</p>
+</div>
+<div id="merge-villes-into-their-territories" class="section level3">
+<h3>11-MERGE VILLES INTO THEIR TERRITORIES</h3>
+<p>This section identifies and merges smaller administrative regions
+(villes) into their larger surrounding territories for more accurate
+data analysis. The process involves:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Identifying Intersections</strong>: Checking which villes
+should be merged by analyzing geographic intersections of territory
+borders.</li>
+<li><strong>Creating Plots for Manual Checking</strong>: Generating
+plots of intersection geometries for manual verification.</li>
+<li><strong>Defining Merges</strong>: Specifying which villes should be
+merged into which territories.</li>
+<li><strong>Updating Labels</strong>: Adjusting the labels for the
+villes being merged.</li>
+<li><strong>Merging Data</strong>: Using a custom function to merge the
+data of specified villes into their corresponding territories.</li>
+<li><strong>Summarizing Results</strong>: Aggregating various metrics
+such as voter counts and election results for the merged territories,
+and calculating additional percentages and turnout rates.</li>
+</ol>
+</div>
+</div>
+<div id="data.rdata" class="section level1">
+<h1>data.RData</h1>
+<p>results/data.RData contains several variables used across the
+repository. Here we describe some of them.</p>
+<div id="data-frame-data-description" class="section level2">
+<h2>Data Frame <code>data</code> Description</h2>
+<p>The <code>data</code> data frame contains information on presidential
+elections in the Democratic Republic of Congo (DRC) from 2006, 2011, and
+2018. It includes identifiers, labels, and detailed results at various
+administrative levels.</p>
+<div id="main-columns" class="section level3">
+<h3>Main Columns</h3>
+<ul>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the analysis.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier.</li>
+<li><code>province</code> (character): The name of the province.</li>
+<li><code>index.2006</code> (character): Identifier for the territorial
+units used in the 2006 analysis.</li>
+<li><code>index.2011</code> (character): Identifier for the territorial
+units used in the 2011 analysis.</li>
+<li><code>index.2018</code> (character): Identifier for the territorial
+units used in the 2018 analysis.</li>
+</ul>
+</div>
+<div id="nested-columns-for-2006-election" class="section level3">
+<h3>Nested Columns for 2006 Election</h3>
+<div id="data_2006" class="section level4">
+<h4><code>data_2006</code></h4>
+<ul>
+<li><code>circonscription</code>
+<ul>
+<li><code>Province</code> (character): The name of the province.</li>
+<li><code>Subprovince</code> (character): The name of the subprovince or
+district within the province.</li>
+<li><code>Territoire/ville</code> (character): The name of the territory
+or city.</li>
+<li><code>Votes valables</code> (numeric): The number of valid votes
+cast.</li>
+<li><code>Percent_participation</code> (numeric): The percentage of
+voter participation.</li>
+<li><code>votes.data</code>
+<ul>
+<li><code>candidate</code> (character): The name of the candidate.</li>
+<li><code>votes</code> (numeric): The number of votes received by the
+candidate.</li>
+<li><code>percent</code> (numeric): The percentage of votes received by
+the candidate.</li>
+</ul></li>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the analysis of the circonscription.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier for the circonscription.</li>
+<li><code>total.votes</code> (numeric): The total number of votes
+cast.</li>
+<li><code>kabila.votes</code> (numeric): The number of votes received by
+candidate Kabila.</li>
+<li><code>kabila.percent</code> (numeric): The percentage of votes
+received by candidate Kabila.</li>
+</ul></li>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the 2006 analysis.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier for the 2006 analysis.</li>
+<li><code>registered.voters</code> (numeric): The number of registered
+voters calculated by aggregating valid votes and participation
+percentages for each administrative level in the 2006 election.</li>
+<li><code>voters</code> (numeric): The number of voters who participated
+in the election.</li>
+<li><code>total.votes</code> (numeric): The total number of valid votes
+cast in the 2006 election, calculated by summing the votes cast across
+all administrative levels.</li>
+<li><code>kabila.votes</code> (numeric): The number of votes received by
+candidate Kabila in the election.</li>
+<li><code>kabila.percent</code> (numeric): The percentage of votes
+received by candidate Kabila in the election.</li>
+</ul>
+</div>
+</div>
+<div id="nested-columns-for-2011-election" class="section level3">
+<h3>Nested Columns for 2011 Election</h3>
+<div id="data_2011" class="section level4">
+<h4><code>data_2011</code></h4>
+<ul>
+<li><code>circonscription</code>
+<ul>
+<li><code>Province</code> (character): The name of the province.</li>
+<li><code>Ville</code> (character): The name of the city.</li>
+<li><code>registered.voters</code> (numeric): The number of registered
+voters calculated by aggregating valid votes and participation
+percentages for each administrative level in the 2011 election.</li>
+<li><code>voters</code> (numeric): The number of voters who participated
+in the election.</li>
+<li><code>ballot.boxes</code> (numeric): The number of ballot boxes used
+in the election.</li>
+<li><code>ballot.boxes_counted</code> (numeric): The number of ballot
+boxes counted in the election.</li>
+<li><code>votes.data</code>
+<ul>
+<li><code>candidate</code> (character): The name of the candidate.</li>
+<li><code>votes</code> (numeric): The number of votes received by the
+candidate.</li>
+<li><code>Candidate Number</code> (numeric): The candidate’s
+number.</li>
+<li><code>First Name</code> (character): The candidate’s first
+name.</li>
+<li><code>Second Name</code> (character): The candidate’s second
+name.</li>
+<li><code>Third Name</code> (character): The candidate’s third
+name.</li>
+<li><code>Fourth Name</code> (character): The candidate’s fourth
+name.</li>
+<li><code>Fifth Name</code> (character): The candidate’s fifth
+name.</li>
+<li><code>Percent</code> (character): The percentage of votes received
+by the candidate.</li>
+</ul></li>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the analysis of the circonscription.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier for the circonscription.</li>
+<li><code>total.votes</code> (numeric): The total number of valid votes
+cast in the 2011 election.</li>
+<li><code>kabila.votes</code> (numeric): The number of votes received by
+candidate Kabila.</li>
+<li><code>kabila.percent</code> (numeric): The percentage of votes
+received by candidate Kabila.</li>
+</ul></li>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the 2011 analysis.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier for the 2011 analysis.</li>
+<li><code>registered.voters</code> (numeric): The number of registered
+voters calculated by aggregating valid votes and participation
+percentages for each administrative level in the 2011 election.</li>
+<li><code>voters</code> (numeric): The number of voters who participated
+in the election.</li>
+<li><code>total.votes</code> (numeric): The total number of valid votes
+cast in the 2011 election, calculated by summing the votes cast across
+all administrative levels.</li>
+<li><code>kabila.votes</code> (numeric): The number of votes received by
+candidate Kabila in the 2011 election.</li>
+<li><code>kabila.percent</code> (numeric): The percentage of votes
+received by candidate Kabila in the 2011 election.</li>
+<li><code>ballot.boxes_counted</code> (numeric): The number of ballot
+boxes counted in the 2011 election.</li>
+</ul>
+</div>
+</div>
+<div id="nested-columns-for-2018-election" class="section level3">
+<h3>Nested Columns for 2018 Election</h3>
+<div id="data_2018" class="section level4">
+<h4><code>data_2018</code></h4>
+<ul>
+<li><code>circonscription</code>
+<ul>
+<li><code>ville.territoire</code>
+<ul>
+<li><code>province_id</code> (numeric): The ID of the province.</li>
+<li><code>province</code> (character): The name of the province.</li>
+<li><code>clcr_id</code> (numeric): The ID of the local
+constituency.</li>
+<li><code>clcr</code> (character): The name of the local
+constituency.</li>
+<li><code>circonscription_id</code> (numeric): The ID of the electoral
+district.</li>
+<li><code>circonscription</code> (character): The name of the electoral
+district.</li>
+<li><code>siege</code> (numeric): The number of seats allocated to the
+district.</li>
+<li><code>voting.sites</code>
+<ul>
+<li><code>site_vote_id</code> (numeric): The ID of the voting site.</li>
+<li><code>nom_sv</code> (character): The name of the voting site.</li>
+<li><code>adresse_sv</code> (character): The address of the voting
+site.</li>
+<li><code>ballot.boxes</code> (numeric): The number of ballot boxes at
+the voting site.</li>
+<li><code>ballot.boxes_counted</code> (numeric): The number of ballot
+boxes counted at the voting site.</li>
+<li><code>registered.voters</code> (numeric): The number of registered
+voters calculated by aggregating valid votes and participation
+percentages for each administrative level at the voting site in the 2018
+election.</li>
+<li><code>voters</code> (numeric): The number of voters who participated
+in the election at the voting site.</li>
+<li><code>votes.data</code>
+<ul>
+<li><code>candidate</code> (character): The name of the candidate.</li>
+<li><code>votes</code> (numeric): The number of votes received by the
+candidate.</li>
+<li><code>candidat_id</code> (numeric): The ID of the candidate.</li>
+<li><code>nom</code> (character): The candidate’s last name.</li>
+<li><code>prenom</code> (character): The candidate’s first name.</li>
+<li><code>postnom</code> (character): The candidate’s middle name.</li>
+</ul></li>
+<li><code>total.votes</code> (numeric): The total number of valid votes
+cast at the voting site, calculated by summing the votes cast across all
+nested administrative levels.</li>
+<li><code>ramazani.votes</code> (numeric): The number of votes received
+by candidate Ramazani.</li>
+<li><code>ramazani.percent</code> (numeric): The percentage of votes
+received by candidate Ramazani.</li>
+<li><code>fayulu.votes</code> (numeric): The number of votes received by
+candidate Fayulu.</li>
+<li><code>fayulu.percent</code> (numeric): The percentage of votes
+received by candidate Fayulu.</li>
+<li><code>tshisekedi.votes</code> (numeric): The number of votes
+received by candidate Tshisekedi.</li>
+<li><code>tshisekedi.percent</code> (numeric): The percentage of votes
+received by candidate Tshisekedi.</li>
+</ul></li>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the analysis of the circonscription.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier for the circonscription.</li>
+<li><code>registered.voters</code> (numeric): The number of registered
+voters calculated by aggregating valid votes and participation
+percentages for each administrative level in the 2018 election.</li>
+<li><code>voters</code> (numeric): The number of voters who participated
+in the 2018 election.</li>
+<li><code>total.votes</code> (numeric): The total number of valid votes
+cast in the 2018 election, calculated by summing the votes cast across
+all administrative levels.</li>
+<li><code>ramazani.votes</code> (numeric): The number of votes received
+by candidate Ramazani in the 2018 election.</li>
+<li><code>ramazani.percent</code> (numeric): The percentage of votes
+received by candidate Ramazani in the 2018 election.</li>
+<li><code>ballot.boxes_counted</code> (numeric): The number of ballot
+boxes counted in the 2018 election.</li>
+<li><code>n.voting.sites</code> (integer): The number of voting sites in
+the 2018 election.</li>
+<li>`zero.voters.sites</li>
+</ul></li>
+</ul></li>
+</ul>
+<p><code>(integer): The number of voting sites with zero voters in the 2018 election.     -</code>fayulu.votes<code>(numeric): The number of votes received by candidate Fayulu in the 2018 election.     -</code>fayulu.percent<code>(numeric): The percentage of votes received by candidate Fayulu in the 2018 election.     -</code>tshisekedi.votes<code>(numeric): The number of votes received by candidate Tshisekedi in the 2018 election.     -</code>tshisekedi.percent`
+(numeric): The percentage of votes received by candidate Tshisekedi in
+the 2018 election.</p>
+<ul>
+<li><code>index</code> (character): Identifier for the territorial units
+used in the 2018 analysis.</li>
+<li><code>label</code> (character): Label associated with the
+territorial unit identifier for the 2018 analysis.</li>
+<li><code>registered.voters</code> (numeric): The number of registered
+voters calculated by aggregating valid votes and participation
+percentages for each administrative level in the 2018 election.</li>
+<li><code>voters</code> (numeric): The number of voters who participated
+in the 2018 election.</li>
+<li><code>total.votes</code> (numeric): The total number of valid votes
+cast in the 2018 election, calculated by summing the votes cast across
+all administrative levels.</li>
+<li><code>ramazani.votes</code> (numeric): The number of votes received
+by candidate Ramazani in the 2018 election.</li>
+<li><code>ramazani.percent</code> (numeric): The percentage of votes
+received by candidate Ramazani in the 2018 election.</li>
+<li><code>ballot.boxes_counted</code> (numeric): The number of ballot
+boxes counted in the 2018 election.</li>
+<li><code>n.voting.sites</code> (integer): The number of voting sites in
+the 2018 election.</li>
+<li><code>zero.voters.sites</code> (integer): The number of voting sites
+with zero voters in the 2018 election.</li>
+<li><code>fayulu.votes</code> (numeric): The number of votes received by
+candidate Fayulu in the 2018 election.</li>
+<li><code>fayulu.percent</code> (numeric): The percentage of votes
+received by candidate Fayulu in the 2018 election.</li>
+<li><code>tshisekedi.votes</code> (numeric): The number of votes
+received by candidate Tshisekedi in the 2018 election.</li>
+<li><code>tshisekedi.percent</code> (numeric): The percentage of votes
+received by candidate Tshisekedi in the 2018 election.</li>
+</ul>
+</div>
+</div>
+<div id="summary-columns" class="section level3">
+<h3>Summary Columns</h3>
+<ul>
+<li><code>registered.voters_2006</code> (numeric): The number of
+registered voters calculated for the 2006 election by summing up the
+registered voters from all nested administrative levels.</li>
+<li><code>registered.voters_2011</code> (numeric): The number of
+registered voters calculated for the 2011 election by summing up the
+registered voters from all nested administrative levels.</li>
+<li><code>registered.voters_2018</code> (numeric): The number of
+registered voters calculated for the 2018 election by summing up the
+registered voters from all nested administrative levels.</li>
+<li><code>voters_2006</code> (numeric): The number of voters who
+participated in the 2006 election, calculated by summing the valid votes
+cast across all administrative levels.</li>
+<li><code>voters_2011</code> (numeric): The number of voters who
+participated in the 2011 election, calculated by summing the valid votes
+cast across all administrative levels.</li>
+<li><code>voters_2018</code> (numeric): The number of voters who
+participated in the 2018 election, calculated by summing the valid votes
+cast across all administrative levels.</li>
+<li><code>total.votes_2006</code> (numeric): The total number of valid
+votes cast in the 2006 election, calculated by summing the votes cast
+across all administrative levels.</li>
+<li><code>total.votes_2011</code> (numeric): The total number of valid
+votes cast in the 2011 election, calculated by summing the votes cast
+across all administrative levels.</li>
+<li><code>total.votes_2018</code> (numeric): The total number of valid
+votes cast in the 2018 election, calculated by summing the votes cast
+across all administrative levels.</li>
+<li><code>kabila.votes_2006</code> (numeric): The number of votes
+received by candidate Kabila in the 2006 election.</li>
+<li><code>kabila.percent_2006</code> (numeric): The percentage of votes
+received by candidate Kabila in the 2006 election.</li>
+<li><code>kabila.votes_2011</code> (numeric): The number of votes
+received by candidate Kabila in the 2011 election.</li>
+<li><code>kabila.percent_2011</code> (numeric): The percentage of votes
+received by candidate Kabila in the 2011 election.</li>
+<li><code>ramazani.votes_2018</code> (numeric): The number of votes
+received by candidate Ramazani in the 2018 election.</li>
+<li><code>ramazani.percent_2018</code> (numeric): The percentage of
+votes received by candidate Ramazani in the 2018 election.</li>
+<li><code>ballot.boxes_counted_2011</code> (numeric): The number of
+ballot boxes counted in the 2011 election.</li>
+<li><code>ballot.boxes_counted_2018</code> (numeric): The number of
+ballot boxes counted in the 2018 election.</li>
+<li><code>n.voting.sites_2018</code> (integer): The number of voting
+sites in the 2018 election.</li>
+<li><code>zero.voters.sites_2018</code> (integer): The number of voting
+sites with zero voters in the 2018 election.</li>
+<li><code>fayulu.votes_2018</code> (numeric): The number of votes
+received by candidate Fayulu in the 2018 election.</li>
+<li><code>fayulu.percent_2018</code> (numeric): The percentage of votes
+received by candidate Fayulu in the 2018 election.</li>
+<li><code>tshisekedi.votes_2018</code> (numeric): The number of votes
+received by candidate Tshisekedi in the 2018 election.</li>
+<li><code>tshisekedi.percent_2018</code> (numeric): The percentage of
+votes received by candidate Tshisekedi in the 2018 election.</li>
+<li><code>turnout_2006</code> (numeric): The voter turnout percentage
+for the 2006 election, calculated by dividing the number of voters by
+the number of registered voters.</li>
+<li><code>turnout_2011</code> (numeric): The voter turnout percentage
+for the 2011 election, calculated by dividing the number of voters by
+the number of registered voters.</li>
+<li><code>turnout_2018</code> (numeric): The voter turnout percentage
+for the 2018 election, calculated by dividing the number of voters by
+the number of registered voters.</li>
+</ul>
 </div>
 </div>
 </div>
