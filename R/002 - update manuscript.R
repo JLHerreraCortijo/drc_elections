@@ -30,7 +30,7 @@ here::i_am("R/002 - update manuscript.R")
 ###############################################################################
 
 library(magrittr)
-
+library(sf)
 #### FUNCTIONS ####
 
 
@@ -654,3 +654,58 @@ Figure_4 <- ggplot2::ggplot(differences, ggplot2::aes(x = difference)) +
 if (update_Fig4) {
   ggplot2::ggsave(here::here("manuscript/figures/Figure4.png"), Figure_4, width = fig4_width, height = fig4_height, units = "in")
 }
+
+
+##### FIGURE 5 #####
+
+# This section analyzes and visualizes the number of conflict-related deaths 
+# across different regions and years. 
+# It aggregates the total number of deaths per region and year, merges this data 
+# with voting share information, and prepares it for panel data analysis. 
+# The script then creates a histogram to show the distribution of conflict deaths 
+# for regions with more than zero deaths, with separate panels for each year. 
+# If required, the resulting figure is saved as a PNG file.
+
+# Aggregate conflict deaths by index and year, summing the number of deaths
+total_conflict_deaths <- conflict.aggregated_by_type %>% 
+  dplyr::select(index = index.data, year, n.deaths) %>% 
+  dplyr::group_by(index, year) %>% 
+  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the conflict deaths data with the share data, replacing NA values in n.deaths with 0
+to.model <- share %>% 
+  dplyr::left_join(total_conflict_deaths, by = c("index", "year")) %>% 
+  dplyr::mutate(n.deaths = tidyr::replace_na(n.deaths, 0)) %>% 
+  dplyr::rename(region = label) %>% 
+  dplyr::select(-index)
+
+# Convert the data frame to a panel data frame for further analysis
+to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
+
+# Create a histogram plot of the number of conflict deaths for regions with more than 0 deaths
+Figure_5 <- to.model %>% 
+  data.frame() %>% 
+  dplyr::filter(n.deaths > 0) %>% 
+  dplyr::select(n.deaths, year) %>%
+  dplyr::mutate(n.deaths = as.integer(n.deaths), year = factor(as.character(year))) %>%
+  ggplot2::ggplot() + 
+  
+  # Add histogram of conflict deaths with dynamically calculated number of bins
+  ggplot2::geom_histogram(
+    ggplot2::aes(x = n.deaths), 
+    bins = floor(1 + 3.322 * log10(nrow(to.model  %>% data.frame() %>% dplyr::filter(n.deaths > 0)) / 3)),  # Sturges' formula for number of bins
+    color = "black",  # Border color of the bars
+    fill = "red"  # Fill color of the bars
+  ) + 
+  
+  # Create separate panels for each year
+  ggplot2::facet_wrap(~year, ncol = 3) + 
+  
+  # Set the title of the plot
+  ggplot2::ggtitle("# deaths > 0")
+
+# Save the figure if the condition is met
+if (update_Fig5) {
+  ggplot2::ggsave(here::here("manuscript/figures/Figure5.png"), Figure_5, width = fig5_width, height = fig5_height, units = "in")
+}
+

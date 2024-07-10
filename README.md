@@ -797,3 +797,8 @@ The `data` data frame contains information on presidential elections in the Demo
 #### Figure 4: Histogram of Changes in Nightlight Intensity Across Election Periods 2006-2011 and 2011-2018
 
 ![**Figure 4: Histogram of Changes in Nightlight Intensity Across Election Periods 2006-2011 and 2011-2018**](manuscript/figures/Figure4.png "Figure 4: Histogram of Changes in Nightlight Intensity Across Election Periods 2006-2011 and 2011-2018")
+
+#### Figure 5: Distribution of Conflict-Related Deaths Across Regions and Election Periods
+
+![**Figure 5: Distribution of Conflict-Related Deaths Across Regions and Election Periods**](manuscript/figures/Figure5.png "Figure 5: Distribution of Conflict-Related Deaths Across Regions and Election Periods")
+
