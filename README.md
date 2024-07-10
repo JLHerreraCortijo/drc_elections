@@ -793,3 +793,7 @@ The `data` data frame contains information on presidential elections in the Demo
 #### Figure 3: Histogram of Changes in Presidential Vote Share in the Democratic Republic of Congo for Election Periods 2006-2011 and 2011-2018
 
 ![**Figure 3: Histogram of Changes in Presidential Vote Share in the Democratic Republic of Congo for Election Periods 2006-2011 and 2011-2018**](manuscript/figures/Figure3.png "Figure 3: Histogram of Changes in Presidential Vote Share in the Democratic Republic of Congo for Election Periods 2006-2011 and 2011-2018")
+
+#### Figure 4: Histogram of Changes in Nightlight Intensity Across Election Periods 2006-2011 and 2011-2018
+
+![**Figure 4: Histogram of Changes in Nightlight Intensity Across Election Periods 2006-2011 and 2011-2018**](manuscript/figures/Figure4.png "Figure 4: Histogram of Changes in Nightlight Intensity Across Election Periods 2006-2011 and 2011-2018")

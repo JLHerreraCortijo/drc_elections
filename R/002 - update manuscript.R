@@ -480,3 +480,177 @@ Figure_3 <- ggplot2::ggplot(percentage.differences, ggplot2::aes(x = difference)
 if (update_Fig3) {
   ggplot2::ggsave(here::here("manuscript/figures/Figure3.png"), Figure_3, width = fig3_width, height = fig3_height, units = "in")
 }
+
+
+##### FIGURE 4 #####
+
+# This section processes data to visualize changes in nightlight intensity related 
+# to election periods. 
+# First, it selects and reshapes the data to include vote shares and separates 
+# election years. 
+# It defines election periods and calculates mean nightlight values for each period,
+#  adjusting to avoid zero values.
+# It also calculates the percent change in nightlight between specific years and 
+# corrects nightlight values accordingly.
+# The final dataset merges vote share data with mean nightlight values, enabling 
+# analysis of differences in nightlight 
+# between election periods. Lastly, it creates a histogram to illustrate the 
+# distribution of these differences, 
+# adjusting the y-axis to a logarithmic scale, and saves the figure if required.
+
+# Select relevant columns from the data frame
+share <- data %>% 
+  dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>%
+  
+  # Pivot data to longer format
+  tidyr::pivot_longer(
+    cols = -c(index, label),
+    values_to = "votes_share"
+  ) %>% 
+  
+  # Separate the year from the variable name
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>% 
+  
+  # Convert the year to an integer
+  dplyr::mutate(year = as.integer(year)) %>% 
+  
+  # Remove the 'drop' column
+  dplyr::select(-drop) 
+
+# Define election periods for grouping
+elections <- list(
+  "2006" = c(2001:2006),
+  "2011" = c(2007:2011)
+) %>% 
+  
+  # Create a named vector for mapping years to election periods
+  purrr::map2(
+    names(.), 
+    ~rep(.y, length(.x)) %>% set_names(.x)
+  ) %>% 
+  
+  # Combine the list into a single vector
+  purrr::reduce(c)
+
+# Calculate the mean nightlight values, adjusted slightly to avoid zero values
+mean_nightlight <- nightlight_gt30_mean %>% 
+  dplyr::mutate(nightlight_mean = nightlight_mean + 0.01) %>% 
+  dplyr::select(index = index.data, year, nightlight_mean) %>% 
+  
+  # Map years to election periods
+  dplyr::mutate(election = elections[as.character(year)]) %>% 
+  
+  # Group by index and election period, then calculate the mean nightlight
+  dplyr::group_by(index, election) %>% 
+  dplyr::summarise(
+    across(nightlight_mean, ~mean(., na.rm = TRUE)),
+    .groups = "drop"
+  ) %>% 
+  
+  # Filter out rows without election period information
+  dplyr::filter(!is.na(election))
+
+# Calculate the mean nightlight for 2012-2013
+DMSP_2012_13 <- nightlight_gt30_mean %>% 
+  dplyr::mutate(nightlight_mean = nightlight_mean + 0.01) %>% 
+  dplyr::select(index = index.data, year, nightlight_mean) %>% 
+  
+  # Filter for years 2012 and 2013, then group by index
+  dplyr::filter(year %in% c(2012, 2013)) %>% 
+  dplyr::group_by(index) %>% 
+  
+  # Calculate the mean nightlight for these years
+  dplyr::summarise(
+    across(nightlight_mean, ~mean(., na.rm = TRUE)),
+    .groups = "drop"
+  ) 
+
+# Calculate the percent change in nightlight between 2014 and 2018
+VIIR_percent_change <- nightlight_gt30_mean %>% 
+  dplyr::mutate(nightlight_mean = nightlight_mean + 0.01) %>% 
+  dplyr::select(index = index.data, year, nightlight_mean) %>% 
+  
+  # Filter for years 2014 and 2018
+  dplyr::filter(year %in% c(2014, 2018)) %>% 
+  
+  # Pivot data to wider format
+  tidyr::pivot_wider(
+    names_from = year,
+    values_from = nightlight_mean
+  ) %>% 
+  
+  # Calculate the percent change in nightlight
+  dplyr::mutate(change = (`2018` - `2014`) / `2014`)
+
+# Correct nightlight values using the calculated percent change
+VIIR_corrected <- DMSP_2012_13 %>% 
+  dplyr::left_join(VIIR_percent_change, by = "index") %>% 
+  dplyr::mutate(
+    nightlight_mean_corrected = nightlight_mean + (nightlight_mean) * change
+  ) %>% 
+  dplyr::select(index, nightlight_mean = nightlight_mean_corrected) %>% 
+  dplyr::mutate(election = "2018")
+
+# Combine the corrected nightlight values with the original data
+mean_nightlight %<>% 
+  dplyr::bind_rows(VIIR_corrected) %>% 
+  dplyr::mutate(year = as.integer(election)) %>% 
+  dplyr::select(-election)
+
+# Merge the vote share data with the mean nightlight data
+to.model <- share %>% 
+  dplyr::left_join(mean_nightlight, by = c("index", "year")) %>% 
+  dplyr::rename(region = label) %>% 
+  dplyr::select(-index)
+
+# Calculate differences in nightlight between election periods
+differences <- to.model %>% 
+  dplyr::select(region, year, nightlight_mean) %>% 
+  as.data.frame() %>% 
+  
+  # Pivot data to wider format
+  tidyr::pivot_wider(
+    names_from = "year",
+    values_from = "nightlight_mean"
+  ) %>% 
+  
+  # Calculate the differences in nightlight between periods
+  dplyr::mutate(
+    `2006-2011` = `2011` - `2006`,
+    `2011-2018` = `2018` - `2011`
+  ) %>% 
+  
+  # Remove the original year columns
+  dplyr::select(-c(`2006`, `2011`, `2018`)) %>% 
+  
+  # Pivot data back to longer format
+  tidyr::pivot_longer(
+    cols = -region,
+    names_to = "period",
+    values_to = "difference"
+  )
+
+# Create a histogram of the changes in nightlight
+Figure_4 <- ggplot2::ggplot(differences, ggplot2::aes(x = difference)) +
+  
+  # Add a histogram with dynamically calculated number of bins
+  ggplot2::geom_histogram(
+    bins = floor(1 + 3.322 * log10(nrow(to.model))),  # Calculate number of bins using Sturges' formula
+    color = "black",  # Set border color of the bars
+    fill = "red"  # Set fill color of the bars
+  ) +
+  
+  # Create separate panels for each period
+  ggplot2::facet_wrap(~period, ncol = 2) +
+  
+  # Set the x-axis label
+  ggplot2::xlab("Change in mean nightlight") +
+  
+  # Set the y-axis to log scale and label it
+  ggplot2::scale_y_continuous(trans = "log10") +
+  ggplot2::ylab("log10(count)")
+
+# Save the figure if the condition is met
+if (update_Fig4) {
+  ggplot2::ggsave(here::here("manuscript/figures/Figure4.png"), Figure_4, width = fig4_width, height = fig4_height, units = "in")
+}
