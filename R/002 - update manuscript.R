@@ -709,3 +709,234 @@ if (update_Fig5) {
   ggplot2::ggsave(here::here("manuscript/figures/Figure5.png"), Figure_5, width = fig5_width, height = fig5_height, units = "in")
 }
 
+##### FIGURE 6 #####
+
+# This section processes and visualizes changes in the number of conflict-related 
+# deaths between election periods. It first converts the data to a wide format 
+# with separate columns for each year and calculates the changes in deaths between
+# 2006-2011 and 2011-2018. The data is then reshaped to long format for visualization.
+# The script creates a histogram to show the distribution of these changes, 
+# with separate panels for each period and the y-axis on a logarithmic scale. 
+# If required, the resulting figure is saved as a PNG file.
+
+# Convert the to.model data to a data frame and remove the votes_share column
+.to_plot <- to.model %>% 
+  as.data.frame() %>% 
+  dplyr::select(-votes_share) %>% 
+  
+  # Pivot the data to have separate columns for each year
+  tidyr::pivot_wider(id_cols = region, names_from = "year", values_from = "n.deaths") %>%
+  
+  # Calculate the changes in number of deaths between the specified years
+  dplyr::mutate(
+    change_2006_2011 = `2011` - `2006`,
+    change_2011_2018 = `2018` - `2011`
+  ) %>%
+  
+  # Select only the region and change columns
+  dplyr::select(region, starts_with("change_"))
+
+# Pivot the data back to long format for plotting
+.to_plot %<>% 
+  tidyr::pivot_longer(
+    cols = -region, 
+    values_to = "change"
+  )
+
+# Create a histogram plot of the changes in number of deaths
+Figure_6 <- .to_plot %>% 
+  ggplot2::ggplot() + 
+  
+  # Add histogram of changes with log10 count on y-axis
+  ggplot2::geom_histogram(
+    ggplot2::aes(x = change, y = log10(..count..)), 
+    bins = floor(1 + 3.322 * log10(nrow(.to_plot) / 2)),  # Sturges' formula for number of bins
+    color = "black",  # Border color of the bars
+    fill = "red"  # Fill color of the bars
+  ) + 
+  
+  # Create separate panels for each change period
+  ggplot2::facet_wrap(~name, ncol = 2)
+
+# Save the figure if the condition is met
+if (update_Fig6) {
+  ggplot2::ggsave(here::here("manuscript/figures/Figure6.png"), Figure_6, width = fig6_width, height = fig6_height, units = "in")
+}
+
+
+##### FIGURE 7 #####
+
+# This section analyzes and visualizes the number of conflict events across 
+# different regions and years. It aggregates the total number of conflict events 
+# per region and year, merges this data with voting share information, 
+# and prepares it for panel data analysis. 
+# The script then creates a histogram to show the distribution of conflict 
+# events for regions with more than zero events, with separate panels for each year. 
+# If required, the resulting figure is saved as a PNG file.
+
+# Aggregate conflict events by index and year, summing the number of conflicts
+total_conflict_events <- conflict.aggregated_by_type %>% 
+  dplyr::select(index = index.data, year, n.conflicts) %>% 
+  dplyr::group_by(index, year) %>% 
+  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the conflict events data with the share data, replacing NA values in n.conflicts with 0
+to.model <- share %>% 
+  dplyr::left_join(total_conflict_events, by = c("index", "year")) %>% 
+  dplyr::mutate(n.conflicts = tidyr::replace_na(n.conflicts, 0)) %>% 
+  dplyr::rename(region = label) %>% 
+  dplyr::select(-index)
+
+# Convert the data frame to a panel data frame for further analysis
+to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
+
+# Create a histogram plot of the number of conflict events for regions with more than 0 conflicts
+Figure_7 <- to.model %>% 
+  as.data.frame() %>% 
+  dplyr::filter(n.conflicts > 0) %>% 
+  ggplot2::ggplot() + 
+  
+  # Add histogram of conflict events with dynamically calculated number of bins
+  ggplot2::geom_histogram(
+    ggplot2::aes(x = n.conflicts), 
+    bins = floor(1 + 3.322 * log10(nrow(to.model %>% dplyr::filter(n.conflicts > 0)) / 3)),  # Sturges' formula for number of bins
+    color = "black",  # Border color of the bars
+    fill = "red"  # Fill color of the bars
+  ) + 
+  
+  # Create separate panels for each year
+  ggplot2::facet_wrap(~year, ncol = 3) + 
+  
+  # Set the title of the plot
+  ggplot2::ggtitle("# conflicts > 0")
+
+# Save the figure if the condition is met
+if (update_Fig7) {
+  ggplot2::ggsave(here::here("manuscript/figures/Figure7.png"), Figure_7, width = fig7_width, height = fig7_height, units = "in")
+}
+
+##### FIGURE 8 ####
+
+# This section analyzes and visualizes changes in the number of conflict events 
+# between election periods. First, it converts the data to a wide format with 
+# separate columns for each year and calculates the changes in conflicts between 
+# 2006-2011 and 2011-2018. The data is then reshaped to a long format for visualization.
+# The script creates a histogram to show the distribution of these changes, 
+# with the y-axis on a logarithmic scale, and separate panels for each period.
+# If required, the resulting figure is saved as a PNG file.
+
+# Convert the to.model data to a data frame and remove the votes_share column
+.to_plot <- to.model %>% 
+  as.data.frame() %>% 
+  dplyr::select(-votes_share) %>% 
+  
+  # Pivot the data to have separate columns for each year
+  tidyr::pivot_wider(id_cols = region, names_from = "year", values_from = "n.conflicts") %>%
+  
+  # Calculate the changes in number of conflicts between the specified years
+  dplyr::mutate(
+    change_2006_2011 = `2011` - `2006`,
+    change_2011_2018 = `2018` - `2011`
+  ) %>%
+  
+  # Select only the region and change columns
+  dplyr::select(region, starts_with("change_"))
+
+# Pivot the data back to long format for plotting
+.to_plot %<>% 
+  tidyr::pivot_longer(
+    cols = -region, 
+    values_to = "change"
+  )
+
+# Create a histogram plot of the changes in number of conflicts
+Figure_8 <- .to_plot %>% 
+  ggplot2::ggplot() + 
+  
+  # Add histogram of changes with log10 count on y-axis
+  ggplot2::geom_histogram(
+    ggplot2::aes(x = change, y = log10(..count..)), 
+    bins = floor(1 + 3.322 * log10(nrow(.to_plot) / 2)),  # Sturges' formula for number of bins
+    color = "black",  # Border color of the bars
+    fill = "red"  # Fill color of the bars
+  ) + 
+  
+  # Create separate panels for each change period
+  ggplot2::facet_wrap(~name, ncol = 2)
+
+# Save the figure if the condition is met
+if (update_Fig8) {
+  ggplot2::ggsave(here::here("manuscript/figures/Figure8.png"), Figure_8, width = fig8_width, height = fig8_height, units = "in")
+}
+
+
+##### FIGURE A1 #####
+
+# This section analyzes and visualizes voter turnout data across different years.
+# First, it selects columns related to voter turnout and pivots the data to a 
+# long format for easier comparison. The data is then transformed to show turnout 
+# percentages and merged with geographical shapefile data. Non-administrative units, 
+# like lakes, are accounted for separately in the visualization.
+# Finally, it creates a map to display voter turnout percentages across regions 
+# for the years 2006, 2011, and 2018, and saves the figure as a PNG file if required.
+
+# Select columns related to voter turnout from the data
+percentages <- data %>% 
+  dplyr::select(index, starts_with("turnout_"))
+
+# Pivot the data to have one row per index per year
+percentages %<>% 
+  tidyr::pivot_longer(
+    cols = -c(index), 
+    names_to = "var", 
+    values_to = "percent"
+  )
+
+# Separate the year from the variable name
+percentages %<>% 
+  tidyr::separate(var, c("drop", "year"), sep = "_")
+
+# Convert the percentage values to actual percentages (multiplying by 100)
+percentages %<>% 
+  dplyr::mutate(percent = percent * 100)
+
+# Adding rows for lakes to be shown as NAs since lakes are not administrative units
+percentages %<>% 
+  dplyr::bind_rows(
+    data.frame(index = "administrative unit not available", year = c("2006", "2011", "2018"))
+  )
+
+# Join the percentages data with the shapefile data
+percentages.map <- congo.territoire.borders %>% 
+  dplyr::full_join(percentages, by = c("index.data" = "index"))
+
+# Extract rows for lakes to plot them separately
+lakes <- percentages.map %>% 
+  dplyr::filter(index.data == "administrative unit not available")
+
+# Filter out rows corresponding to lakes from the main data
+percentages.map %<>% 
+  dplyr::filter(index.data != "administrative unit not available")
+
+# Plot and save the figure
+Figure_A1 <- ggplot2::ggplot(percentages.map, ggplot2::aes(fill = percent, color = "")) +
+  ggplot2::geom_sf() +  # Add spatial polygons
+  ggplot2::geom_sf(data = lakes, fill = "white") +  # Add lakes with white fill
+  ggplot2::scale_color_manual(values = "gray30") +  # Set manual color scale for the border
+  ggplot2::scale_fill_gradient(name = "Turnout (%)", guide = "colourbar", na.value = "gray50") +  # Set fill gradient for turnout percentage
+  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) +  # Customize the legend for "No data"
+  ggplot2::facet_wrap(~year, ncol = 2) +  # Create separate panels for each year
+  ggplot2::theme_void() +  # Use a theme without axes or background
+  ggplot2::theme(
+    legend.position = "inside", # Position legend inside the plot
+    legend.position.inside = c(0.75, 0.3), # Coordinates for the legend position
+    strip.text = ggplot2::element_text(size = 18),  # Set the size of the facet strip text
+    legend.text = ggplot2::element_text(size = 12),  # Set the size of the legend text
+    legend.title = ggplot2::element_text(size = 14)  # Set the size of the legend title
+  )
+
+# Save the figure if the condition is met
+if (update_FigA1) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA1.png"), Figure_A1, width = figA1_width, height = figA1_height, units = "in")
+}
+

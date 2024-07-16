@@ -802,3 +802,18 @@ The `data` data frame contains information on presidential elections in the Demo
 
 ![**Figure 5: Distribution of Conflict-Related Deaths Across Regions and Election Periods**](manuscript/figures/Figure5.png "Figure 5: Distribution of Conflict-Related Deaths Across Regions and Election Periods")
 
+#### Figure 6: Histogram of Changes in Conflict-Related Deaths Across Election Periods 2006-2011 and 2011-2018
+
+![**Figure 6: Histogram of Changes in Conflict-Related Deaths Across Election Periods 2006-2011 and 2011-2018**](manuscript/figures/Figure6.png "Figure 6: Histogram of Changes in Conflict-Related Deaths Across Election Periods 2006-2011 and 2011-2018")
+
+#### Figure 7: Distribution of Conflict Events Across Election Periods
+
+![**Figure 7: Distribution of Conflict Events Across Election Periods**](manuscript/figures/Figure7.png "Figure 7: Distribution of Conflict Events Across Election Periods")
+
+#### Figure 8: Histogram of Changes in Conflict Events Across Election Periods 2006-2011 and 2011-2018
+
+![**Figure 8: Histogram of Changes in Conflict Events Across Election Periods 2006-2011 and 2011-2018**](manuscript/figures/Figure8.png "Figure 8: Histogram of Changes in Conflict Events Across Election Periods 2006-2011 and 2011-2018")
+
+#### Figure A1: Visualization of Voter Turnout Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018
+
+![**Figure A1: Visualization of Voter Turnout Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018**](manuscript/figures/FigureA1.png "Figure A1: Visualization of Voter Turnout Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018")
