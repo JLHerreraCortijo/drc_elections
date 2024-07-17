@@ -940,3 +940,233 @@ if (update_FigA1) {
   ggplot2::ggsave(here::here("manuscript/figures/FigureA1.png"), Figure_A1, width = figA1_width, height = figA1_height, units = "in")
 }
 
+##### FIGURE A1b #####
+
+# This section analyzes and visualizes changes in voter turnout between election 
+# periods. First, it converts the data to a wide format with separate columns for 
+# each year and calculates the changes in turnout between 2006-2011 and 2011-2018.
+# The data is then reshaped to a long format for easier visualization.
+# The script creates a map to show the distribution of these turnout changes, 
+# with separate panels for each period and the color scale on a logarithmic scale.
+# If required, the resulting figure is saved as a PNG file.
+
+# Select relevant columns from percentages.map and convert to data frame, excluding geometry column
+percentage.differences <- percentages.map %>% 
+  dplyr::select(index.data, year, percent) %>% 
+  as.data.frame() %>% 
+  dplyr::select(-geometry) %>% 
+  
+  # Pivot the data to have separate columns for each year
+  tidyr::pivot_wider(names_from = "year", values_from = "percent") %>%
+  
+  # Calculate percentage differences between election years
+  dplyr::mutate(
+    `2006-2011` = `2011` - `2006`,
+    `2011-2018` = `2018` - `2011`
+  ) %>% 
+  
+  # Remove the original year columns
+  dplyr::select(-c(`2006`, `2011`, `2018`)) %>% 
+  
+  # Pivot the data back to long format for plotting
+  tidyr::pivot_longer(
+    cols = -index.data,
+    names_to = "period",
+    values_to = "difference"
+  )
+
+# Add rows for lakes to be shown as NAs since lakes are not administrative units
+percentage.differences %<>% 
+  dplyr::bind_rows(
+    data.frame(index.data = "administrative unit not available", period = c("2006-2011", "2011-2018"))
+  )
+
+# Join the percentage differences data with the shapefile data
+percentage.differences.map <- congo.territoire.borders %>% 
+  dplyr::full_join(percentage.differences, by = "index.data")
+
+# Extract rows for lakes to plot them separately
+lakes <- percentage.differences.map %>% 
+  dplyr::filter(index.data == "administrative unit not available")
+
+# Filter out rows corresponding to lakes from the main data
+percentage.differences.map %<>% 
+  dplyr::filter(index.data != "administrative unit not available")
+
+# Create the plot for the differences in voter turnout
+Figure_A1b <- ggplot2::ggplot(percentage.differences.map, ggplot2::aes(fill = difference, color = "")) +
+  ggplot2::geom_sf() +  # Add spatial polygons
+  ggplot2::geom_sf(data = lakes, fill = "white") +  # Add lakes with white fill
+  ggplot2::scale_color_manual(values = "gray30") +  # Set manual color scale for the border
+  ggplot2::scale_fill_gradient2(name = "Turnout Change", guide = "colourbar", na.value = "gray50") +  # Set fill gradient for turnout change
+  ggplot2::guides(colour = ggplot2::guide_legend("No data", override.aes = list(color = "gray50", fill = "gray50"))) +  # Customize the legend for "No data"
+  ggplot2::facet_wrap(~period, ncol = 2) +  # Create separate panels for each period
+  ggplot2::theme_void() +  # Use a theme without axes or background
+  ggplot2::theme(
+    legend.position = "bottom",  # Position the legend at the bottom
+    strip.text = ggplot2::element_text(size = 18),  # Set the size of the facet strip text
+    legend.text = ggplot2::element_text(size = 12),  # Set the size of the legend text
+    legend.title = ggplot2::element_text(size = 14)  # Set the size of the legend title
+  )
+
+# Save the figure if the condition is met
+if (update_FigA1b) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA1b.png"), Figure_A1b, width = figA1b_width, height = figA1b_height, units = "in")
+}
+
+
+##### FIGURE A2 #####
+
+# This section analyzes and visualizes the relationship between vote share and 
+# the number of conflict events. It first selects relevant columns related to 
+# vote share from the data and pivots the data to a longer format for easier comparison.
+# It then defines election periods for grouping and aggregates conflict events 
+# by index and year, summing the number of conflicts. The conflict events data 
+# is merged with the share data, replacing NA values in n.conflicts with 0, and 
+# categorizes the number of conflicts into "0 conflicts" and "1+ conflicts".
+# A jitter plot is created to show the vote share vs. number of conflicts with 
+# separate panels for each year. If required, the resulting figure is saved as a PNG file.
+
+# Select relevant columns related to vote share from the data
+share <- data %>% 
+  dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>%
+  
+  # Pivot the data to longer format for easier comparison
+  tidyr::pivot_longer(
+    cols = -c(index, label), 
+    values_to = "votes_share"
+  ) %>% 
+  
+  # Separate the year from the variable name
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>% 
+  
+  # Convert the year to an integer
+  dplyr::mutate(year = as.integer(year)) %>% 
+  
+  # Remove the 'drop' column
+  dplyr::select(-drop)
+
+# Define election periods for grouping
+elections <- list(
+  "2006" = c(2001:2006),
+  "2011" = c(2007:2011)
+) %>% 
+  purrr::map2(names(.), ~rep(.y, length(.x)) %>% set_names(.x)) %>% 
+  purrr::reduce(c)
+
+# Aggregate conflict events by index and year, summing the number of conflicts
+total_conflict_events <- conflict.aggregated_by_type %>% 
+  dplyr::select(index = index.data, year, n.conflicts) %>% 
+  dplyr::group_by(index, year) %>% 
+  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the conflict events data with the share data, replacing NA values in n.conflicts with 0
+to.plot <- share %>% 
+  dplyr::left_join(total_conflict_events, by = c("index", "year")) %>% 
+  dplyr::mutate(n.conflicts = tidyr::replace_na(n.conflicts, 0)) %>% 
+  dplyr::rename(region = label) %>% 
+  dplyr::select(-index)
+
+# Categorize the number of conflicts into "0 conflicts" and "1+ conflicts"
+to.plot %<>% 
+  dplyr::mutate(n.conflicts = dplyr::case_when(
+    n.conflicts == 0 ~ "0 conflicts", 
+    TRUE ~ "1+ conflicts"
+  ))
+
+# Set seed for reproducibility of jitter plot
+set.seed(200)
+
+# Create a jitter plot of vote share vs. number of conflicts
+Figure_A2 <- to.plot %>% 
+  ggplot2::ggplot(ggplot2::aes(x = n.conflicts, y = votes_share)) + 
+  ggplot2::geom_jitter(alpha = 0.5, width = 0.1, size = 1) +  # Add jitter points with transparency
+  ggplot2::facet_wrap(~year, ncol = 1) +  # Create separate panels for each year
+  ggplot2::xlab(NULL) +  # Remove x-axis label
+  ggplot2::ylab("Votes share") +  # Set y-axis label
+  ggplot2::scale_y_continuous(labels = scales::percent)  # Format y-axis labels as percentages
+
+# Save the figure if the condition is met
+if (update_FigA2) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA2.png"), Figure_A2, width = figA2_width, height = figA2_height, units = "in")
+}
+
+
+##### FIGURE A3 #####
+
+# This section analyzes and visualizes the relationship between voter turnout and
+# the number of conflict events. First, it selects columns related to voter 
+# turnout from the data and pivots the data to a longer format for easier comparison. 
+# It then defines election periods for grouping and aggregates conflict events 
+# by index and year, summing the number of conflicts. The conflict events data is 
+# merged with the turnout data, replacing NA values in n.conflicts with 0, and 
+# categorizes the number of conflicts into "0 conflicts" and "1+ conflicts".
+# A jitter plot is created to show the voter turnout vs. number of conflicts with 
+# separate panels for each year. If required, the resulting figure is saved as a PNG file.
+
+# Select columns related to voter turnout from the data
+turnout <- data %>% 
+  dplyr::select(index, starts_with("turnout_"))
+
+# Pivot the data to have one row per index per year
+turnout %<>% 
+  tidyr::pivot_longer(
+    cols = -c(index), 
+    names_to = "var", 
+    values_to = "percent"
+  )
+
+# Separate the year from the variable name
+turnout %<>% 
+  tidyr::separate(var, c("drop", "year"), sep = "_")
+
+# Convert the year to an integer
+turnout %<>% 
+  dplyr::mutate(year = as.integer(year))
+
+# Define election periods for grouping
+elections <- list(
+  "2006" = c(2001:2006),
+  "2011" = c(2007:2011)
+) %>% 
+  purrr::map2(
+    names(.), 
+    ~rep(.y, length(.x)) %>% set_names(.x)
+  ) %>% 
+  purrr::reduce(c)
+
+# Aggregate conflict events by index and year, summing the number of conflicts
+total_conflict_events <- conflict.aggregated_by_type %>% 
+  dplyr::select(index = index.data, year, n.conflicts) %>% 
+  dplyr::group_by(index, year) %>% 
+  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the conflict events data with the turnout data, replacing NA values in n.conflicts with 0
+to.plot <- turnout %>% 
+  dplyr::left_join(total_conflict_events, by = c("index", "year")) %>% 
+  dplyr::mutate(n.conflicts = tidyr::replace_na(n.conflicts, 0)) %>% 
+  dplyr::select(-index)
+
+# Categorize the number of conflicts into "0 conflicts" and "1+ conflicts"
+to.plot %<>% 
+  dplyr::mutate(n.conflicts = dplyr::case_when(
+    n.conflicts == 0 ~ "0 conflicts", 
+    TRUE ~ "1+ conflicts"
+  ))
+
+# Set seed for reproducibility of jitter plot
+set.seed(200)
+
+# Create a jitter plot of turnout percentage vs. number of conflicts
+Figure_A3 <- to.plot %>% 
+  ggplot2::ggplot(ggplot2::aes(x = n.conflicts, y = percent)) + 
+  ggplot2::geom_jitter(alpha = 0.5, width = 0.1, size = 1) +  # Add jitter points with transparency
+  ggplot2::facet_wrap(~year, ncol = 1) +  # Create separate panels for each year
+  ggplot2::xlab(NULL) +  # Remove x-axis label
+  ggplot2::ylab("Turnout") +  # Set y-axis label
+  ggplot2::scale_y_continuous(labels = scales::percent)  # Format y-axis labels as percentages
+
+# Save the figure if the condition is met
+if (update_FigA3) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA3.png"), Figure_A3, width = figA3_width, height = figA3_height, units = "in")
+}

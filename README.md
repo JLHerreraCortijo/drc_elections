@@ -817,3 +817,16 @@ The `data` data frame contains information on presidential elections in the Demo
 #### Figure A1: Visualization of Voter Turnout Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018
 
 ![**Figure A1: Visualization of Voter Turnout Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018**](manuscript/figures/FigureA1.png "Figure A1: Visualization of Voter Turnout Percentages in the Democratic Republic of Congo for 2006, 2011, and 2018")
+
+#### Figure A1b: Visualization of Changes in Voter Turnout in the Democratic Republic of Congo Between 2006-2011 and 2011-2018
+
+![**Figure A1b: Visualization of Changes in Voter Turnout in the Democratic Republic of Congo Between 2006-2011 and 2011-2018**](manuscript/figures/FigureA1b.png "Figure A1b: Visualization of Changes in Voter Turnout in the Democratic Republic of Congo Between 2006-2011 and 2011-2018")
+
+
+#### Figure A2: Relationship Between Vote Share and Number of Conflict Events
+
+![**Figure A2: Relationship Between Vote Share and Number of Conflict Events**](manuscript/figures/FigureA2.png "Figure A2: Relationship Between Vote Share and Number of Conflict Events")
+
+#### Figure A3: Relationship Between Voter Turnout and Number of Conflict Events
+
+![**Figure A3: Relationship Between Voter Turnout and Number of Conflict Events**](manuscript/figures/FigureA3.png "Figure A3: Relationship Between Voter Turnout and Number of Conflict Events")
