@@ -1020,12 +1020,12 @@ if (update_FigA1b) {
 # This section analyzes and visualizes the relationship between vote share and 
 # the number of conflict events. It first selects relevant columns related to 
 # vote share from the data and pivots the data to a longer format for easier comparison.
-# It then defines election periods for grouping and aggregates conflict events 
-# by index and year, summing the number of conflicts. The conflict events data 
-# is merged with the share data, replacing NA values in n.conflicts with 0, and 
-# categorizes the number of conflicts into "0 conflicts" and "1+ conflicts".
-# A jitter plot is created to show the vote share vs. number of conflicts with 
-# separate panels for each year. If required, the resulting figure is saved as a PNG file.
+# It then and aggregates conflict events by index and lection period, summing the 
+# number of conflicts. The conflict events data is merged with the share data, 
+# replacing NA values in n.conflicts with 0, and categorizes the number of conflicts 
+# into "0 conflicts" and "1+ conflicts". A jitter plot is created to show the vote 
+# share vs. number of conflicts with separate panels for each year. If required, 
+# the resulting figure is saved as a PNG file.
 
 # Select relevant columns related to vote share from the data
 share <- data %>% 
@@ -1046,13 +1046,6 @@ share <- data %>%
   # Remove the 'drop' column
   dplyr::select(-drop)
 
-# Define election periods for grouping
-elections <- list(
-  "2006" = c(2001:2006),
-  "2011" = c(2007:2011)
-) %>% 
-  purrr::map2(names(.), ~rep(.y, length(.x)) %>% set_names(.x)) %>% 
-  purrr::reduce(c)
 
 # Aggregate conflict events by index and year, summing the number of conflicts
 total_conflict_events <- conflict.aggregated_by_type %>% 
@@ -1097,12 +1090,12 @@ if (update_FigA2) {
 # This section analyzes and visualizes the relationship between voter turnout and
 # the number of conflict events. First, it selects columns related to voter 
 # turnout from the data and pivots the data to a longer format for easier comparison. 
-# It then defines election periods for grouping and aggregates conflict events 
-# by index and year, summing the number of conflicts. The conflict events data is 
-# merged with the turnout data, replacing NA values in n.conflicts with 0, and 
-# categorizes the number of conflicts into "0 conflicts" and "1+ conflicts".
-# A jitter plot is created to show the voter turnout vs. number of conflicts with 
-# separate panels for each year. If required, the resulting figure is saved as a PNG file.
+# It then aggregates conflict events by index and election, summing the number of conflicts. 
+# The conflict events data is merged with the turnout data, replacing NA values 
+# in n.conflicts with 0, and categorizes the number of conflicts into "0 conflicts" 
+# and "1+ conflicts". A jitter plot is created to show the voter turnout vs. 
+# number of conflicts with separate panels for each year. If required, the resulting 
+# figure is saved as a PNG file.
 
 # Select columns related to voter turnout from the data
 turnout <- data %>% 
@@ -1123,17 +1116,6 @@ turnout %<>%
 # Convert the year to an integer
 turnout %<>% 
   dplyr::mutate(year = as.integer(year))
-
-# Define election periods for grouping
-elections <- list(
-  "2006" = c(2001:2006),
-  "2011" = c(2007:2011)
-) %>% 
-  purrr::map2(
-    names(.), 
-    ~rep(.y, length(.x)) %>% set_names(.x)
-  ) %>% 
-  purrr::reduce(c)
 
 # Aggregate conflict events by index and year, summing the number of conflicts
 total_conflict_events <- conflict.aggregated_by_type %>% 
@@ -1170,3 +1152,214 @@ Figure_A3 <- to.plot %>%
 if (update_FigA3) {
   ggplot2::ggsave(here::here("manuscript/figures/FigureA3.png"), Figure_A3, width = figA3_width, height = figA3_height, units = "in")
 }
+
+##### FIGURE A4 #####
+
+# This section analyzes and visualizes the relationship between vote share for 
+# Kabila and the number of conflict events before the election. It selects relevant
+#  columns related to vote share from the data and pivots it to a longer format. 
+#  The code then aggregates conflict events by index and election, and merges the 
+#  conflict data with the vote share data, replacing NA values with 0. It 
+#  categorizes the number of conflicts into "0 conflicts" and "1+ conflicts" and 
+#  creates a scatter plot with a smoothing line to show the 
+#  relationship between vote share and the number of conflicts, with separate 
+#  panels for each year. The figure is saved as a PNG file if required.
+
+# Select relevant columns related to vote share from the data
+share <- data %>%
+  dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>% 
+  # Pivot the data to longer format for easier comparison
+  tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>% 
+  # Separate the year from the variable name
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>% 
+  # Convert the year to an integer
+  dplyr::mutate(year = as.integer(year)) %>% 
+  # Remove the 'drop' column
+  dplyr::select(-drop)
+
+
+# Aggregate conflict events by index and year, summing the number of conflicts
+total_conflict_events <- conflict.aggregated_by_type %>%
+  dplyr::select(index = index.data, year, n.conflicts) %>% 
+  dplyr::group_by(index, year) %>% 
+  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the conflict events data with the share data, replacing NA values in n.conflicts with 0
+to.plot <- share %>%
+  dplyr::left_join(total_conflict_events, by = c("index", "year")) %>% 
+  dplyr::mutate(n.conflicts = tidyr::replace_na(n.conflicts, 0)) %>% 
+  dplyr::rename(region = label) %>% 
+  dplyr::select(-index)
+
+# Create a scatter plot with a smoothing line of vote share vs. number of conflicts
+Figure_A4 <- to.plot %>%
+  ggplot2::ggplot(ggplot2::aes(x = n.conflicts, y = votes_share)) + 
+  ggplot2::geom_point(alpha = 0.2, size = 0.5) +  # Add scatter points with transparency
+  ggplot2::geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE, formula = y ~ x) +  # Add a smooth line using GLM
+  ggplot2::xlab("# Conflicts before election") +  # Set x-axis label
+  ggplot2::ylab("% Votes for Kabila") +  # Set y-axis label
+  ggplot2::scale_y_continuous(labels = scales::percent) +  # Format y-axis labels as percentages
+  ggplot2::facet_wrap(~year, ncol = 2) +  # Create separate panels for each year
+  ggplot2::theme(
+    axis.title = ggplot2::element_text(size = 16),  # Set size of axis titles
+    axis.text = ggplot2::element_text(size = 12),  # Set size of axis text
+    strip.text = ggplot2::element_text(size = 18)  # Set size of facet strip text
+  )
+
+# Save the figure if the condition is met
+if (update_FigA4) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA4.png"), Figure_A4, width = figA4_width, height = figA4_height, units = "in")
+}
+
+
+##### FIGURE A5 #####
+
+# This section analyzes and visualizes the relationship between vote share for 
+# Kabila and the number of conflict-related deaths before the election. It selects 
+# relevant columns related to vote share from the data and pivots it to a longer 
+# format. The code then aggregates conflict-related deaths by index and election 
+# period, and merges the conflict data with the vote share data, replacing NA 
+# values with 0. A scatter plot with a smoothing line is created to 
+# show the relationship between vote share and the number of deaths, with 
+# separate panels for each year. The figure is saved as a PNG file if required.
+
+# Select relevant columns related to vote share from the data
+share <- data %>% 
+  dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>% 
+  
+  # Pivot the data to longer format for easier comparison
+  tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>% 
+  
+  # Separate the year from the variable name
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>% 
+  
+  # Convert the year to an integer
+  dplyr::mutate(year = as.integer(year)) %>% 
+  
+  # Remove the 'drop' column
+  dplyr::select(-drop)
+
+
+
+# Aggregate total deaths by index and year, summing the number of deaths
+total_deaths <- conflict.aggregated_by_type %>% 
+  dplyr::select(index = index.data, year, n.deaths) %>% 
+  dplyr::group_by(index, year) %>% 
+  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the total deaths data with the share data, replacing NA values in n.deaths with 0
+to.plot <- share %>% 
+  dplyr::left_join(total_deaths, by = c("index", "year")) %>% 
+  dplyr::mutate(n.deaths = tidyr::replace_na(n.deaths, 0)) %>% 
+  dplyr::rename(region = label) %>% 
+  dplyr::select(-index)
+
+# Create a scatter plot with a smoothing line of vote share vs. number of deaths
+Figure_A5 <- to.plot %>% 
+  ggplot2::ggplot(ggplot2::aes(x = n.deaths, y = votes_share)) + 
+  
+  # Add scatter points with transparency
+  ggplot2::geom_point(alpha = 0.2, size = 0.5) + 
+  
+  # Add a smooth line using GLM
+  ggplot2::geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE, formula = y ~ x) + 
+  
+  # Set x-axis label
+  ggplot2::xlab("# Deaths before election") + 
+  
+  # Set y-axis label
+  ggplot2::ylab("% Votes for Kabila") + 
+  
+  # Format y-axis labels as percentages
+  ggplot2::scale_y_continuous(labels = scales::percent) + 
+  
+  # Create separate panels for each year
+  ggplot2::facet_wrap(~year, ncol = 2) + 
+  
+  # Customize theme elements
+  ggplot2::theme(
+    axis.title = ggplot2::element_text(size = 16),  # Set size of axis titles
+    axis.text = ggplot2::element_text(size = 12),  # Set size of axis text
+    strip.text = ggplot2::element_text(size = 18)  # Set size of facet strip text
+  )
+
+# Save the figure if the condition is met
+if (update_FigA5) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA5.png"), Figure_A5, width = figA5_width, height = figA5_height, units = "in")
+}
+
+
+
+##### FIGURE A6 #####
+
+# This section analyzes and visualizes the relationship between vote share for 
+# Kabila and the number of conflict events before the election. It selects relevant
+#  columns related to vote share from the data and pivots it to a longer format. 
+#  The code then aggregates conflict events by index and election period, and 
+#  merges the conflict data with the vote share data, replacing NA values 
+#  with 0. A scatter plot with a smoothing line is created to show the relationship 
+#  between vote share and the number of conflicts, with separate panels for each year. 
+#  The figure is saved as a PNG file if required.
+
+# Select the columns 'index', 'label', and any columns starting with 'kabila.percent' or 'ramazani.percent'
+share <- data %>% 
+  dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>%
+  # Transform the dataset to a longer format, keeping 'index' and 'label' columns fixed
+  tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>%
+  # Split the 'name' column into 'drop' and 'year' based on the underscore separator
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>%
+  # Convert the 'year' column to integer type
+  dplyr::mutate(year = as.integer(year)) %>%
+  # Remove the 'drop' column as it is no longer needed
+  dplyr::select(-drop)
+
+
+
+# Aggregate conflict data by region and year
+total_conflict_events <- conflict.aggregated_by_type %>%
+  dplyr::select(index = index.data, year, n.conflicts) %>%
+  # Group data by 'index' and 'year'
+  dplyr::group_by(index, year) %>%
+  # Summarize the number of conflicts, summing up and removing NAs
+  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge the vote share data with the conflict data
+to.plot <- share %>%
+  # Join with 'total_conflict_events' by 'index' and 'year'
+  dplyr::left_join(total_conflict_events, by = c("index", "year")) %>%
+  # Replace any NA values in 'n.conflicts' with 0
+  dplyr::mutate(n.conflicts = tidyr::replace_na(n.conflicts, 0)) %>%
+  # Rename the 'label' column to 'region'
+  dplyr::rename(region = label) %>%
+  # Remove the 'index' column as it is no longer needed
+  dplyr::select(-index)
+
+# Create the plot for Figure A6
+Figure_A6 <- to.plot %>%
+  # Set up the ggplot with the 'x' and 'y' aesthetics
+  ggplot2::ggplot(ggplot2::aes(x = log10(n.conflicts), y = votes_share)) + 
+  # Add points to the plot with transparency and size
+  ggplot2::geom_point(alpha = 0.2, size = 0.5) + 
+  # Add a smooth curve using a generalized linear model with a binomial family
+  ggplot2::geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE, formula = y ~ x) + 
+  # Set the x-axis label
+  ggplot2::xlab("log10 of # Conflicts before election") +
+  # Set the y-axis label
+  ggplot2::ylab("% Votes for Kabila") +
+  # Format the y-axis labels as percentages
+  ggplot2::scale_y_continuous(labels = scales::percent) +
+  # Create facets for each year, arranging them in 2 columns
+  ggplot2::facet_wrap(~ year, ncol = 2) + 
+  # Customize the theme for axis titles, text, and strip text
+  ggplot2::theme(
+    axis.title = ggplot2::element_text(size = 16),
+    axis.text = ggplot2::element_text(size = 12),
+    strip.text = ggplot2::element_text(size = 18)
+  )
+
+# Save the plot if 'update_FigA6' is TRUE
+if(update_FigA6) {  
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA6.png"), Figure_A6, width = figA6_width, height = figA6_height, units = "in")
+}  
+
+

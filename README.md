@@ -830,3 +830,16 @@ The `data` data frame contains information on presidential elections in the Demo
 #### Figure A3: Relationship Between Voter Turnout and Number of Conflict Events
 
 ![**Figure A3: Relationship Between Voter Turnout and Number of Conflict Events**](manuscript/figures/FigureA3.png "Figure A3: Relationship Between Voter Turnout and Number of Conflict Events")
+
+#### Figure A4: Relationship Between Vote Share for Kabila and Number of Conflict Events
+
+![**Figure A4: Relationship Between Vote Share for Kabila and Number of Conflict Events**](manuscript/figures/FigureA4.png "Figure A4: Relationship Between Vote Share for Kabila and Number of Conflict Events")
+
+#### Figure A5: Relationship Between Vote Share for Kabila and Number of Conflict-Related Deaths
+
+![**Figure A5: Relationship Between Vote Share for Kabila and Number of Conflict-Related Deaths**](manuscript/figures/FigureA5.png "Figure A5: Relationship Between Vote Share for Kabila and Number of Conflict-Related Deaths")
+
+
+#### Figure A6: Relationship Between Vote Share for Kabila and Number of Conflict Events
+
+![**Figure A6: Relationship Between Vote Share for Kabila and Number of Conflict Events**](manuscript/figures/FigureA6.png "Figure A6: Relationship Between Vote Share for Kabila and Number of Conflict Events")
