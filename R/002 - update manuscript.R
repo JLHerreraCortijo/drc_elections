@@ -1363,6 +1363,204 @@ if(update_FigA6) {
 }  
 
 
+##### FIGURE A7 #####
+
+# Select relevant columns from data and pivot to longer format
+share <- data %>%
+  dplyr::select(index, label, dplyr::starts_with("kabila.percent"), dplyr::starts_with("ramazani.percent")) %>%
+  tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>%
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>%
+  dplyr::mutate(year = as.integer(year)) %>%
+  dplyr::select(-drop)
+
+
+
+# Aggregate conflict data by type and year
+total_deaths <- conflict.aggregated_by_type %>%
+  dplyr::select(index = index.data, year, n.deaths) %>%
+  dplyr::group_by(index, year) %>%
+  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+
+# Merge share data with total deaths data, handle NA values, and rename columns
+to.plot <- share %>%
+  dplyr::left_join(total_deaths, by = c("index", "year")) %>%
+  dplyr::mutate(n.deaths = tidyr::replace_na(n.deaths, 0)) %>%
+  dplyr::rename(region = label) %>%
+  dplyr::select(-index)
+
+# Create ggplot for Figure A7
+Figure_A7 <- to.plot %>%
+  ggplot2::ggplot(ggplot2::aes(x = log10(n.deaths), y = votes_share)) +
+  ggplot2::geom_point(alpha = 0.2, size = 0.5) +
+  ggplot2::geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE, formula = y ~ x) +
+  ggplot2::xlab("log10 of # Deaths before election") +
+  ggplot2::ylab("% Votes for Kabila") +
+  ggplot2::scale_y_continuous(labels = scales::percent) +
+  ggplot2::facet_wrap(~year, ncol = 2) +
+  ggplot2::theme(axis.title = ggplot2::element_text(size = 16),
+                 axis.text = ggplot2::element_text(size = 12),
+                 strip.text = ggplot2::element_text(size = 18))
+
+# Save the plot if update_FigA7 is TRUE
+if (update_FigA7) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA7.png"), Figure_A7, width = figA7_width, height = figA7_height, units = "in")
+}
+
+##### FIGURE A8 #####
+
+# Select relevant columns from conflict.aggregated and pivot to longer format
+conflicts <- conflict.aggregated %>%
+  dplyr::select(index.data, dplyr::starts_with("n.conflicts")) %>%
+  tidyr::pivot_longer(-index.data, names_to = "var", values_to = "n") %>%
+  tidyr::separate(var, c("drop", "year"), sep = "_") %>%
+  dplyr::select(-drop)
+
+# Lakes are not administrative units, we will show them as NAs
+# Bind rows to include "administrative unit not available" for specific years
+conflicts %<>% dplyr::bind_rows(data.frame(index.data = "administrative unit not available", year = c("2006", "2011", "2018")))
+
+# Convert index.data to a factor with levels ordered by congo.territoire.borders
+conflicts %<>% dplyr::mutate(index.data = factor(index.data, levels = unique(congo.territoire.borders$index.data)))
+
+# Complete the conflicts dataset to include all combinations of index.data and year
+conflicts %<>% tidyr::complete(index.data, year)
+
+# Replace NA values in n with 0
+conflicts %<>% dplyr::mutate(n = tidyr::replace_na(n, 0))
+
+# Join percentages and shapefile data
+conflicts.map <- congo.territoire.borders %>%
+  dplyr::full_join(conflicts, by = "index.data")
+
+# Extract lakes because we are plotting them in a different color
+lakes <- conflicts.map %>%
+  dplyr::filter(index.data == "administrative unit not available")
+
+# Filter out the lakes from conflicts.map
+conflicts.map %<>% dplyr::filter(index.data != "administrative unit not available")
+
+# Plot and save the figure
+Figure_A8 <- ggplot2::ggplot(conflicts.map, ggplot2::aes(fill = n + 0.1)) +
+  ggplot2::geom_sf() +
+  ggplot2::geom_sf(data = lakes, fill = "white") +
+  ggplot2::scale_fill_gradientn(colours = c("white", "orange", "red", "red3", "red4"), values = scales::rescale(log10(c(0.1, 1, 10, 100, 1000))), name = "# Conflicts", guide = "colorbar", breaks = c(0.1, 1, 10, 100, 1000), na.value = "gray50", trans = "log10", labels = c("0", "1", "10", "100", "1000")) +
+  ggplot2::facet_wrap(~year, ncol = 2) +
+  ggplot2::theme_void() +
+  ggplot2::theme(legend.position = "inside", # Position legend inside the plot
+                 legend.position.inside = c(0.75, 0.25), # Coordinates for the legend position
+                 strip.text = ggplot2::element_text(size = 18),
+                 legend.text = ggplot2::element_text(size = 12),
+                 legend.title = ggplot2::element_text(size = 14))
+
+# Save the plot if update_FigA8 is TRUE
+if (update_FigA8) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA8.png"), Figure_A8, width = figA8_width, height = figA8_height, units = "in")
+}
+
+
+##### FIGURE A9 #####
+
+# Select relevant columns from conflict.aggregated and pivot to longer format
+deaths <- conflict.aggregated %>%
+  dplyr::select(index.data, dplyr::starts_with("n.deaths")) %>%
+  tidyr::pivot_longer(-index.data, names_to = "var", values_to = "n") %>%
+  tidyr::separate(var, c("drop", "year"), sep = "_") %>%
+  dplyr::select(-drop)
+
+# Lakes are not administrative units, we will show them as NAs
+# Bind rows to include "administrative unit not available" for specific years
+deaths %<>% dplyr::bind_rows(data.frame(index.data = "administrative unit not available", year = c("2006", "2011", "2018")))
+
+# Convert index.data to a factor with levels ordered by congo.territoire.borders
+deaths %<>% dplyr::mutate(index.data = factor(index.data, levels = unique(congo.territoire.borders$index.data)))
+
+# Complete the deaths dataset to include all combinations of index.data and year
+deaths %<>% tidyr::complete(index.data, year)
+
+# Replace NA values in n with 0
+deaths %<>% dplyr::mutate(n = tidyr::replace_na(n, 0))
+
+# Join percentages and shapefile data
+deaths.map <- congo.territoire.borders %>%
+  dplyr::full_join(deaths, by = "index.data")
+
+# Extract lakes because we are plotting them in a different color
+lakes <- deaths.map %>%
+  dplyr::filter(index.data == "administrative unit not available")
+
+# Filter out the lakes from deaths.map
+deaths.map %<>% dplyr::filter(index.data != "administrative unit not available")
+
+# Plot and save the figure
+Figure_A9 <- ggplot2::ggplot(deaths.map, ggplot2::aes(fill = n + 0.1)) +
+  ggplot2::geom_sf() +
+  ggplot2::geom_sf(data = lakes, fill = "white") +
+  ggplot2::scale_fill_gradientn(colours = c("white", "orange", "red", "red3", "red4"), values = scales::rescale(log10(c(0.1, 1, 10, 100, 1000))), name = "# Deaths", guide = "colorbar", breaks = c(0.1, 1, 10, 100, 1000), na.value = "gray50", trans = "log10", labels = c("0", "1", "10", "100", "1000")) +
+  ggplot2::facet_wrap(~year, ncol = 2) +
+  ggplot2::theme_void() +
+  ggplot2::theme(legend.position = "inside", # Position legend inside the plot
+                 legend.position.inside = c(0.75, 0.25), # Coordinates for the legend position
+                 strip.text = ggplot2::element_text(size = 18),
+                 legend.text = ggplot2::element_text(size = 12),
+                 legend.title = ggplot2::element_text(size = 14))
+
+# Save the plot if update_FigA9 is TRUE
+if (update_FigA9) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA9.png"), Figure_A9, width = figA9_width, height = figA9_height, units = "in")
+}
+
+##### FIGURE A10 #####
+
+# Select relevant columns for conflicts data from different years
+to.plot <- conflict.aggregated %>%
+  dplyr::select(conflicts.data_2006, conflicts.data_2011, conflicts.data_2018)
+
+# Combine data from different years into one dataframe, removing NULLs
+to.plot <- dplyr::bind_rows(
+  purrr::compact(to.plot$conflicts.data_2006),
+  purrr::compact(to.plot$conflicts.data_2011),
+  purrr::compact(to.plot$conflicts.data_2018)
+)
+
+# Process the combined data
+to.plot %<>%
+  # Select date_start and best columns
+  dplyr::select(date_start, best) %>%
+  # Create a month column by flooring the date_start to the nearest month
+  dplyr::mutate(month = lubridate::floor_date(date_start, unit = "month")) %>%
+  # Group by month and summarize the number of conflicts and total deaths
+  dplyr::group_by(month) %>%
+  dplyr::summarise(n.conflicts = dplyr::n(), n.deaths = sum(best, na.rm = TRUE))
+
+# Create the plot for Figure A10
+Figure_A10 <- to.plot %>%
+  # Scale deaths to match the plot scale
+  dplyr::mutate(n.deaths = n.deaths / 100 * 6) %>%
+  ggplot2::ggplot(ggplot2::aes(x = month)) +
+  # Plot linerange for number of conflicts
+  ggplot2::geom_linerange(ggplot2::aes(ymax = n.conflicts), ymin = 0, color = "#0111FA", linewidth = 0.2) +
+  # Plot linerange for number of deaths with a slight nudge on the x-axis
+  ggplot2::geom_linerange(ggplot2::aes(ymax = n.deaths), ymin = 0, color = "#FA4C00", position = ggplot2::position_nudge(x = 10 * 24 * 3600), linewidth = 0.2) +
+  # Add vertical lines for election dates
+  ggplot2::geom_vline(data = data.frame(month = as.POSIXct(as.Date(c("2006-07-30", "2011-11-28", "2018-12-30")))), ggplot2::aes(xintercept = month), color = "black") +
+  # Add text labels for election dates
+  ggplot2::geom_text(data = data.frame(month = as.POSIXct(as.Date(c("2006-07-30", "2011-11-28", "2018-12-30"))), label = c("2006 election", "2011 election", "2018 election")), ggplot2::aes(label = label), y = 75, color = "black", nudge_x = -3 * 30 * 3600 * 24, angle = 90) +
+  # Scale the x-axis with a small expansion
+  ggplot2::scale_x_datetime(expand = c(0.01, 0.01)) +
+  # Remove x-axis label
+  ggplot2::xlab(NULL) +
+  ggplot2::ylab("n.conflicts") +
+  # Add a secondary y-axis for number of deaths
+  ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(trans = ~.*100/6, guide = ggplot2::guide_axis(title = "n.deaths"))) +
+  # Customize the theme for axis text colors and sizes
+  ggplot2::theme(axis.text.y.left = ggplot2::element_text(color = "#0111FA", size = 10),
+                 axis.text.y.right = ggplot2::element_text(color = "#FA4C00", size = 10))
+
+# Save the plot if update_FigA10 is TRUE
+if (update_FigA10) {
+  ggplot2::ggsave(here::here("manuscript/figures/FigureA10.png"), Figure_A10, width = figA10_width, height = figA10_height, units = "in")
+}
+
 #### UPDATE DOCUMENT #####
 
 # Open the document
