@@ -1363,3 +1363,408 @@ if(update_FigA6) {
 }  
 
 
+#### UPDATE DOCUMENT #####
+
+# Open the document
+doc <- officer::read_docx(document_path)
+
+
+# Update figure 1  
+doc <- cursor_bookmark(doc,"Fig1") # Find the bookmark
+# Add the figure after the bookmark
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure1.png"),pos = "after",width =fig1_width,height = fig1_height )  
+# Remove the previous figure version
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 2
+doc <- cursor_bookmark(doc,"Fig2")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure2.png"),pos = "after",width =fig2_width,height = fig2_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 3
+doc <- cursor_bookmark(doc,"Fig3")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure3.png"),pos = "after",width =fig3_width,height = fig3_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 4
+doc <- cursor_bookmark(doc,"Fig4")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure4.png"),pos = "after",width =fig4_width,height = fig4_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 5
+doc <- cursor_bookmark(doc,"Fig5")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure5.png"),pos = "after",width =fig5_width,height = fig5_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 6
+doc <- cursor_bookmark(doc,"Fig6")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure6.png"),pos = "after",width =fig6_width,height = fig6_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 7
+doc <- cursor_bookmark(doc,"Fig7")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure7.png"),pos = "after",width =fig7_width,height = fig7_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure 8
+doc <- cursor_bookmark(doc,"Fig8")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/Figure8.png"),pos = "after",width =fig8_width,height = fig8_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A1
+doc <- cursor_bookmark(doc,"FigA1")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA1.png"),pos = "after",width =figA1_width,height = figA1_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update figure A1b
+doc <- cursor_bookmark(doc,"FigA1b")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA1b.png"),pos = "after",width =figA1b_width,height = figA1b_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table 1
+
+doc <- cursor_bookmark(doc,"Table1")
+doc %<>% body_add_flextable(Table_1,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table 3a
+
+doc <- cursor_bookmark(doc,"Table3a")
+doc %<>% body_add_flextable(Table_3a,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table 3b
+
+doc <- cursor_bookmark(doc,"Table3b")
+doc %<>% body_add_flextable(Table_3b,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update Table 1 v2
+
+doc <- cursor_bookmark(doc,"Table1v2")
+doc %<>% body_add_flextable(Table_1_v2,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update Table A2
+
+doc <- cursor_bookmark(doc,"TableA2")
+doc %<>% body_add_flextable(Table_A2,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update Table A2b
+
+doc <- cursor_bookmark(doc,"TableA2b")
+doc %<>% body_add_flextable(Table_A2b,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update Table A2c
+
+doc <- cursor_bookmark(doc,"TableA2c")
+doc %<>% body_add_flextable(Table_A2c,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A2d
+
+doc <- cursor_bookmark(doc,"TableA2d")
+doc %<>% body_add_flextable(Table_A2d,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update Table A3
+
+doc <- cursor_bookmark(doc,"TableA3")
+doc %<>% body_add_flextable(Table_A3,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update Table A4
+
+doc <- cursor_bookmark(doc,"TableA4")
+doc %<>% body_add_flextable(Table_A4,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A5
+
+doc <- cursor_bookmark(doc,"TableA5")
+doc %<>% body_add_flextable(Table_A5,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A6i
+
+doc <- cursor_bookmark(doc,"TableA6i")
+doc %<>% body_add_flextable(Table_A6i,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A6ii
+
+doc <- cursor_bookmark(doc,"TableA6ii")
+doc %<>% body_add_flextable(Table_A6ii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A6iii
+
+doc <- cursor_bookmark(doc,"TableA6iii")
+doc %<>% body_add_flextable(Table_A6iii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+###### Table A8i #####
+
+doc <- cursor_bookmark(doc,"TableA8i")
+doc %<>% body_add_flextable(Table_A8i,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A8ii #####
+
+doc <- cursor_bookmark(doc,"TableA8ii")
+doc %<>% body_add_flextable(Table_A8ii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A8iii #####
+
+doc <- cursor_bookmark(doc,"TableA8iii")
+doc %<>% body_add_flextable(Table_A8iii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+
+# Update Table A9i
+
+doc <- cursor_bookmark(doc,"TableA9i")
+doc %<>% body_add_flextable(Table_A9i,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A9ii
+
+doc <- cursor_bookmark(doc,"TableA9ii")
+doc %<>% body_add_flextable(Table_A9ii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A9iii
+
+doc <- cursor_bookmark(doc,"TableA9iii")
+doc %<>% body_add_flextable(Table_A9iii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A11
+
+doc <- cursor_bookmark(doc,"TableA11")
+doc %<>% body_add_flextable(Table_A11,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A12 #####
+
+doc <- cursor_bookmark(doc,"TableA12")
+doc %<>% body_add_flextable(Table_A12,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+###### Table A13 #####
+
+doc <- cursor_bookmark(doc,"TableA13")
+doc %<>% body_add_flextable(Table_A13,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+###### Table A14 #####
+
+doc <- cursor_bookmark(doc,"TableA14")
+doc %<>% body_add_flextable(Table_A14,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A15
+
+doc <- cursor_bookmark(doc,"TableA15")
+doc %<>% body_add_flextable(Table_A15,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A16 ######
+
+doc <- cursor_bookmark(doc,"TableA16")
+doc %<>% body_add_flextable(Table_A16,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A17 ######
+
+doc <- cursor_bookmark(doc,"TableA17")
+doc %<>% body_add_flextable(Table_A17,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A18 ######
+
+doc <- cursor_bookmark(doc,"TableA18")
+doc %<>% body_add_flextable(Table_A18,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A8ib
+
+doc <- cursor_bookmark(doc,"TableA8ib")
+doc %<>% body_add_flextable(Table_A8ib,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A8ic
+
+doc <- cursor_bookmark(doc,"TableA8ic")
+doc %<>% body_add_flextable(Table_A8ic,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A8id
+
+doc <- cursor_bookmark(doc,"TableA8id")
+doc %<>% body_add_flextable(Table_A8id,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update figure A2
+doc <- cursor_bookmark(doc,"FigA2")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA2.png"),pos = "after",width =figA2_width,height = figA2_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+# Update figure A3
+doc <- cursor_bookmark(doc,"FigA3")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA3.png"),pos = "after",width =figA3_width,height = figA3_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A4
+doc <- cursor_bookmark(doc,"FigA4")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA4.png"),pos = "after",width =figA4_width,height = figA4_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A5
+doc <- cursor_bookmark(doc,"FigA5")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA5.png"),pos = "after",width =figA5_width,height = figA5_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A6
+doc <- cursor_bookmark(doc,"FigA6")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA6.png"),pos = "after",width =figA6_width,height = figA6_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A7
+doc <- cursor_bookmark(doc,"FigA7")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA7.png"),pos = "after",width =figA7_width,height = figA7_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A8
+doc <- cursor_bookmark(doc,"FigA8")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA8.png"),pos = "after",width =figA8_width,height = figA8_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A9
+doc <- cursor_bookmark(doc,"FigA9")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA9.png"),pos = "after",width =figA9_width,height = figA9_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update figure A10
+doc <- cursor_bookmark(doc,"FigA10")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA10.png"),pos = "after",width =figA10_width,height = figA10_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### figure A11 #####
+doc <- cursor_bookmark(doc,"FigA11")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA11.png"),pos = "after",width =figA11_width,height = figA11_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### figure A12 #####
+doc <- cursor_bookmark(doc,"FigA12")
+doc <- body_add_img(doc,src = here::here("manuscript/figures/FigureA12.png"),pos = "after",width =figA12_width,height = figA12_height )  
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A19i ######
+
+doc <- cursor_bookmark(doc,"TableA19i")
+doc %<>% body_add_flextable(Table_A19i,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A19ii ######
+
+doc <- cursor_bookmark(doc,"TableA19ii")
+doc %<>% body_add_flextable(Table_A19ii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+###### Table A19iii ######
+
+doc <- cursor_bookmark(doc,"TableA19iii")
+doc %<>% body_add_flextable(Table_A19iii,align = "center")
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+# Update Table A10
+
+doc <- cursor_bookmark(doc,"TableA10")
+doc %<>% body_add_flextable(Table_A10,align = "center",split=TRUE)
+doc <- cursor_forward(doc)
+doc <- body_remove(doc)
+
+
+
+###### Backup document ######
+
+back_timestamp <- Sys.time() %>% format("%Y-%m-%dT%H:%M:%S",tz="UTC")
+back_path <- file.path(dirname(document_path),"backup",paste0(back_timestamp,"_backup_",basename(document_path)))
+file.copy(document_path,back_path,overwrite = FALSE)
+
+###### Save document updated ######
+library(officer)
+print(doc,target=document_path)
+print("docx updated")
