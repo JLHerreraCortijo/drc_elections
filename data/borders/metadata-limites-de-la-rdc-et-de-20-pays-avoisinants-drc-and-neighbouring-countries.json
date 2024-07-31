@@ -1,0 +1,64 @@
+{
+    "id": "c9cfe96c-bd95-484a-b950-53cef508011e",
+    "title": "Limites de la RDC et de 20 pays avoisinants / DRC and neighbouring countries",
+    "name": "limites-de-la-rdc-et-de-20-pays-avoisinants-drc-and-neighbouring-countries",
+    "notes": "Limites de la R\u00e9publique D\u00e9mocratique du Congo et de 20 pays avoisinants, extraites de la base de donn\u00e9es OpenStreetMap et mises \u00e0 disposition pour faciliter la cartographie.",
+    "dataset_source": "OpenStreetMap RDC",
+    "organization": "OpenStreetMap RDC",
+    "dataset_date": "[2021-10-12T00:00:00 TO 2021-10-12T23:59:59]",
+    "last_modified": "2021-10-12T11:37:16.030029",
+    "data_update_frequency": "As needed",
+    "groups": [
+        "Angola",
+        "Burundi",
+        "Cameroon",
+        "Central African Republic",
+        "Congo",
+        "Democratic Republic of the Congo",
+        "Rwanda",
+        "South Sudan",
+        "Uganda",
+        "United Republic of Tanzania",
+        "Zambia"
+    ],
+    "license_title": "Open Database License (ODC-ODbL)",
+    "methodology": "Other",
+    "methodology_other": "Extraction de la base de donn\u00e9es OpenStreetMap",
+    "caveats": "Ces donn\u00e9es peuvent diverger des vues officielles. Certaines zones disput\u00e9es sont repr\u00e9sent\u00e9es s\u00e9par\u00e9ment.",
+    "tags": [
+        "administrative boundaries-divisions",
+        "geodata"
+    ],
+    "resources": [
+        {
+            "created": "2021-10-12T11:36:59.154119",
+            "description": "Limites de la R\u00e9publique D\u00e9mocratique du Congo et de 20 pays avoisinants, extraites de la base de donn\u00e9es OpenStreetMap, version du 12 octobre 2021 au format geopackage. ",
+            "format": "Geopackage",
+            "download_url": "https://data.humdata.org/dataset/c9cfe96c-bd95-484a-b950-53cef508011e/resource/1b9eb58f-69f0-47ee-a5ac-3dddc54ad985/download/osm_rdc_paysvoisins_211012.gpkg",
+            "id": "1b9eb58f-69f0-47ee-a5ac-3dddc54ad985",
+            "last_modified": "2021-10-12T11:36:58.901187",
+            "metadata_modified": "2022-10-17T17:42:33.119570",
+            "microdata": false,
+            "dataset_id": "c9cfe96c-bd95-484a-b950-53cef508011e",
+            "resource_type": "file.upload",
+            "name": "OSM_RDC_PaysVoisins_211012.gpkg",
+            "mimetype": "application/octet-stream",
+            "size": "17.2M"
+        },
+        {
+            "created": "2021-10-12T11:37:16.392013",
+            "description": "Limites de la R\u00e9publique D\u00e9mocratique du Congo et de 20 pays avoisinants, extraites de la base de donn\u00e9es OpenStreetMap, version du 12 octobre 2021 au format shapefile. ",
+            "format": "SHP",
+            "download_url": "https://data.humdata.org/dataset/c9cfe96c-bd95-484a-b950-53cef508011e/resource/d9fc105c-5976-4b9d-a90e-9a01965828f3/download/osm_rdc_paysvoisins_211012.zip",
+            "id": "d9fc105c-5976-4b9d-a90e-9a01965828f3",
+            "last_modified": "2021-10-12T11:37:16.030029",
+            "metadata_modified": "2022-10-17T17:42:33.119712",
+            "microdata": false,
+            "dataset_id": "c9cfe96c-bd95-484a-b950-53cef508011e",
+            "resource_type": "file.upload",
+            "name": "OSM_RDC_PaysVoisins_211012.zip",
+            "mimetype": "application/zip",
+            "size": "6.1M"
+        }
+    ]
+}

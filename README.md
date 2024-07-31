@@ -612,6 +612,22 @@ into their corresponding territories.
 and election results for the merged territories, and calculating additional 
 percentages and turnout rates.
 
+### 12-DISTANCES
+
+#### 12.1-DISTANCES TO RWANDA AND UGANDA BORDERS
+
+##### Get borders geometry
+The provided script extracts and processes geographical border data for the 
+Democratic Republic of the Congo (DRC) and its neighboring countries, sourced 
+from a shapefile downloaded from the [Humanitarian Data Exchange](https://data.humdata.org/dataset/limites-de-la-rdc-et-de-20-pays-avoisinants-drc-and-neighbouring-countries). 
+The data includes boundaries for 20 neighboring countries as obtained from 
+OpenStreetMap. The script specifically filters out the borders for Uganda, Rwanda, 
+and the DRC, and then applies a small buffer to these borders to facilitate 
+accurate spatial calculations. Finally, it identifies the intersecting border 
+areas between the DRC and Rwanda, as well as the DRC and Uganda, enabling further 
+analysis of these border regions. See the dtat/borders folder for further details
+on the border data.
+
 # data.RData
 
 results/data.RData contains several variables used across the repository. Here we describe some of them.

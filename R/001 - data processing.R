@@ -2231,16 +2231,16 @@ if(!file.exists(here::here("data/nightlight.RData"))){
         nightlight <- 1:nrow(congo.territoire.borders) %>% 
           purrr::map(\(i) {
             nightlight %>% raster::crop(congo.territoire.borders %>% dplyr::slice(i))
-
+            
           }) %>% 
-
+          
           purrr::map(\(x) { 
             x %>% raster::rasterToPoints(spatial = TRUE) %>% 
               dplyr::rename(nightlight = 1) %>% 
               dplyr::mutate(year = year)
-
+            
           })
-
+        
         # Convert points to sf objects
         nightlight %<>% purrr::map(sf::st_as_sf)
         
@@ -2286,7 +2286,7 @@ if(!file.exists(here::here("data/nightlight.RData"))){
 
 # Calculate the mean nightlight values
 nightlight_mean <- nightlight %>% purrr::map(\(.x){
-
+  
   # Convert the current data frame to a standard data frame
   .x %>% as.data.frame %>% 
     # Select only the relevant columns: index.data, year, and nightlight
@@ -2690,7 +2690,64 @@ data_villes_merged <- data %>% merge_villes("label") %>% dplyr::group_by(index) 
 
 rm(merge_villes, villes_to_merge, villes_labels)
 
-#### 12-SAVE DATA ####
+#### 12-DISTANCES ####
+
+##### 12.1-DISTANCES TO RWANDA AND UGANDA BORDERS #####
+
+###### Get borders geometry ######
+# The provided script extracts and processes geographical border data for the 
+# Democratic Republic of the Congo (DRC) and its neighboring countries, sourced 
+# from a shapefile downloaded from the Humanitarian Data Exchange 
+# (https://data.humdata.org/dataset/limites-de-la-rdc-et-de-20-pays-avoisinants-drc-and-neighbouring-countries). 
+# The data includes boundaries for 20 neighboring countries as obtained from 
+# OpenStreetMap. The script specifically filters out the borders for Uganda, Rwanda, 
+# and the DRC, and then applies a small buffer to these borders to facilitate 
+# accurate spatial calculations. Finally, it identifies the intersecting border 
+# areas between the DRC and Rwanda, as well as the DRC and Uganda, enabling further 
+# analysis of these border regions. See the dtat/borders folder for further details
+# on the border data.
+
+
+# Read the shapefile containing borders information for the Democratic Republic of the Congo and neighboring countries
+borders <- sf::st_read("data/borders/OSM_RDC_PaysVoisins_211012.shp")
+
+# Filter the borders data to get the geometry for Uganda
+uga <- borders %>% 
+  dplyr::filter(name_en == "Uganda") %>% 
+  sf::st_geometry()
+
+# Filter the borders data to get the geometry for Rwanda
+rwa <- borders %>% 
+  dplyr::filter(name_en == "Rwanda") %>% 
+  sf::st_geometry()
+
+# Filter the borders data to get the geometry for the Democratic Republic of the Congo
+drc <- borders %>% 
+  dplyr::filter(name_en == "Democratic Republic of the Congo") %>% 
+  sf::st_geometry()
+
+# Define a small buffer size to adjust border precision
+buffer_size <- 0.00001  
+
+# Apply the buffer to the Democratic Republic of the Congo borders to ensure proper spatial operations
+buffered_drc <- sf::st_buffer(drc, dist = buffer_size)
+
+# Apply the buffer to the Rwanda borders to ensure proper spatial operations
+buffered_rwa <- sf::st_buffer(rwa, dist = buffer_size)
+
+# Apply the buffer to the Uganda borders to ensure proper spatial operations
+buffered_uga <- sf::st_buffer(uga, dist = buffer_size)
+
+# Calculate the intersection of the buffered borders between the Democratic Republic of the Congo and Rwanda
+drc_rwa_border <- sf::st_intersection(buffered_drc, buffered_rwa) 
+
+# Calculate the intersection of the buffered borders between the Democratic Republic of the Congo and Uganda
+drc_uga_border <- sf::st_intersection(buffered_drc, buffered_uga) 
+
+###### Compute distances fom territories to each border ######
+
+
+#### 13-SAVE DATA ####
 
 
 save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,data_villes_merged,file=here::here("results/data.RData"))
