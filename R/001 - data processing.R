@@ -2745,37 +2745,59 @@ drc_rwa_border <- sf::st_intersection(buffered_drc, buffered_rwa)
 drc_uga_border <- sf::st_intersection(buffered_drc, buffered_uga) 
 
 # Ensure the resulting geometries are valid
-drc_rwa_border <- st_make_valid(drc_rwa_border)
-drc_uga_border <- st_make_valid(drc_uga_border)
+drc_rwa_border <- sf::st_make_valid(drc_rwa_border)
+drc_uga_border <- sf::st_make_valid(drc_uga_border)
 
-###### Compute distances from territories to each border ######
+###### Compute distances in m from territories to each border ######
 
 # Calculate the centroid of each territory
 territories_centroids <- congo.territoire.borders %>%
-  st_centroid()
+  sf::st_centroid()
 
 # Calculate the minimum distances from each centroid to the Rwanda border
 distance_to_rwa_border <- apply(
-  st_distance(territories_centroids$geometry, drc_rwa_border),
+  sf::st_distance(territories_centroids$geometry, drc_rwa_border),
   1,
   min
 )
 
 # Calculate the minimum distances from each centroid to the Uganda border
 distance_to_uga_border <- apply(
-  st_distance(territories_centroids$geometry, drc_uga_border),
+  sf::st_distance(territories_centroids$geometry, drc_uga_border),
   1,
   min
 )
 
 # Add the distance calculations to the original data frame of territories
 congo.territoire.borders %<>%
-  mutate(
+  dplyr::mutate(
     distance_to_rwa_border = distance_to_rwa_border,
     distance_to_uga_border = distance_to_uga_border
   )
 
 rm(drc_rwa_border, drc_uga_border, borders, uga_border, rwa_border, drc_border, distance_to_rwa_border, distance_to_uga_border, buffered_uga, buffered_drc, buffered_rwa)
+
+
+##### 12.3-COMPUTE Distance_Bemba_home #####
+
+# Distance in m from each territory centroid to the centroid of Mbandaka ville
+
+mbandaka_centroid <- territories_centroids %>% dplyr::filter(index.data == "mbandaka")
+
+congo.territoire.borders %<>% dplyr::mutate(Distance_Bemba_home =  sf::st_distance(territories_centroids$geometry,mbandaka_centroid))
+
+rm(mbandaka_centroid)  
+
+##### 12.3-COMPUTE Distance_Bemba_home #####
+
+# Distance in m from each territory centroid to the centroid of Mbandaka ville
+
+mbandaka_centroid <- territories_centroids %>% dplyr::filter(index.data == "mbandaka")
+
+congo.territoire.borders %<>% dplyr::mutate(Distance_Bemba_home =  sf::st_distance(territories_centroids$geometry,mbandaka_centroid))
+
+rm(mbandaka_centroid)
+                
 #### 13-SAVE DATA ####
 
 
