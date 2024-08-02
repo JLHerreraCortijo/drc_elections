@@ -37,8 +37,10 @@ years are merged to create a comprehensive view that supports longitudinal analy
 registered voters, total votes, and specific candidate votes across various 
 administrative levels, enhancing the dataset's analytical depth.
 7. **Geographic Harmonization**: Geographic data is aligned with the electoral 
-dataset, ensuring consistency in spatial analysis. Distances from each administrative unit
-to the Uganda and Rwanda border are computed. Distances in m from each territory centroid to each candidate's home territory are computed.
+dataset, ensuring consistency in spatial analysis. Distances 
+(as log10(distance in km)) from each administrative unit to the Uganda and Rwanda 
+border are computed. Distances (as log10(distance in km)) from each territory 
+centroid to each candidate's home territory are computed.
 8. **Conflict Data Integration**: Conflict data (UCDP and ACLED) is integrated to provide a 
 contextual understanding of the election periods, categorized by types of 
 violence and involved parties.
@@ -635,6 +637,13 @@ Distances in m from each territory centroid to each candidate's home territory a
 - **Distance_Kabila_home**: distance in m to the ???? centroid.
 - **Distance_Bemba_home**: distance in m to the Mbandaka Ville centroid.
 - **Distance_Tshisekedi_home**: distance in m to the Kananga Ville centroid.
+
+#### 12.5-TRANSFORM DISTANCES TO LOG10 DISTANCES
+
+Calculated distances are transformed to a logarithmic scale (log10) after 
+converting them from meters to kilometers and adding a small constant to avoid 
+undefined log values. This transformation standardizes the distance data, making 
+it easier to interpret and analyze in subsequent steps.
 
 # data.RData
 

@@ -2703,7 +2703,7 @@ rm(merge_villes, villes_to_merge, villes_labels)
 # To ensure accurate spatial operations, a small buffer is applied to these borders. 
 # The intersections between the buffered borders of the DRC with Rwanda and Uganda 
 # are calculated. Additionally, the script computes the centroids of various 
-# territories within the DRC and measures the minimum distances from these centroids 
+# territories within the DRC and measures the minimum distances in m from these centroids 
 # to the identified borders with Rwanda and Uganda.
 
 ###### Get borders geometry ######
@@ -2797,7 +2797,34 @@ kananga_centroid <- territories_centroids %>% dplyr::filter(index.data == "kanan
 congo.territoire.borders %<>% dplyr::mutate(Distance_Tshisekedi_home =  sf::st_distance(territories_centroids$geometry,kananga_centroid))
 
 rm(kananga_centroid)
-                
+
+##### 12.5-TRANSFORM DISTANCES TO LOG10 DISTANCES #####
+
+# Calculated distances are transformed to a logarithmic scale (log10) after 
+# converting them from meters to kilometers and adding a small constant to avoid 
+# undefined log values. This transformation standardizes the distance data, making 
+# it easier to interpret and analyze in subsequent steps.
+
+# Start the pipeline to modify the 'congo.territoire.borders' dataframe
+congo.territoire.borders %<>% 
+  
+  # Use mutate to create or transform columns in the dataframe
+  dplyr::mutate(
+    
+    # Apply a transformation across specific columns
+    dplyr::across(
+      
+      # Select the columns to be transformed: distance_to_rwa_border, distance_to_uga_border,
+      # Distance_Bemba_home, and Distance_Tshisekedi_home
+      dplyr::all_of(c("distance_to_rwa_border","distance_to_uga_border","Distance_Bemba_home", "Distance_Tshisekedi_home")),
+      
+      # Define the function to apply: convert distances to log10 scale
+      # Add 1 to avoid log(0) and convert meters to kilometers by dividing by 1000
+      \(dist_in_m) log10((as.numeric(dist_in_m) + 1) / 1000)
+    )
+  )
+
+
 #### 13-SAVE DATA ####
 
 
