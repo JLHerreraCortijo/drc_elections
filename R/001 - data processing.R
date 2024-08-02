@@ -2712,17 +2712,17 @@ rm(merge_villes, villes_to_merge, villes_labels)
 borders <- sf::st_read("data/borders/OSM_RDC_PaysVoisins_211012.shp")
 
 # Filter the borders data to get the geometry for Uganda
-uga <- borders %>% 
+uga_border <- borders %>% 
   dplyr::filter(name_en == "Uganda") %>% 
   sf::st_geometry()
 
 # Filter the borders data to get the geometry for Rwanda
-rwa <- borders %>% 
+rwa_border <- borders %>% 
   dplyr::filter(name_en == "Rwanda") %>% 
   sf::st_geometry()
 
 # Filter the borders data to get the geometry for the Democratic Republic of the Congo
-drc <- borders %>% 
+drc_border <- borders %>% 
   dplyr::filter(name_en == "Democratic Republic of the Congo") %>% 
   sf::st_geometry()
 
@@ -2730,13 +2730,13 @@ drc <- borders %>%
 buffer_size <- 0.00001  
 
 # Apply the buffer to the Democratic Republic of the Congo borders to ensure proper spatial operations
-buffered_drc <- sf::st_buffer(drc, dist = buffer_size)
+buffered_drc <- sf::st_buffer(drc_border, dist = buffer_size)
 
 # Apply the buffer to the Rwanda borders to ensure proper spatial operations
-buffered_rwa <- sf::st_buffer(rwa, dist = buffer_size)
+buffered_rwa <- sf::st_buffer(rwa_border, dist = buffer_size)
 
 # Apply the buffer to the Uganda borders to ensure proper spatial operations
-buffered_uga <- sf::st_buffer(uga, dist = buffer_size)
+buffered_uga <- sf::st_buffer(uga_border, dist = buffer_size)
 
 # Calculate the intersection of the buffered borders between the Democratic Republic of the Congo and Rwanda
 drc_rwa_border <- sf::st_intersection(buffered_drc, buffered_rwa) 
@@ -2775,7 +2775,7 @@ congo.territoire.borders %<>%
     distance_to_uga_border = distance_to_uga_border
   )
 
-
+rm(drc_rwa_border, drc_uga_border, borders, uga_border, rwa_border, drc_border, distance_to_rwa_border, distance_to_uga_border, buffered_uga, buffered_drc, buffered_rwa)
 #### 13-SAVE DATA ####
 
 
