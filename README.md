@@ -38,7 +38,7 @@ registered voters, total votes, and specific candidate votes across various
 administrative levels, enhancing the dataset's analytical depth.
 7. **Geographic Harmonization**: Geographic data is aligned with the electoral 
 dataset, ensuring consistency in spatial analysis. Distances from each administrative unit
-to the Uganda and Rwanda border are computed.
+to the Uganda and Rwanda border are computed. Distances in m from each territory centroid to each candidate's home territory are computed.
 8. **Conflict Data Integration**: Conflict data (UCDP and ACLED) is integrated to provide a 
 contextual understanding of the election periods, categorized by types of 
 violence and involved parties.
@@ -615,7 +615,7 @@ percentages and turnout rates.
 
 ### 12-DISTANCES
 
-#### 12.1-DISTANCES TO RWANDA AND UGANDA BORDERS
+#### 12.1-DISTANCES IN M TO RWANDA AND UGANDA BORDERS
 
 This section involves extracting and processing geographical data to analyze the 
 borders of the Democratic Republic of the Congo (DRC) and its neighboring countries. 
@@ -628,6 +628,13 @@ The intersections between the buffered borders of the DRC with Rwanda and Uganda
 are calculated. Additionally, the script computes the centroids of various 
 territories within the DRC and measures the minimum distances from these centroids 
 to the identified borders with Rwanda and Uganda.
+
+#### 12.2 to 12.4 COMPUTE DISTANCES TO CANDIDATE HOMES
+
+Distances in m from each territory centroid to each candidate's home territory are computed:
+- **Distance_Kabila_home**: distance in m to the ???? centroid.
+- **Distance_Bemba_home**: distance in m to the Mbandaka Ville centroid.
+- **Distance_Tshisekedi_home**: distance in m to the Kananga Ville centroid.
 
 # data.RData
 
