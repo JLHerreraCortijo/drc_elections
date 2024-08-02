@@ -2231,16 +2231,16 @@ if(!file.exists(here::here("data/nightlight.RData"))){
         nightlight <- 1:nrow(congo.territoire.borders) %>% 
           purrr::map(\(i) {
             nightlight %>% raster::crop(congo.territoire.borders %>% dplyr::slice(i))
-
+            
           }) %>% 
-
+          
           purrr::map(\(x) { 
             x %>% raster::rasterToPoints(spatial = TRUE) %>% 
               dplyr::rename(nightlight = 1) %>% 
               dplyr::mutate(year = year)
-
+            
           })
-
+        
         # Convert points to sf objects
         nightlight %<>% purrr::map(sf::st_as_sf)
         
@@ -2286,7 +2286,7 @@ if(!file.exists(here::here("data/nightlight.RData"))){
 
 # Calculate the mean nightlight values
 nightlight_mean <- nightlight %>% purrr::map(\(.x){
-
+  
   # Convert the current data frame to a standard data frame
   .x %>% as.data.frame %>% 
     # Select only the relevant columns: index.data, year, and nightlight
@@ -2690,7 +2690,93 @@ data_villes_merged <- data %>% merge_villes("label") %>% dplyr::group_by(index) 
 
 rm(merge_villes, villes_to_merge, villes_labels)
 
-#### 12-SAVE DATA ####
+#### 12-DISTANCES ####
+
+##### 12.1-DISTANCES TO RWANDA AND UGANDA BORDERS #####
+
+# This section involves extracting and processing geographical data to analyze the 
+# borders of the Democratic Republic of the Congo (DRC) and its neighboring countries. 
+# The data is obtained from a shapefile sourced from the Humanitarian Data Exchange 
+# (https://data.humdata.org/dataset/limites-de-la-rdc-et-de-20-pays-avoisinants-drc-and-neighbouring-countries), 
+# which includes boundaries for 20 countries based on OpenStreetMap. The section 
+# focuses on filtering and isolating the borders for Uganda, Rwanda, and the DRC. 
+# To ensure accurate spatial operations, a small buffer is applied to these borders. 
+# The intersections between the buffered borders of the DRC with Rwanda and Uganda 
+# are calculated. Additionally, the script computes the centroids of various 
+# territories within the DRC and measures the minimum distances from these centroids 
+# to the identified borders with Rwanda and Uganda.
+
+###### Get borders geometry ######
+
+# Read the shapefile containing borders information for the Democratic Republic of the Congo and neighboring countries
+borders <- sf::st_read("data/borders/OSM_RDC_PaysVoisins_211012.shp")
+
+# Filter the borders data to get the geometry for Uganda
+uga_border <- borders %>% 
+  dplyr::filter(name_en == "Uganda") %>% 
+  sf::st_geometry()
+
+# Filter the borders data to get the geometry for Rwanda
+rwa_border <- borders %>% 
+  dplyr::filter(name_en == "Rwanda") %>% 
+  sf::st_geometry()
+
+# Filter the borders data to get the geometry for the Democratic Republic of the Congo
+drc_border <- borders %>% 
+  dplyr::filter(name_en == "Democratic Republic of the Congo") %>% 
+  sf::st_geometry()
+
+# Define a small buffer size to adjust border precision
+buffer_size <- 0.00001  
+
+# Apply the buffer to the Democratic Republic of the Congo borders to ensure proper spatial operations
+buffered_drc <- sf::st_buffer(drc_border, dist = buffer_size)
+
+# Apply the buffer to the Rwanda borders to ensure proper spatial operations
+buffered_rwa <- sf::st_buffer(rwa_border, dist = buffer_size)
+
+# Apply the buffer to the Uganda borders to ensure proper spatial operations
+buffered_uga <- sf::st_buffer(uga_border, dist = buffer_size)
+
+# Calculate the intersection of the buffered borders between the Democratic Republic of the Congo and Rwanda
+drc_rwa_border <- sf::st_intersection(buffered_drc, buffered_rwa) 
+
+# Calculate the intersection of the buffered borders between the Democratic Republic of the Congo and Uganda
+drc_uga_border <- sf::st_intersection(buffered_drc, buffered_uga) 
+
+# Ensure the resulting geometries are valid
+drc_rwa_border <- st_make_valid(drc_rwa_border)
+drc_uga_border <- st_make_valid(drc_uga_border)
+
+###### Compute distances from territories to each border ######
+
+# Calculate the centroid of each territory
+territories_centroids <- congo.territoire.borders %>%
+  st_centroid()
+
+# Calculate the minimum distances from each centroid to the Rwanda border
+distance_to_rwa_border <- apply(
+  st_distance(territories_centroids$geometry, drc_rwa_border),
+  1,
+  min
+)
+
+# Calculate the minimum distances from each centroid to the Uganda border
+distance_to_uga_border <- apply(
+  st_distance(territories_centroids$geometry, drc_uga_border),
+  1,
+  min
+)
+
+# Add the distance calculations to the original data frame of territories
+congo.territoire.borders %<>%
+  mutate(
+    distance_to_rwa_border = distance_to_rwa_border,
+    distance_to_uga_border = distance_to_uga_border
+  )
+
+rm(drc_rwa_border, drc_uga_border, borders, uga_border, rwa_border, drc_border, distance_to_rwa_border, distance_to_uga_border, buffered_uga, buffered_drc, buffered_rwa)
+#### 13-SAVE DATA ####
 
 
 save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,data_villes_merged,file=here::here("results/data.RData"))

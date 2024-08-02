@@ -37,7 +37,8 @@ years are merged to create a comprehensive view that supports longitudinal analy
 registered voters, total votes, and specific candidate votes across various 
 administrative levels, enhancing the dataset's analytical depth.
 7. **Geographic Harmonization**: Geographic data is aligned with the electoral 
-dataset, ensuring consistency in spatial analysis.
+dataset, ensuring consistency in spatial analysis. Distances from each administrative unit
+to the Uganda and Rwanda border are computed.
 8. **Conflict Data Integration**: Conflict data (UCDP and ACLED) is integrated to provide a 
 contextual understanding of the election periods, categorized by types of 
 violence and involved parties.
@@ -611,6 +612,22 @@ into their corresponding territories.
 6. **Summarizing Results**: Aggregating various metrics such as voter counts 
 and election results for the merged territories, and calculating additional 
 percentages and turnout rates.
+
+### 12-DISTANCES
+
+#### 12.1-DISTANCES TO RWANDA AND UGANDA BORDERS
+
+This section involves extracting and processing geographical data to analyze the 
+borders of the Democratic Republic of the Congo (DRC) and its neighboring countries. 
+The data is obtained from a shapefile sourced from the Humanitarian Data Exchange 
+(https://data.humdata.org/dataset/limites-de-la-rdc-et-de-20-pays-avoisinants-drc-and-neighbouring-countries), 
+which includes boundaries for 20 countries based on OpenStreetMap. The section 
+focuses on filtering and isolating the borders for Uganda, Rwanda, and the DRC. 
+To ensure accurate spatial operations, a small buffer is applied to these borders. 
+The intersections between the buffered borders of the DRC with Rwanda and Uganda 
+are calculated. Additionally, the script computes the centroids of various 
+territories within the DRC and measures the minimum distances from these centroids 
+to the identified borders with Rwanda and Uganda.
 
 # data.RData
 
