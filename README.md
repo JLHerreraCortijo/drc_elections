@@ -617,6 +617,8 @@ percentages and turnout rates.
 
 ### 12-DISTANCES
 
+All distances are included as columns in the data.frame `congo.territoire.borders`
+
 #### 12.1-DISTANCES IN M TO RWANDA AND UGANDA BORDERS
 
 This section involves extracting and processing geographical data to analyze the 
@@ -627,16 +629,16 @@ which includes boundaries for 20 countries based on OpenStreetMap. The section
 focuses on filtering and isolating the borders for Uganda, Rwanda, and the DRC. 
 To ensure accurate spatial operations, a small buffer is applied to these borders. 
 The intersections between the buffered borders of the DRC with Rwanda and Uganda 
-are calculated. Additionally, the script computes the centroids of various 
+are calculated. Finally, the script computes the centroids of various 
 territories within the DRC and measures the minimum distances from these centroids 
-to the identified borders with Rwanda and Uganda.
+to the identified borders with Rwanda and Uganda (`distance_to_rwa_border` and `distance_to_uga_border`).
 
 #### 12.2 to 12.4 COMPUTE DISTANCES TO CANDIDATE HOMES
 
 Distances in m from each territory centroid to each candidate's home territory are computed:
-- **Distance_Kabila_home**: distance in m to the ???? centroid.
-- **Distance_Bemba_home**: distance in m to the Mbandaka Ville centroid.
-- **Distance_Tshisekedi_home**: distance in m to the Kananga Ville centroid.
+- `Distance_Kabila_home`: distance in m to the ???? centroid.
+- `Distance_Bemba_home`: distance in m to the Mbandaka Ville centroid.
+- `Distance_Tshisekedi_home`: distance in m to the Kananga Ville centroid.
 
 #### 12.5-TRANSFORM DISTANCES TO LOG10 DISTANCES
 
