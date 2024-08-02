@@ -2788,15 +2788,15 @@ congo.territoire.borders %<>% dplyr::mutate(Distance_Bemba_home =  sf::st_distan
 
 rm(mbandaka_centroid)  
 
-##### 12.3-COMPUTE Distance_Bemba_home #####
+##### 12.4-COMPUTE Distance_Tshisekedi_home #####
 
-# Distance in m from each territory centroid to the centroid of Mbandaka ville
+# Distance in m from each territory centroid to the centroid of Kananga ville
 
-mbandaka_centroid <- territories_centroids %>% dplyr::filter(index.data == "mbandaka")
+kananga_centroid <- territories_centroids %>% dplyr::filter(index.data == "kananga")
 
-congo.territoire.borders %<>% dplyr::mutate(Distance_Bemba_home =  sf::st_distance(territories_centroids$geometry,mbandaka_centroid))
+congo.territoire.borders %<>% dplyr::mutate(Distance_Tshisekedi_home =  sf::st_distance(territories_centroids$geometry,kananga_centroid))
 
-rm(mbandaka_centroid)
+rm(kananga_centroid)
                 
 #### 13-SAVE DATA ####
 
