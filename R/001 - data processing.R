@@ -2777,6 +2777,15 @@ congo.territoire.borders %<>%
 
 rm(drc_rwa_border, drc_uga_border, borders, uga_border, rwa_border, drc_border, distance_to_rwa_border, distance_to_uga_border, buffered_uga, buffered_drc, buffered_rwa)
 
+##### 12.2-COMPUTE Distance_Kabila_home #####
+
+# Distance in m from each territory centroid to the centroid of Kamina 
+
+kamina_centroid <- territories_centroids %>% dplyr::filter(index.data == "kamina")
+
+congo.territoire.borders %<>% dplyr::mutate(Distance_Kabila_home =  sf::st_distance(territories_centroids$geometry,kamina_centroid))
+
+rm(kamina_centroid)  
 
 ##### 12.3-COMPUTE Distance_Bemba_home #####
 
@@ -2816,8 +2825,8 @@ congo.territoire.borders %<>%
       
       # Select the columns to be transformed: distance_to_rwa_border, distance_to_uga_border,
       # Distance_Bemba_home, and Distance_Tshisekedi_home
-      dplyr::all_of(c("distance_to_rwa_border","distance_to_uga_border","Distance_Bemba_home", "Distance_Tshisekedi_home")),
-      
+      # dplyr::all_of(c("distance_to_rwa_border","distance_to_uga_border","Distance_Kabila_home","Distance_Bemba_home", "Distance_Tshisekedi_home")),
+      dplyr::all_of(c("Distance_Kabila_home")),
       # Define the function to apply: convert distances to log10 scale
       # Add 1 to avoid log(0) and convert meters to kilometers by dividing by 1000
       \(dist_in_m) log10((as.numeric(dist_in_m) + 1) / 1000)

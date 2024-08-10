@@ -636,7 +636,7 @@ to the identified borders with Rwanda and Uganda (`distance_to_rwa_border` and `
 #### 12.2 to 12.4 COMPUTE DISTANCES TO CANDIDATE HOMES
 
 Distances in m from each territory centroid to each candidate's home territory are computed:
-- `Distance_Kabila_home`: distance in m to the ???? centroid.
+- `Distance_Kabila_home`: distance in m to the Kamina centroid.
 - `Distance_Bemba_home`: distance in m to the Mbandaka Ville centroid.
 - `Distance_Tshisekedi_home`: distance in m to the Kananga Ville centroid.
 
