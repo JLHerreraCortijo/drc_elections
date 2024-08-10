@@ -65,10 +65,10 @@ load("results/Table3a_models.RData")
 
 # Create a list of models to be printed
 models.to.print <- list(
-  model_t3a_1_1, model_t3a_1_2, model_t3a_1_3, model_t3a_1_4,
-  model_t3a_1_5, model_t3a_1_6, model_t3a_1_7, model_t3a_1_8,
-  model_t3a_1_9, model_t3a_1_10, model_t3a_1_11, model_t3a_1_12,
-  model_t3a_1_13, model_t3a_1_14, model_t3a_1_15, model_t3a_1_16
+  model_t3a_1, model_t3a_2, model_t3a_3, model_t3a_4,
+  model_t3a_5, model_t3a_6, model_t3a_7, model_t3a_8,
+  model_t3a_9, model_t3a_10, model_t3a_11, model_t3a_12,
+  model_t3a_13, model_t3a_14, model_t3a_15, model_t3a_16
 )
 
 # In order to stargazer to recognize the models, we need to fix their calls
@@ -172,142 +172,281 @@ Table_3a %<>%
 
 ##### TABLE 3b ####
 
-share <- data %>% select(index,label,starts_with("kabila.percent"),starts_with("ramazani.percent")) %>%
-  pivot_longer(cols = -c(index,label),values_to = "votes_share") %>% separate(name,c("drop","year"),sep="_") %>% mutate(year=as.integer(year)) %>% select(-drop)
+# Load the pre-saved RData file containing model results
+load("results/Table3b_models.RData")
 
+# Create a list of models to be printed
+models.to.print <- list(model_t3b_1, model_t3b_2, model_t3b_3)
 
+# Modify the model calls so that stargazer recognizes them as 'plm' models
+models.to.print %<>%
+  purrr::modify(\(model) {
+    # Replace the first element of the call with a 'plm' call
+    model$call[1] <- call("plm")
+    model  # Return the modified model
+  })
 
-mean_nightlight <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% 
-  mutate(election=elections[as.character(year)]) %>%  group_by(index,election) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") %>% filter(!is.na(election))
+# Define the names for each model to be displayed in the table
+model_names <- c("Deaths by type", "Conflicts by type", "Conflict Deaths by side")
 
+# Calculate Standard Errors
 
-DMSP_2012_13 <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% filter(year %in% c(2012,2013)) %>% group_by(index) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") 
+# Calculate robust standard errors for each model using the Arellano method
+models.to.print_se <- purrr::map(models.to.print, ~
+                                   # Use coeftest with robust standard errors (HC3 method)
+                                   lmtest::coeftest(.x, sandwich::vcovHC(.x, method = "arellano", type = "HC3"))[, "Std. Error"]
+)
 
-VIIR_percent_change <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% filter(year %in% c(2014,2018)) %>% pivot_wider(names_from = year,values_from = nightlight_mean) %>% mutate(change=(`2018`-`2014`)/(`2014`))
+# Calculate F-Statistics
 
-VIIR_corrected <- DMSP_2012_13 %>% left_join(VIIR_percent_change,by="index") %>% mutate(nightlight_mean_corrected=nightlight_mean+(nightlight_mean)*change) %>% select(index,nightlight_mean=nightlight_mean_corrected) %>% mutate(election="2018")
-
-mean_nightlight %<>% bind_rows(VIIR_corrected) %>% mutate(year=as.integer(election)) %>% select(-election)
-
-share %<>% left_join(mean_nightlight,by=c("index","year"))
-
-
-
-# Model 1
-
-conflict_deaths_by_type <- conflict.aggregated_by_type %>% dplyr::filter(n.conflicts >0) %>% select(index=index.data,year,type,n.deaths) %>% mutate(type=paste0(type,"_deaths")) %>% pivot_wider(names_from = type,values_from = n.deaths)
-
-
-to.model <- share %>% left_join(conflict_deaths_by_type,by=c("index","year")) %>% mutate(across(-c(index,year,votes_share,label),~replace_na(.,0))) %>% rename(region=label) %>% select(-index)
-
-to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
-
-model1_1 <- plm(votes_share ~ Non.state.vs.non.state_deaths + Foreign.vs.non.state_deaths + Non.state.vs.civilians_deaths + DRC.vs.non.state_deaths + DRC.vs.civilians_deaths +Foreign.vs.civilians_deaths,data=to.model,model="within",effect = "twoways")
-
-
-# Model 2
-
-conflict_events_by_type <- conflict.aggregated_by_type%>% dplyr::filter(n.conflicts >0) %>% select(index=index.data,year,type,n.conflicts) %>% mutate(type=paste0(type,"_events")) %>% pivot_wider(names_from = type,values_from = n.conflicts)
-
-
-to.model <- share %>% left_join(conflict_events_by_type,by=c("index","year")) %>% mutate(across(-c(index,year,votes_share,label),~replace_na(.,0))) %>% rename(region=label) %>% select(-index)
-
-to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
-
-model1_2 <- plm(votes_share ~ Non.state.vs.non.state_events + Foreign.vs.non.state_events + Non.state.vs.civilians_events + DRC.vs.non.state_events + DRC.vs.civilians_events +Foreign.vs.civilians_events,data=to.model,model="within",effect = "twoways")
-
-
-# Model 3
-
-.summarise_var<- function(.x,.var){
-  if(!is.null(.x)){
-    
-    .x %>% as.data.frame() %>%summarise(across(one_of(.var),~sum(.,na.rm = TRUE))) %>% pull(.var)
-  }
-}
-
-conflict_deaths_by_casualty_type <- conflict.aggregated_by_type %>% dplyr::filter(n.conflicts >0) %>% mutate(n.deaths_a=map(conflict.data,~.summarise_var(.x,"deaths_a")),
-                                                                                                             n.deaths_b=map(conflict.data,~.summarise_var(.x,"deaths_b")),
-                                                                                                             n.deaths_civilians=map(conflict.data,~.summarise_var(.x,"deaths_civilians")),
-                                                                                                             n.deaths_unknow=map(conflict.data,~.summarise_var(.x,"deaths_unknown"))
-) %>%
-  unnest(c(starts_with("n.deaths")))
-
-
-conflict_deaths_by_casualty_type %<>% mutate(n.deaths_DRC_milit=case_when(str_detect(type,"DRC")~n.deaths_a,TRUE~0),
-                                             n.deaths_foreign_milit=case_when(str_detect(type,"Foreign")~n.deaths_a,TRUE~0),
-                                             n.deaths_non_state=case_when(type=="Non-state vs non-state"~n.deaths_a+n.deaths_b,
-                                                                          type=="Non-state vs civilians"~n.deaths_a,
-                                                                          str_ends(type,"non-state")~n.deaths_b,
-                                                                          TRUE~0))
-
-
-
-conflict_deaths_by_casualty_type %<>% select(index=index.data,year,n.deaths,n.deaths_DRC_milit,n.deaths_foreign_milit,n.deaths_non_state,n.deaths_civilians,n.deaths_unknow)
-
-conflict_deaths_by_casualty_type %<>% group_by(index,year) %>% summarise(across(everything(),~sum(.,na.rm = FALSE)),.groups="drop")
-
-
-
-to.model <- share %>% left_join(conflict_deaths_by_casualty_type,by=c("index","year")) %>% mutate(across(-c(index,year,votes_share,label),~replace_na(.,0))) %>% rename(region=label) %>% select(-index)
-
-to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
-
-
-model1_3 <- plm(votes_share ~ n.deaths_DRC_milit + n.deaths_foreign_milit +  n.deaths_non_state + n.deaths_civilians + n.deaths_unknow,data=to.model,model="within",effect = "twoways")
-
-# Table
-
-models.to.print <- list(model1_1,model1_2,model1_3)
-
-model_names <- c("Deaths by type","Conflicts by type","Conflict Deaths by side")
-
-models.to.print_se <- map(models.to.print,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
-
-
-
-F.stat <-map(models.to.print,~{
-  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
-  
+# Calculate F-statistics and format them with significance stars
+F.stat <- purrr::map(models.to.print, ~{
+  # Get the model summary with robust standard errors
+  summ <- summary(.x, vcov. = sandwich::vcovHC(.x, method = "arellano", type = "HC3"))
+  # Extract the p-value and format the F-statistic with significance stars
   .p <- summ$fstatistic$p.value
-  sprintf("%0.3f%s",summ$fstatistic$statistic,
-          case_when(.p<0.01 ~"***",
-                    .p<0.05 ~"**",
-                    .p<0.1~"*",
-                    TRUE ~""))
+  sprintf("%0.3f%s", summ$fstatistic$statistic,
+          dplyr::case_when(
+            .p < 0.01 ~ "***",
+            .p < 0.05 ~ "**",
+            .p < 0.1 ~ "*",
+            TRUE ~ ""
+          ))
+}) %>%
+  unlist() %>%  # Flatten the list into a vector
+  c("F Statistic", .)  # Add label "F Statistic" at the beginning
+
+# Calculate Degrees of Freedom
+
+# Calculate degrees of freedom (df) for each model
+df <- purrr::map(models.to.print, ~{
+  # Get the model summary with robust standard errors
+  summ <- summary(.x, vcov. = sandwich::vcovHC(.x, method = "arellano", type = "HC3"))
+  # Extract and combine degrees of freedom
+  paste(summ$fstatistic$parameter, collapse = ";")
+}) %>%
+  unlist() %>%  # Flatten the list into a vector
+  c("df", .)  # Add label "df" at the beginning
+
+# Generate the Table
+
+# Generate the table using stargazer, suppressing warnings
+Table_3b <- suppressWarnings(
+  stargazer::stargazer(
+    models.to.print, type = "html",
+    se = models.to.print_se,
+    column.labels = model_names,  # Set the column labels
+    dep.var.caption = "Votes share",  # Set the dependent variable caption
+    omit.stat = "f",  # Omit the default F-statistic
+    add.lines = list(F.stat, df)  # Add the custom F-statistic and df lines
+  )
+) %>%
+  paste0(collapse = "")  # Combine the HTML output into a single string
+
+# Convert HTML Table to DataFrame
+
+# Convert the HTML table to a dataframe
+Table_3b <- xml2::read_html(Table_3b) %>%
+  rvest::html_table() %>%
+  as.data.frame() %>%
+  dplyr::slice(-c(1:5))  # Remove the first 5 rows (header rows)
+
+# Extract and set the column names from the first row of the table
+table_names <- as.vector(Table_3b %>% dplyr::slice(1) %>% unlist())
+table_names[1] <- " "  # Replace the first column name with a blank space
+Table_3b <- magrittr::set_names(Table_3b, table_names) %>%
+  dplyr::slice(-1)  # Remove the first row (now redundant after setting names)
+
+# Remove Empty Lines
+
+# Identify and remove empty rows in the table
+empty_lines <- Table_3b %>%
+  dplyr::transmute(across(everything(), ~nchar(.) == 0)) %>%
+  dplyr::rowwise() %>%
+  dplyr::transmute(all(dplyr::c_across(everything()))) %>%
+  dplyr::pull(1) %>%
+  which()
+Table_3b <- dplyr::slice(Table_3b, -empty_lines)
+
+# Format the Table with flextable
+
+# Create a flextable and apply formatting
+Table_3b %<>%
+  flextable::flextable() %>%
+  # Merge cells in the last row for all columns except the first
+  flextable::merge_at(i = nrow(Table_3b), j = 2:ncol(Table_3b)) %>%
+  # Apply text and paragraph styling for all parts of the table
+  flextable::style(pr_t = officer::fp_text(font.size = 7), part = "all",
+                   pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>%
+  # Add a horizontal line at the 34th row
+  flextable::hline(i = 34, border = officer::fp_border()) %>%
+  # Automatically adjust column widths
+  flextable::autofit() %>%
+  # Fit the table to a width of 6.49 inches
+  flextable::fit_to_width(6.49)
+
+##### TABLE 1v2 #####
+# Convert the ged201 object into a data frame for manipulation
+conflict.types.period.table <- ged201 %>% 
+  as.data.frame() %>% 
   
+  # Create a new variable 'period' based on the date ranges that match different election periods
+  dplyr::mutate(period = dplyr::case_when(
+    # If the event starts and ends between Jan 17, 2001, and Jul 30, 2006, assign it to the "2006 election" period
+    date_start >= lubridate::ymd("2001-01-17") & date_end <= lubridate::ymd("2006-07-30") ~ "2006 election",
+    
+    # If the event starts and ends between Jul 31, 2006, and Nov 28, 2011, assign it to the "2011 election" period
+    date_start >= lubridate::ymd("2006-07-31") & date_end <= lubridate::ymd("2011-11-28") ~ "2011 election",
+    
+    # If the event starts and ends between Nov 29, 2011, and Dec 30, 2018, assign it to the "2018 election" period
+    date_start >= lubridate::ymd("2011-11-29") & date_end <= lubridate::ymd("2018-12-30") ~ "2018 election",
+    
+    # Otherwise, assign NA if it doesn't match any of the above periods
+    TRUE ~ NA_character_
+  ))
+
+# Group data by 'type' and 'period' to summarize conflicts for each period and type
+conflict.types.period.table %<>% 
+  dplyr::group_by(type, period) %>%
   
-})  %>% unlist %>% c("F Statistic",.)
-
-df <-map(models.to.print,~{
-  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  # Summarize the number of conflicts ('n') and the sum of 'best' casualties for each group
+  dplyr::summarise(n = dplyr::n(), best = sum(best), .groups = "drop") %>%
   
-  paste(summ$fstatistic$parameter,collapse=";")
+  # Rename the 'type' column to 'Conflict category' for clarity
+  dplyr::rename(`Conflict category` = type)
+
+# Filter the data to include only conflicts starting with "State" in their type
+conflict.types.period.table.by.state <- ged201 %>%
+  as.data.frame() %>%
   
+  # Create the 'period' variable again as done previously
+  dplyr::mutate(period = dplyr::case_when(
+    date_start >= lubridate::ymd("2001-01-17") & date_end <= lubridate::ymd("2006-07-30") ~ "2006 election",
+    date_start >= lubridate::ymd("2006-07-31") & date_end <= lubridate::ymd("2011-11-28") ~ "2011 election",
+    date_start >= lubridate::ymd("2011-11-29") & date_end <= lubridate::ymd("2018-12-30") ~ "2018 election",
+    TRUE ~ NA_character_
+  )) %>%
   
-})  %>% unlist %>% c("df",.)
+  # Filter for rows where 'type' starts with "State"
+  dplyr::filter(stringr::str_starts(type, "State"))
 
+# Group the state-specific conflict data by 'period', 'type', and 'side_a'
+conflict.types.period.table.by.state %<>%
+  dplyr::group_by(period, type, side_a) %>%
+  
+  # Summarize the number of conflicts ('n') and the sum of 'best' casualties for each group
+  dplyr::summarise(n = dplyr::n(), best = sum(best), .groups = "drop")
 
-Table_3b <- suppressWarnings(stargazer::stargazer(models.to.print,type="html",
-                                                  se=models.to.print_se,
-                                                  
-                                                  column.labels=model_names,dep.var.caption = "Votes share",
-                                                  omit.stat = "f",
-                                                  add.lines = list(F.stat,
-                                                                   df))) %>% paste0(collapse = "")
+# Rename the 'side_a' column to 'State' and the 'type' column to 'Conflict category'
+conflict.types.period.table.by.state %<>% 
+  dplyr::rename(State = side_a) %>% 
+  dplyr::rename(`Conflict category` = type)
 
-Table_3b <- read_html(Table_3b) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
-table_names <- as.vector(Table_3b %>% slice(1) %>% unlist)
-table_names[1] <- " "
-Table_3b <- set_names(Table_3b,table_names) %>% slice(-1)
+# Nest the conflict data by 'period', apply a transformation to rename columns for each period
+conflict.types.period.table %<>% 
+  tidyr::nest(data = -period) %>% 
+  dplyr::mutate(data = purrr::map2(data, period, ~{
+    .period <- .y
+    .data <- .x
+    
+    # Rename columns by appending the period name to each column except 'Conflict category'
+    .data %>% dplyr::rename_with(~paste0(.x, "_", .period), .cols = -`Conflict category`)
+  })) %>%
+  
+  # Combine the nested data into a single data frame by full joining on 'Conflict category'
+  dplyr::pull("data") %>% 
+  purrr::reduce(~{dplyr::full_join(.x, .y, by = "Conflict category")})
 
-empty_lines <- Table_3b %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+# Create a summary row with totals for all numeric columns and add it to the conflict table
+total <- conflict.types.period.table %>% 
+  dplyr::summarise(dplyr::across(where(is.numeric), sum)) %>%
+  
+  # Add a 'Conflict category' value of "Total" to the summary row
+  dplyr::mutate(`Conflict category` = "Total") %>%
+  
+  # Convert all columns to character type
+  dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
-Table_3b %<>% slice(-empty_lines)
+# Convert all columns in the conflict table to character type
+conflict.types.period.table %<>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 
-Table_3b %<>% flextable() %>% merge_at(i=nrow(Table_3b),j=2:ncol(Table_3b)) %>%
-  style(pr_t=fp_text(font.size = 7),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% hline(i = 34,border = officer::fp_border())%>% autofit() %>% flextable::fit_to_width(6.49)
+# Nest the state-specific conflict data by 'period', apply transformations similar to the general conflict data
+conflict.types.period.table.by.state %<>% 
+  tidyr::nest(data = -period) %>% 
+  dplyr::mutate(data = purrr::map2(data, period, ~{
+    .period <- .y
+    .data <- .x
+    
+    # Rename columns by appending the period name, except 'State' and 'Conflict category'
+    .data %>% dplyr::rename_with(~paste0(.x, "_", .period), .cols = -c(State, `Conflict category`))
+  })) %>% 
+  
+  # Combine the nested data into a single data frame by full joining on 'Conflict category' and 'State'
+  dplyr::pull("data") %>% 
+  purrr::reduce(~{dplyr::full_join(.x, .y, by = c("Conflict category", "State"))}) %>%
+  
+  # Replace NA values in numeric columns with "-" and convert them to character type
+  dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~tidyr::replace_na(as.character(.), "-")))
 
+# Combine the general conflict table with the state-specific conflict table and add the total row
+conflicts.table <- conflict.types.period.table %>% 
+  dplyr::slice(1:3) %>% 
+  dplyr::bind_rows(conflict.types.period.table.by.state %>% dplyr::slice(1:3)) %>%
+  dplyr::bind_rows(conflict.types.period.table %>% dplyr::slice(4)) %>%
+  dplyr::bind_rows(conflict.types.period.table.by.state %>% dplyr::slice(4:8)) %>% 
+  dplyr::bind_rows(total) %>% 
+  
+  # Select and rename columns for the final table
+  dplyr::select(`Conflict category`, ` ` = State, dplyr::everything()) %>%
+  dplyr::rename_with(~stringr::str_replace(.x, "n_", "Conflict events ") %>% 
+                       stringr::str_replace("best_", "Deaths "))
 
+# Replace specific values in the 'Conflict category' column with an empty string
+conflicts.table$`Conflict category`[c(4:6, 8:12)] <- ""
 
-
+# Create a formatted table using the flextable package
+Table_1_v2 <- conflicts.table %>%
+  
+  # Convert the data frame to a flextable object
+  flextable::flextable()  %>%
+  
+  # Add a custom header with merged cells for the election periods
+  flextable::add_header(values = list(
+    "Conflict events 2006 election" = "2006 election",
+    "Deaths 2006 election" = "2006 election",
+    "Conflict events 2011 election" = "2011 election",
+    "Deaths 2011 election" = "2011 election",
+    "Conflict events 2018 election" = "2018 election",
+    "Deaths 2018 election" = "2018 election")) %>%
+  
+  # Set custom labels for the column headers with line breaks
+  flextable::set_header_labels(values = list(
+    "Conflict events 2006 election" = "Conflict\nevents",
+    "Deaths 2006 election" = "Deaths",
+    "Conflict events 2011 election" = "Conflict\nevents",
+    "Deaths 2011 election" = "Deaths",
+    "Conflict events 2018 election" = "Conflict\nevents",
+    "Deaths 2018 election" = "Deaths")) %>%
+  
+  # Merge the header cells by election period
+  flextable::merge_h(part = "header") %>%
+  
+  # Add horizontal lines with varying border widths
+  flextable::hline(i = c(2, 6, 12), border = officer::fp_border(width = 2))  %>% 
+  flextable::hline(i = c(3, 7), border = officer::fp_border(width = 1))  %>%
+  
+  # Add vertical lines with a specific border width
+  flextable::vline(j = c(2, 4, 6), border = officer::fp_border(width = 2)) %>% 
+  
+  # Apply text and paragraph styles to the entire table
+  flextable::style(
+    pr_t = officer::fp_text(font.size = 9),
+    part = "all",
+    pr_p = officer::fp_par(line_spacing = 1, padding = 1)) %>%
+  
+  # Automatically adjust the column widths to fit the content
+  flextable::autofit() %>% 
+  
+  # Fit the table to a specific width
+  flextable::fit_to_width(6.49)

@@ -31,7 +31,6 @@ fix_ACLED_index <- function(df) {
 }
 
 
-#### Table 3a ####
 
 # Selecting relevant columns and reshaping data
 # Select columns: index, label, and columns starting with "kabila.percent" or "ramazani.percent"
@@ -105,6 +104,8 @@ share %<>%
   dplyr::left_join(mean_nightlight, by = c("index", "year"))
 
 
+#### Table 3a ####
+
 ##### Model 1 #####
 
 # Aggregating total conflict deaths by index and year
@@ -151,7 +152,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Running fixed effects model with two-way effects
-model_t3a_1_1 <- plm::plm(votes_share ~ nightlight_mean + n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_1 <- plm::plm(votes_share ~ nightlight_mean + n.deaths, data = to.model, model = "within", effect = "twoways")
 
 
 ##### Model 2 #####
@@ -183,7 +184,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_2 <- plm::plm(votes_share ~ nightlight_mean + log_n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_2 <- plm::plm(votes_share ~ nightlight_mean + log_n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 3 #####
 
@@ -212,7 +213,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_3 <- plm::plm(votes_share ~ nightlight_mean + n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_3 <- plm::plm(votes_share ~ nightlight_mean + n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 4 #####
 
@@ -243,7 +244,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_4 <- plm::plm(votes_share ~ nightlight_mean + log_n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_4 <- plm::plm(votes_share ~ nightlight_mean + log_n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 5 #####
 
@@ -295,7 +296,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_5 <- plm::plm(votes_share ~ n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_5 <- plm::plm(votes_share ~ n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 6 #####
 
@@ -326,7 +327,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_6 <- plm::plm(votes_share ~ log_n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_6 <- plm::plm(votes_share ~ log_n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 7 #####
 
@@ -355,7 +356,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_7 <- plm::plm(votes_share ~ n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_7 <- plm::plm(votes_share ~ n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 8 #####
 
@@ -386,7 +387,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_8 <- plm::plm(votes_share ~ log_n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_8 <- plm::plm(votes_share ~ log_n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 9 #####
 
@@ -417,7 +418,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_9 <- plm::plm(votes_share ~ nightlight_mean + n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_9 <- plm::plm(votes_share ~ nightlight_mean + n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 10 #####
 
@@ -450,7 +451,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_10 <- plm::plm(votes_share ~ nightlight_mean + log_n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_10 <- plm::plm(votes_share ~ nightlight_mean + log_n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 11 #####
 
@@ -481,7 +482,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_11 <- plm::plm(votes_share ~ nightlight_mean + n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_11 <- plm::plm(votes_share ~ nightlight_mean + n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 12 #####
 
@@ -514,7 +515,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_12 <- plm::plm(votes_share ~ nightlight_mean + log_n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_12 <- plm::plm(votes_share ~ nightlight_mean + log_n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 13 #####
 
@@ -560,7 +561,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_13 <- plm::plm(votes_share ~ n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_13 <- plm::plm(votes_share ~ n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 14 #####
 
@@ -593,7 +594,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_14 <- plm::plm(votes_share ~ log_n.deaths, data = to.model, model = "within", effect = "twoways")
+model_t3a_14 <- plm::plm(votes_share ~ log_n.deaths, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 15 #####
 
@@ -624,7 +625,7 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_15 <- plm::plm(votes_share ~ n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_15 <- plm::plm(votes_share ~ n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Model 16 #####
 
@@ -655,10 +656,161 @@ to.model <- share %>%
 to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
 
 # Run a fixed effects model with two-way effects (within model)
-model_t3a_1_16 <- plm::plm(votes_share ~ log_n.conflicts, data = to.model, model = "within", effect = "twoways")
+model_t3a_16 <- plm::plm(votes_share ~ log_n.conflicts, data = to.model, model = "within", effect = "twoways")
 
 ##### Save the models #####
 
-save(list=ls(pattern = "model_t3a_"), file = here::here("results/Table3a_models.RData"))
+models_computed <- ls(pattern = "model_t3a_")
 
+save(list=models_computed, file = here::here("results/Table3a_models.RData"))
 
+rm(list = models_computed)
+
+#### Table 3b ####
+##### Model 1 #####
+
+# Create a dataset of conflict deaths by type, with each type of conflict in a separate column
+conflict_deaths_by_type <- conflict.aggregated_by_type %>%
+  # Filter out rows where there are no conflicts
+  dplyr::filter(n.conflicts > 0) %>%
+  # Select relevant columns and rename 'index' to 'index.data'
+  dplyr::select(index = index.data, year, type, n.deaths) %>%
+  # Modify the 'type' column to include '_deaths' suffix
+  dplyr::mutate(type = paste0(type, "_deaths")) %>%
+  # Pivot the data to a wider format, with each conflict type as a separate column
+  tidyr::pivot_wider(names_from = type, values_from = n.deaths)
+
+# Prepare the data for modeling by merging it with the election data
+to.model <- share %>%
+  # Left join with conflict deaths data by 'index' and 'year'
+  dplyr::left_join(conflict_deaths_by_type, by = c("index", "year")) %>%
+  # Replace NA values in all columns except 'index', 'year', 'votes_share', and 'label' with 0
+  dplyr::mutate(across(-c(index, year, votes_share, label), ~tidyr::replace_na(., 0))) %>%
+  # Rename 'label' to 'region' and remove the 'index' column
+  dplyr::rename(region = label) %>%
+  dplyr::select(-index)
+
+# Convert the data to a panel data frame for the plm package
+to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
+
+# Run a fixed effects model with two-way effects (within model)
+model_t3b_1 <- plm::plm(
+  votes_share ~ Non.state.vs.non.state_deaths + Foreign.vs.non.state_deaths +
+    Non.state.vs.civilians_deaths + DRC.vs.non.state_deaths +
+    DRC.vs.civilians_deaths + Foreign.vs.civilians_deaths,
+  data = to.model, model = "within", effect = "twoways"
+)
+
+##### Model 2 #####
+
+# Create a dataset of conflict events by type, with each type of conflict in a separate column
+conflict_events_by_type <- conflict.aggregated_by_type %>%
+  # Filter out rows where there are no conflicts
+  dplyr::filter(n.conflicts > 0) %>%
+  # Select relevant columns and rename 'index' to 'index.data'
+  dplyr::select(index = index.data, year, type, n.conflicts) %>%
+  # Modify the 'type' column to include '_events' suffix
+  dplyr::mutate(type = paste0(type, "_events")) %>%
+  # Pivot the data to a wider format, with each conflict type as a separate column
+  tidyr::pivot_wider(names_from = type, values_from = n.conflicts)
+
+# Prepare the data for modeling by merging it with the election data
+to.model <- share %>%
+  # Left join with conflict events data by 'index' and 'year'
+  dplyr::left_join(conflict_events_by_type, by = c("index", "year")) %>%
+  # Replace NA values in all columns except 'index', 'year', 'votes_share', and 'label' with 0
+  dplyr::mutate(across(-c(index, year, votes_share, label), ~tidyr::replace_na(., 0))) %>%
+  # Rename 'label' to 'region' and remove the 'index' column
+  dplyr::rename(region = label) %>%
+  dplyr::select(-index)
+
+# Convert the data to a panel data frame for the plm package
+to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
+
+# Run a fixed effects model with two-way effects (within model)
+model_t3b_2 <- plm::plm(
+  votes_share ~ Non.state.vs.non.state_events + Foreign.vs.non.state_events +
+    Non.state.vs.civilians_events + DRC.vs.non.state_events +
+    DRC.vs.civilians_events + Foreign.vs.civilians_events,
+  data = to.model, model = "within", effect = "twoways"
+)
+
+##### Model 3 #####
+
+# Define a helper function to summarize a variable from a nested dataframe
+.summarise_var <- function(.x, .var) {
+  if (!is.null(.x)) {
+    # Convert to data frame and summarize the specified variable, returning the sum
+    .x %>%
+      as.data.frame() %>%
+      dplyr::summarise(across(dplyr::one_of(.var), ~sum(., na.rm = TRUE))) %>%
+      dplyr::pull(.var)
+  }
+}
+
+# Create a dataset of conflict deaths by casualty type, with detailed breakdowns
+conflict_deaths_by_casualty_type <- conflict.aggregated_by_type %>%
+  # Filter out rows where there are no conflicts
+  dplyr::filter(n.conflicts > 0) %>%
+  # Create new columns by applying the summarization function to nested data
+  dplyr::mutate(
+    n.deaths_a = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_a")),
+    n.deaths_b = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_b")),
+    n.deaths_civilians = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_civilians")),
+    n.deaths_unknow = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_unknown"))
+  ) %>%
+  # Unnest the newly created columns to bring them to the top level
+  tidyr::unnest(c(dplyr::starts_with("n.deaths")))
+
+# Calculate additional casualty types based on existing data
+conflict_deaths_by_casualty_type %<>%
+  dplyr::mutate(
+    n.deaths_DRC_milit = dplyr::case_when(stringr::str_detect(type, "DRC") ~ n.deaths_a, TRUE ~ 0),
+    n.deaths_foreign_milit = dplyr::case_when(stringr::str_detect(type, "Foreign") ~ n.deaths_a, TRUE ~ 0),
+    n.deaths_non_state = dplyr::case_when(
+      type == "Non-state vs non-state" ~ n.deaths_a + n.deaths_b,
+      type == "Non-state vs civilians" ~ n.deaths_a,
+      stringr::str_ends(type, "non-state") ~ n.deaths_b,
+      TRUE ~ 0
+    )
+  )
+
+# Select and rename relevant columns for further analysis
+conflict_deaths_by_casualty_type %<>%
+  dplyr::select(
+    index = index.data, year, n.deaths, n.deaths_DRC_milit,
+    n.deaths_foreign_milit, n.deaths_non_state, n.deaths_civilians, n.deaths_unknow
+  )
+
+# Group by 'index' and 'year', and summarize all columns
+conflict_deaths_by_casualty_type %<>%
+  dplyr::group_by(index, year) %>%
+  dplyr::summarise(across(everything(), ~sum(., na.rm = FALSE)), .groups = "drop")
+
+# Prepare the data for modeling by merging it with the election data
+to.model <- share %>%
+  # Left join with conflict deaths by casualty type data by 'index' and 'year'
+  dplyr::left_join(conflict_deaths_by_casualty_type, by = c("index", "year")) %>%
+  # Replace NA values in all columns except 'index', 'year', 'votes_share', and 'label' with 0
+  dplyr::mutate(across(-c(index, year, votes_share, label), ~tidyr::replace_na(., 0))) %>%
+  # Rename 'label' to 'region' and remove the 'index' column
+  dplyr::rename(region = label) %>%
+  dplyr::select(-index)
+
+# Convert the data to a panel data frame for the plm package
+to.model <- plm::pdata.frame(to.model, index = c("region", "year"), drop.index = FALSE)
+
+# Run a fixed effects model with two-way effects (within model)
+model_t3b_3 <- plm::plm(
+  votes_share ~ n.deaths_DRC_milit + n.deaths_foreign_milit +
+    n.deaths_non_state + n.deaths_civilians + n.deaths_unknow,
+  data = to.model, model = "within", effect = "twoways"
+)
+
+##### Save the models #####
+
+models_computed <- ls(pattern = "model_t3b_")
+
+save(list=models_computed, file = here::here("results/Table3b_models.RData"))
+
+rm(list = models_computed)
