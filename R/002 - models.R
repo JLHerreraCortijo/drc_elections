@@ -814,3 +814,102 @@ models_computed <- ls(pattern = "model_t3b_")
 save(list=models_computed, file = here::here("results/Table3b_models.RData"))
 
 rm(list = models_computed)
+
+
+#### Table A2 ####
+
+# # Select relevant columns from the data frame for Kabila and Ramazani's vote share
+# share <- data %>%
+#   dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>%
+#   
+#   # Reshape the data from wide to long format, converting the vote percentages into a single 'votes_share' column
+#   tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>%
+#   
+#   # Separate the 'name' column into 'drop' and 'year' columns based on the underscore separator
+#   tidyr::separate(name, c("drop", "year"), sep = "_") %>%
+#   
+#   # Convert the 'year' column to an integer type
+#   dplyr::mutate(year = as.integer(year)) %>%
+#   
+#   # Drop the 'drop' column as it's no longer needed
+#   dplyr::select(-drop)
+
+# Define a vector of variable names related to conflicts and deaths
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Extract unique years from the conflict data, discard NA values, and sort the years
+periods <- conflict.aggregated_by_type %>%
+  dplyr::pull("year") %>%
+  unique() %>%
+  purrr::discard(is.na) %>%
+  sort()
+
+# Map over the list of variables to create models for each period
+models_tA2 <- vars %>%
+  purrr::map(~ purrr::map(periods, function(period, var) {
+    
+    # Filter the conflict data to include only records with more than 0 conflicts and for the specific year
+    to.model <- conflict.aggregated_by_type %>%
+      dplyr::filter(n.conflicts > 0) %>%
+      dplyr::filter(year == period) %>%
+      
+      # Group by index and year, summarizing conflict and death counts, and compute log-transformed variables
+      dplyr::group_by(index.data, year) %>%
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>%
+      dplyr::mutate(
+        log_n.conflicts = log10(n.conflicts + 0.1),
+        log_n.deaths = log10(n.deaths + 0.1)
+      ) %>%
+      
+      # Select the relevant columns, renaming 'index.data' to 'index', and adjust the 'year' column to include the variable name
+      dplyr::select(index = index.data, year, dplyr::one_of(var)) %>%
+      dplyr::mutate(year = paste(var, year, sep = "_"))
+    
+    # Join the reshaped vote share data with the conflict data on the 'index' column
+    to.model <- share %>%
+      dplyr::filter(year == period) %>%
+      dplyr::left_join(to.model, by = c("index")) %>%
+      
+      # Replace NA values in the selected variables with 0 and rename 'label' to 'region'
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~tidyr::replace_na(., 0))) %>%
+      dplyr::rename(region = label) %>%
+      
+      # Drop the 'index' column as it's no longer needed
+      dplyr::select(-index)
+    
+    # Create a linear model formula based on the variable
+    formula <- as.formula(paste0("votes_share ~ ", var))
+    
+    # Fit the linear model using the formula and the prepared data
+    lm(formula, to.model)
+    
+  }, var = .x)) %>%
+  
+  # Flatten the nested list of models into a single list
+  purrr::flatten()
+
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  # Create the directory for diagnostics files if it doesn't already exist
+  if (!dir.exists("manuscript/diagnostics/Table_A2/")) {
+    dir.create("manuscript/diagnostics/Table_A2/", recursive = TRUE)
+  }
+  
+  # Iterate over each model and corresponding name to render diagnostics as HTML files
+  models_tA2 %>% purrr::walk2(model_names, ~ {
+    model <- .x
+    
+    # Render the diagnostics report for the model using RMarkdown
+    try(rmarkdown::render("R/lm diagnostics.Rmd", output_file = paste0("manuscript/diagnostics/Table_A2/", .y, ".html")))
+  })
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA2"
+
+save(periods,list=models_computed, file = here::here("results/TableA2_models.RData"))
+
+rm(list = models_computed)

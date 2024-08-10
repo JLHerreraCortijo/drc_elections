@@ -659,6 +659,12 @@ converting them from meters to kilometers and adding a small constant to avoid
 undefined log values. This transformation standardizes the distance data, making 
 it easier to interpret and analyze in subsequent steps.
 
+## Models computation
+
+The script `R/002 - models.R` calculates the models that will be later used to generate tables and figures in '003 - update manuscript.R'.
+
+Some models allow for running linear diagnostics on them using the Rmd document `R/lm diagnostics.Rmd`. This will generate multiple HTML files in the `manuscript/diagnostics/[Table name]` folder. Each HTML file contains statistical tests for one model.
+
 # data.RData
 
 results/data.RData contains several variables used across the repository. Here we describe some of them.

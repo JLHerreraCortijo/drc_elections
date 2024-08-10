@@ -1,0 +1,154 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+
+indep.var <- as.character(model$terms)[2]
+
+model.data <- model.matrix(model)[,-1,drop=F] %>% as.data.frame() %>% dplyr::bind_cols(model$model %>% dplyr::select(one_of(indep.var)))
+
+
+
+```
+
+
+```{r}
+summary(model)
+```
+
+
+# ANOVA Table
+
+```{r}
+anova(model)
+```
+
+
+# Diagnostics
+
+## Residuals
+
+```{r}
+plot(model,which=1)
+```
+
+
+## Standardized residuals
+
+```{r}
+plot(model,which=3)
+```
+
+
+## Normality
+
+```{r}
+
+shapiro.test(rstandard(model))
+
+
+
+```
+
+
+## Kolmogorov-Smirnoff t-student n-k-1 df
+
+
+```{r}
+ks.test(rstudent(model),"pt",df=nrow(model.data)-ncol(model.data)-1-1)
+
+```
+
+```{r}
+
+plot(model,which = 2)
+
+```
+
+## QQ-Plot
+
+```{r}
+Dowd::TQQPlot(rstudent(model),df=nrow(model$model)-ncol(model$model)-1)
+
+```
+
+
+## Residuals mean
+
+```{r}
+
+t.test(rstandard(model))
+
+```
+
+## Leverage points
+
+
+```{r}
+plot(model,which=5)
+```
+
+
+## Linearity
+
+```{r,eval=T,include=T}
+
+names(model.data) %>% purrr::discard(~.x==indep.var) %>% purrr::walk( ~{
+  
+  
+  
+  g <- ggplot2::ggplot(model.data,ggplot2::aes_string(x=.x,y=indep.var)) + ggplot2::geom_point(alpha=0.5) + ggplot2::geom_smooth(method="lm",se=FALSE) +ggplot2::geom_text(ggplot2::aes(label=1:nrow(model.data))) +
+    ggplot2::ggtitle(.x)
+  
+  print(g)
+  
+})
+```
+
+
+
+## R-squared
+
+
+```{r}
+sqrt(summary(model)$r.squared)
+```
+
+## Partial correlation
+
+
+
+```{r,eval=F,include=F}
+
+summary(model)$r.squared-summary(lm(FA~ Agricultores,model.data=datos))$r.squared
+
+```
+
+```{r,eval=F,include=F}
+
+summary(model)$r.squared-summary(lm(FA~ Desempleo,model.data=datos))$r.squared
+
+```
+
+
+```{r}
+ppcor::pcor(model$model)
+```
+
+# Colinearity
+
+```{r}
+Hmisc::rcorr(as.matrix(model$model))
+```
+
+# Runs test
+
+```{r}
+randtests::runs.test(residuals(model)[order(model$model[,indep.var,drop=T])])
+
+
+
+```
+
