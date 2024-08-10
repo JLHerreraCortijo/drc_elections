@@ -2836,6 +2836,27 @@ congo.territoire.borders %<>%
 
 #### 13-SAVE DATA ####
 
+##### 13.1-USEFUL VARIABLES #####
 
-save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,data_villes_merged,file=here::here("results/data.RData"))
+# Create a named vector where each year from 2001 to 2011 is mapped to its 
+# corresponding election period ("2006" or "2011"). This could be useful for 
+# quickly identifying which election year a particular year falls into.
+
+elections <- list(
+  "2006" = c(2001:2006),
+  "2011" = c(2007:2011)
+) %>% 
+  
+  # Create a named vector for mapping years to election periods
+  purrr::map2(
+    names(.), 
+    ~rep(.y, length(.x)) %>% set_names(.x)
+  ) %>% 
+  
+  # Combine the list into a single vector
+  purrr::reduce(c)
+
+##### 13.2-SAVE #####
+
+save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,data_villes_merged, elections, file=here::here("results/data.RData"))
 

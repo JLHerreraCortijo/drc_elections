@@ -195,6 +195,11 @@
       ],
       "Hash": "01f28d4278f15c76cddbea05899c5d6f"
     },
+    "plm": {
+      "Package": "plm",
+      "Version": "2.6-2",
+      "Source": "Repository"
+    },
     "prettyunits": {
       "Package": "prettyunits",
       "Version": "1.2.0",

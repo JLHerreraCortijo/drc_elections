@@ -5,6 +5,19 @@ make sure that support for git large file storage is installed before cloning it
 Please check for more information at 
 https://docs.github.com/en/repositories/working-with-files/managing-large-files
 
+## Install
+
+Please install renv and then run renv::restore()
+
+### Package versions
+
+The package plm, version 2.6-4, requires fixing to work with stargazer. Please 
+continue using version 2.6-2 until the stargazer issue is resolved.
+
+# Scripts
+
+The folder `R` contains all the scripts required to replicate the results in this project. The scripts are numbered `001`, `002`, `003`, etc., indicating the order in which they should be executed. Scripts with numbers followed by a letter (e.g., `003a`, `003b`) are not intended to be run independently; instead, they should be called from other scripts.
+
 ## Preprocessing
 
 The preprocessing script (R/001 - data processing) is designed to meticulously 
