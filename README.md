@@ -11,8 +11,7 @@ Please install renv and then run renv::restore()
 
 ### Package versions
 
-The package plm, version 2.6-4, requires fixing to work with stargazer. Please 
-continue using version 2.6-2 until the stargazer issue is resolved.
+
 
 # Scripts
 
