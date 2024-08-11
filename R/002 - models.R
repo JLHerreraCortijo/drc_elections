@@ -795,10 +795,12 @@ model_t3b_2 <- plm::plm(
 ##### Model 3 #####
 
 # Define a helper function to summarize a variable from a nested dataframe
-.summarise_var <- function(values, .var) {
-  if (!is.null(values)) {
+.summarise_var <- function(df, .var) {
+  if (!is.null(df)) {
     # Convert to data frame and summarize the specified variable, returning the sum
-    values %>%
+    
+    df %>% 
+      dplyr::select(dplyr::one_of(.var)) %>%
       as.data.frame() %>%
       dplyr::summarise(across(dplyr::one_of(.var), \(x) sum(x, na.rm = TRUE))) %>%
       dplyr::pull(.var)
@@ -934,7 +936,7 @@ models_tA2 <- vars %>%
 
 # Diagnostics section to run additional diagnostics on the models if specified
 if (run_diagnostics) {
- 
+  
   run_lm_list_diagnostics( models_list = models_tA2, 
                            table_name =  "Table_A2", 
                            model_name_prefix = "model_tA2_")
@@ -1102,5 +1104,131 @@ if (run_diagnostics) {
 models_computed <- "models_tA2c"
 
 save(periods,list=models_computed, file = here::here("results/TableA2c_models.RData"))
+
+rm(list = models_computed)
+
+#### Table A2d ####
+
+
+# Define a vector of variable names related to conflicts and deaths
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Extract unique years from the conflict data, discard NA values, and sort the years
+periods <- conflict.aggregated_by_type %>%
+  dplyr::pull("year") %>%  # Extract the 'year' column
+  unique() %>%  # Get unique years
+  purrr::discard(is.na) %>%  # Discard any NA values
+  sort()  # Sort the years
+
+# Create a list of models using different values of 'k' for the k-nearest neighbors analysis
+models_tA2d <- 1:10 %>%
+  purrr::map( \(k) {
+    
+    
+    # Remove the first row from the borders data 
+    borders <- congo.territoire.borders %>% dplyr::slice(-1)  
+    
+    # Create k-nearest neighbors based on the centroids of the borders
+    w1nb <- borders %>%
+      sf::st_centroid() %>%  # Calculate the centroid of each border region
+      spdep::knearneigh(k = k, longlat = TRUE) %>%  # Compute k-nearest neighbors
+      spdep::knn2nb()  # Convert the neighbor object to a list
+    
+    # Convert the neighbors list to a weights list
+    listw1nb <- w1nb %>% spdep::nb2listw(style = "W")
+    plot_path <- here::here(paste0("manuscript/knn/nb_", k, ".png"))
+    
+    if(!file.exists(plot_path)){
+      # Convert neighbors to a spatial lines object for plotting
+      neighbors_sf <- spdep::nb2lines(w1nb, coords = sp::coordinates(as(borders, "Spatial"))) %>%
+        sf::st_as_sf() %>%  # Convert to an 'sf' object
+        sf::st_set_crs(sf::st_crs(borders))  # Set the coordinate reference system
+      
+      # Plot the borders and the neighbors using ggplot2
+      ggplot2::ggplot(congo.territoire.borders) + 
+        ggplot2::geom_sf(fill = NA) +  # Plot the borders without filling
+        ggplot2::theme_void() +  # Use a theme without axes or labels
+        ggplot2::geom_sf(data = neighbors_sf, color = "red")  # Overlay the neighbors in red
+      
+      # Save the plot to a file
+      ggplot2::ggsave(
+        plot_path,  # File path and name
+        width = 10,  # Width of the saved plot
+        height = 10  # Height of the saved plot
+      )
+    }
+    # Loop over each variable and period to create the models
+    vars %>%
+      purrr::map(\(x) purrr::map(periods, function(period, var) {
+        
+        # Filter the conflict data for the current period and aggregate it by index and year
+        to.model <- conflict.aggregated_by_type %>%
+          dplyr::filter(n.conflicts > 0) %>%  # Filter for non-zero conflicts
+          dplyr::filter(year == period) %>%  # Filter for the specific period
+          dplyr::group_by(index.data, year) %>%  # Group by index and year
+          dplyr::summarise(
+            dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Summarize conflicts and deaths
+            .groups = "drop"  # Drop the grouping
+          ) %>%
+          dplyr::mutate(
+            log_n.conflicts = log10(n.conflicts + 0.1),  # Log transform the conflict counts
+            log_n.deaths = log10(n.deaths + 0.1)  # Log transform the death counts
+          ) %>%
+          dplyr::select(
+            index = index.data,  # Rename 'index.data' to 'index'
+            year, 
+            dplyr::one_of(var)  # Select the current variable
+          ) %>%
+          dplyr::mutate(year = paste(var, year, sep = "_"))  # Modify the 'year' column to include the variable name
+        
+        # Merge the model data with the vote share data
+        to.model <- share %>%
+          dplyr::filter(year == period) %>%  # Filter for the specific period
+          dplyr::left_join(to.model, by = c("index")) %>%  # Join on 'index'
+          dplyr::mutate(dplyr::across(dplyr::one_of(var), ~ tidyr::replace_na(., 0))) %>%  # Replace NA values with 0
+          dplyr::rename(region = label)  # Rename 'label' to 'region'
+        
+        # Merge the model data with the borders data
+        to.model <- borders %>%
+          dplyr::left_join(to.model, by = c(index.data = "index"))  # Join on 'index'
+        
+        # Create a linear model formula based on the variable
+        formula <- as.formula(paste0("votes_share ~ ", var))
+        
+        # Convert the model data to a data frame
+        to.model %<>% as.data.frame()
+        
+        # Select only the relevant columns for the model
+        to.model %<>% dplyr::select(votes_share, dplyr::one_of(var))
+        
+        # Fit the spatial lag model (SLX) using the specified formula and weights
+        m <- spatialreg::lmSLX(formula, to.model, listw = listw1nb, zero.policy = TRUE)
+        
+        # Return the model object
+        m
+        
+      }, var = x)) %>%  # Pass the current variable to the inner map
+      purrr::flatten()  # Flatten the nested list of models into a single list
+  })
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  models_tA2d %>% purrr::map2(seq_along(.),\(x,i){
+    run_lm_list_diagnostics( models_list = x, 
+                             table_name =  "Table_A2d", 
+                             model_name_prefix = glue::glue("model_tA2d_nb_{i}_"))
+  })
+  
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA2d"
+
+save(periods,list=models_computed, file = here::here("results/TableA2d_models.RData"))
 
 rm(list = models_computed)
