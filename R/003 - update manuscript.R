@@ -1,33 +1,16 @@
 
 rm(list=ls())
 
-here::i_am("R/003 - update manuscript.R")
+###############################################################################
+# Name: 003 - update manuscript.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Generate Figures and Tables for the manuscript and update the
+# manuscript document.
+# Script UUID: "6c0bba01-1af0-5a6e-abeb-f00aa4c08b28"
+###############################################################################
 
-###############################################################################
-#' Name: update document
-#' Author: John Quattrochi (john.quattrochi@gmail.com)
-#' Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
-#' Purpose: Updates word document with tables and figures
-#' Notes:
-#' 
-#' Figures are stored in the manuscript/figures folder as png files. Figure files are updated only
-#' if the corresponding update_FigX un the user section is TRUE.
-#' 
-#' Figures width and height in inches can be set in the user section.
-#' 
-#' 
-#' Figures and tables produced: 
-#' 
-#' Figure 1
-#' Figure 2
-#' Figure 3
-#' 
-#' 
-#' The script assumes the following folder structure:
-#' Scripts are stored in "[project folder]/R"
-#' Data are stored in "[project folder]/data"
-#' Document is stored in "[project folder]/manuscript"
-###############################################################################
+here::i_am("R/003 - update manuscript.R", uuid = uuid::UUIDfromName("64d742a5-bb7a-0164-0192-f03d7f475bed", "003 - update manuscript.R"))
 
 library(magrittr)
 library(sf)

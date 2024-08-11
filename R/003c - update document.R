@@ -1,6 +1,12 @@
-#### IMPORTANT NOTE #####
+###############################################################################
+# Name: 003c - update document.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Updates de manuscript using pre-generated figures and tables. 
 # This script is not meant to be run as a stand alone script, but sourced from 
 # 003 - update manuscript.R
+# Script UUID: 61e36467-af79-578a-8a58-b5ab54e05412
+###############################################################################
 
 # Open the document
 doc <- officer::read_docx(document_path) # officer::read_docx opens the Word document specified by document_path

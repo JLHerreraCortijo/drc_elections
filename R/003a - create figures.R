@@ -1,7 +1,14 @@
-#### IMPORTANT NOTE #####
+###############################################################################
+# Name: 003a - create figures.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Plot manuscript figures. 
 # This script is not meant to be run as a stand alone script, but sourced from 
 # 003 - update manuscript.R
-# 
+# Script UUID: 0da234d9-175a-54be-a11a-402b0c2c3243
+###############################################################################
+
+
 
 #### FIGURES ####
 

@@ -1,3 +1,5 @@
+Project UUID Namespace: 64d742a5-bb7a-0164-0192-f03d7f475bed
+
 ## Large File Storage Support
 
 This project uses git large file storage to store the nightlight data. Please, 
@@ -11,6 +13,9 @@ Please install renv and then run renv::restore()
 
 ### Package versions
 
+# Manuscript
+
+The manuscript folder holds the manuscript as well as backup versions of the manuscript, the manuscript figures as png and diagnostics reports for models.
 
 
 # Scripts

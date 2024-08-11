@@ -1,16 +1,31 @@
 rm(list=ls())
 
-here::i_am("R/002 - models.R")
+###############################################################################
+# Name: 002 - models.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: Pre-compute analysis models
+# Script UUID: 5b7a4fde-e699-5cce-86d8-b4cc4df12f3a
+###############################################################################
+
+here::i_am("R/002 - models.R", uuid = uuid::UUIDfromName("64d742a5-bb7a-0164-0192-f03d7f475bed", "002 - models.R"))
 
 library(magrittr)
 
-# Load data
+source(here::here("R/000 - utils.R"))
 
-load(here::here("results/data.RData"))
+#### Settings ####
 
 # Run model diagnostics?
 
 run_diagnostics <- F
+
+
+#### Load data ####
+
+load(here::here("results/data.RData"))
+
+#### Functions ####
 
 # Function to fix the 'index' values in the ACLED dataset
 fix_ACLED_index <- function(df) {
@@ -30,6 +45,36 @@ fix_ACLED_index <- function(df) {
     )
 }
 
+
+run_lm_list_diagnostics <- function(models_list, table_name, model_name_prefix = "model_") {
+  
+  # Create the path for saving the diagnostic files for this table
+  table_diagnostics_path <- glue::glue("results/diagnostics/{table_name}/")
+  
+  # Check if the diagnostics directory exists, and if not, create it
+  if (!dir.exists(table_diagnostics_path)) {
+    dir.create(table_diagnostics_path, recursive = TRUE)
+  }
+  
+  # Iterate over each model in the list along with its index
+  models_list %>%
+    purrr::walk2(seq_along(.), \(model, i) {
+      
+      # Render the diagnostics report for the current model using RMarkdown
+      try(
+        rmarkdown::render(
+          "R/lm diagnostics.Rmd",
+          output_file = glue::glue(
+            "{table_diagnostics_path}{model_name_prefix}{sprintf('%02d', i)}.html"
+          )
+        )
+      )
+    })
+}
+
+
+
+#### Compute data shared by multiple models ####
 
 
 # Selecting relevant columns and reshaping data
@@ -102,6 +147,18 @@ mean_nightlight %<>%
 # Join nightlight data with election share data
 share %<>% 
   dplyr::left_join(mean_nightlight, by = c("index", "year"))
+
+
+share_viles_merged <- data_villes_merged %>%
+  # Select relevant columns, including vote shares for Kabila and Ramazani
+  dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>%
+  # Convert data from wide to long format, keeping 'index' and 'label' constant, and storing values in 'votes_share'
+  tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>%
+  # Separate the 'name' column into 'drop' and 'year', using '_' as a separator
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>%
+  # Convert 'year' to integer and remove the 'drop' column
+  dplyr::mutate(year = as.integer(year)) %>%
+  dplyr::select(-drop)
 
 
 #### Table 3a ####
@@ -818,21 +875,6 @@ rm(list = models_computed)
 
 #### Table A2 ####
 
-# # Select relevant columns from the data frame for Kabila and Ramazani's vote share
-# share <- data %>%
-#   dplyr::select(index, label, starts_with("kabila.percent"), starts_with("ramazani.percent")) %>%
-#   
-#   # Reshape the data from wide to long format, converting the vote percentages into a single 'votes_share' column
-#   tidyr::pivot_longer(cols = -c(index, label), values_to = "votes_share") %>%
-#   
-#   # Separate the 'name' column into 'drop' and 'year' columns based on the underscore separator
-#   tidyr::separate(name, c("drop", "year"), sep = "_") %>%
-#   
-#   # Convert the 'year' column to an integer type
-#   dplyr::mutate(year = as.integer(year)) %>%
-#   
-#   # Drop the 'drop' column as it's no longer needed
-#   dplyr::select(-drop)
 
 # Define a vector of variable names related to conflicts and deaths
 vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
@@ -888,22 +930,15 @@ models_tA2 <- vars %>%
   # Flatten the nested list of models into a single list
   purrr::flatten()
 
+###### Diagnostics ######
 
 # Diagnostics section to run additional diagnostics on the models if specified
 if (run_diagnostics) {
+ 
+  run_lm_list_diagnostics( models_list = models_tA2, 
+                           table_name =  "Table_A2", 
+                           model_name_prefix = "model_tA2_")
   
-  # Create the directory for diagnostics files if it doesn't already exist
-  if (!dir.exists("manuscript/diagnostics/Table_A2/")) {
-    dir.create("manuscript/diagnostics/Table_A2/", recursive = TRUE)
-  }
-  
-  # Iterate over each model and corresponding name to render diagnostics as HTML files
-  models_tA2 %>% purrr::walk2(model_names, ~ {
-    model <- .x
-    
-    # Render the diagnostics report for the model using RMarkdown
-    try(rmarkdown::render("R/lm diagnostics.Rmd", output_file = paste0("manuscript/diagnostics/Table_A2/", .y, ".html")))
-  })
 }
 
 ##### Save the models #####
@@ -911,5 +946,161 @@ if (run_diagnostics) {
 models_computed <- "models_tA2"
 
 save(periods,list=models_computed, file = here::here("results/TableA2_models.RData"))
+
+rm(list = models_computed)
+
+
+
+
+#### Table A2b ####
+
+# Define a vector of variable names related to conflicts and deaths
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Extract unique years from the ACLED data, discard NA values, and sort the years
+periods <- ACLED_data_models %>%
+  dplyr::pull("year") %>%
+  unique() %>%
+  purrr::discard(is.na) %>%
+  sort()
+
+# Map over the list of variables to create models for each period in the ACLED data
+models_tA2b <- vars %>%
+  purrr::map(~ purrr::map(periods, function(period, var) {
+    
+    # Filter the ACLED data to include only records with more than 0 conflicts and for the specific year
+    to.model <- ACLED_data_models %>%
+      dplyr::filter(n.conflicts > 0) %>%
+      dplyr::filter(year == period) %>%
+      
+      # Group by index and year, summarizing conflict and death counts, and compute log-transformed variables
+      dplyr::group_by(index, year) %>%
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>%
+      dplyr::mutate(
+        log_n.conflicts = log10(n.conflicts + 0.1),
+        log_n.deaths = log10(n.deaths + 0.1)
+      ) %>%
+      
+      # Select the relevant columns and adjust the 'year' column to include the variable name
+      dplyr::select(index, year, dplyr::one_of(var)) %>%
+      dplyr::mutate(year = paste(var, year, sep = "_"))
+    
+    # Fix the index in the share data and join it with the prepared conflict data on the 'index' column
+    to.model <- share %>%
+      fix_ACLED_index() %>%
+      dplyr::filter(year == period) %>%
+      dplyr::left_join(to.model, by = c("index")) %>%
+      
+      # Replace NA values in the selected variables with 0 and rename 'label' to 'region'
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~tidyr::replace_na(., 0))) %>%
+      dplyr::rename(region = label) %>%
+      
+      # Drop the 'index' column as it's no longer needed
+      dplyr::select(-index)
+    
+    # Create a linear model formula based on the variable
+    formula <- as.formula(paste0("votes_share ~ ", var))
+    
+    # Fit the linear model using the formula and the prepared data
+    lm(formula, to.model)
+    
+  }, var = .x)) %>%
+  
+  # Flatten the nested list of models into a single list
+  purrr::flatten()
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA2b, 
+                           table_name =  "Table_A2b", 
+                           model_name_prefix = "model_tA2b_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA2b"
+
+save(periods,list=models_computed, file = here::here("results/TableA2b_models.RData"))
+
+rm(list = models_computed)
+
+
+#### Table A2c ####
+
+# Define a vector of variable names related to conflicts and deaths
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Extract unique years from the merged conflict data, discard NA values, and sort the years
+table_A2c_periods <- conflict.aggregated_by_type %>%
+  merge_villes(index = "index.data") %>%  # Merge the data by "index.data"
+  dplyr::pull("year") %>%  # Extract the "year" column
+  unique() %>%  # Get unique years
+  purrr::discard(is.na) %>%  # Discard any NA values
+  sort()  # Sort the years
+
+# Map over the list of variables to create models for each period
+models_tA2c <- vars %>%
+  purrr::map(~ purrr::map(table_A2c_periods, function(period, var) {
+    
+    # Filter the conflict data to include only records with more than 0 conflicts and for the specific year
+    to.model <- conflict.aggregated_by_type %>%
+      merge_villes(index = "index.data") %>%  # Merge the data by "index.data"
+      dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where there are more than 0 conflicts
+      dplyr::filter(year == period) %>%  # Filter the data for the specific period
+      dplyr::group_by(index.data, year) %>%  # Group by index and year
+      dplyr::summarise(  # Summarize the data
+        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, removing NAs
+        .groups = "drop"  # Drop the grouping after summarizing
+      ) %>%
+      dplyr::mutate(  # Create log-transformed variables
+        log_n.conflicts = log10(n.conflicts + 0.1),  # Log transform the conflict counts
+        log_n.deaths = log10(n.deaths + 0.1)  # Log transform the death counts
+      ) %>%
+      dplyr::select(  # Select relevant columns
+        index = index.data, year, dplyr::one_of(var)
+      ) %>%
+      dplyr::mutate(year = paste(var, year, sep = "_"))  # Modify the "year" column to include the variable name
+    
+    # Merge the prepared conflict data with the vote share data, handling missing values
+    to.model <- share_viles_merged %>%
+      dplyr::filter(year == period) %>%  # Filter the share data for the specific period
+      dplyr::left_join(to.model, by = c("index")) %>%  # Join the share data with the conflict data by "index"
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~ tidyr::replace_na(., 0))) %>%  # Replace NAs in the selected variables with 0
+      dplyr::rename(region = label) %>%  # Rename the "label" column to "region"
+      dplyr::select(-index)  # Remove the "index" column, as it's no longer needed
+    
+    # Create a linear model formula based on the variable
+    formula <- as.formula(paste0("votes_share ~ ", var))
+    
+    # Fit the linear model using the formula and the prepared data
+    lm(formula, to.model)
+    
+  }, var = .x)) %>%
+  
+  # Flatten the nested list of models into a single list
+  purrr::flatten()
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA2c, 
+                           table_name =  "Table_A2c", 
+                           model_name_prefix = "model_tA2c_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA2c"
+
+save(table_A2c_periods,list=models_computed, file = here::here("results/TableA2c_models.RData"))
 
 rm(list = models_computed)

@@ -1,31 +1,29 @@
 rm(list=ls())
 
-library(magrittr)
+
 
 ###############################################################################
-#' Name: 001 - data processing.R
-#' Author: John Quattrochi (john.quattrochi@gmail.com)
-#' Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
-#' Purpose: Reads clean dara and produces data frame for analysis
-#' UUID: e44ebf95-8ba3-4dad-aacf-7356584fab22
-#' Notes:
-#' We merge the data from the 2006, 2011 and 2018 elections in one dataframe. Since
-#' data granularity is different across elections, we try to keep that granularity by
-#' nesting the data and merging using a hierarchy of indexes.
-#' The script assumes the following folder structure:
-#' Scripts are stored in "[project folder]/R"
-#' Data are stored in "[project folder]/data"
-#' Results are stored in "[project folder]/results"
+# Name: 001 - data processing.R
+# Author: John Quattrochi (john.quattrochi@gmail.com)
+# Assistant: Juan Luis Herrera Cortijo (juan.luis.herrera.cortijo@gmail.com)
+# Purpose: ETL for analysis
+# Script UUID: "9e2b814d-550c-519c-86f5-0c0a2e4ea12b"
 ###############################################################################
 
-here::i_am("R/001 - data processing.R", uuid = "e44ebf95-8ba3-4dad-aacf-7356584fab22")
+here::i_am("R/001 - data processing.R", uuid = uuid::UUIDfromName("64d742a5-bb7a-0164-0192-f03d7f475bed", "001 - data processing.R"))
 
-# R and packages versions defined in renv.lock 
 
 if(!dir.exists(here::here("results"))){
   dir.create(here::here("results"))
   
 }
+
+# R and packages versions defined in renv.lock 
+
+library(magrittr)
+
+source(here::here("R/000 - utils.R"))
+
 
 #### 1-READ DATA ####
 
@@ -2651,17 +2649,6 @@ villes_labels <- data %>% dplyr::filter(index %in% c(names(villes_to_merge), vil
 # Update labels for villes to be merged
 villes_labels[names(villes_to_merge)] <- villes_labels[villes_to_merge]
 
-# Define a function to merge villes into their surrounding territories
-merge_villes <- function(df, labels = NA, index = "index") {
-  df %<>% dplyr::rename_with(.fn = ~ paste0(".index"), .cols = dplyr::one_of(index))
-  if (!is.na(labels)) {
-    df %<>% dplyr::mutate(dplyr::across(dplyr::one_of(labels), ~ dplyr::case_when(.index %in% names(villes_labels) ~ villes_labels[.index], TRUE ~ .)))
-  }
-  df %>%
-    dplyr::mutate(.index = dplyr::case_when(.index %in% names(villes_to_merge) ~ villes_to_merge[.index], TRUE ~ .index)) %>%
-    dplyr::rename_with(.fn = ~ paste0(index), .cols = dplyr::one_of(".index"))
-}
-
 # Apply the merge_villes function to the data and summarize the results
 data_villes_merged <- data %>% merge_villes("label") %>% dplyr::group_by(index) %>% dplyr::summarise(
   label = unique(label),
@@ -2688,7 +2675,7 @@ data_villes_merged <- data %>% merge_villes("label") %>% dplyr::group_by(index) 
   turnout_2018 = total.votes_2018 / registered.voters_2018
 )
 
-rm(merge_villes, villes_to_merge, villes_labels)
+rm(villes_labels)
 
 #### 12-DISTANCES ####
 
@@ -2858,5 +2845,27 @@ elections <- list(
 
 ##### 13.2-SAVE #####
 
-save(data,kinshasa.subprov,congo.territoire.borders,ged201,data.map.index,conflict.aggregated,conflict.aggregated_by_type,nightlight_mean,nightlight_gt30_mean,trends_nightlight_mean,trends_nightlight_gt30_mean,actor_types,actor_types1_table,actor_types2_table,actor_type_2_territories, ACLED_data, ACLED_data_models, ACLED_actor_type_2_territories,data_villes_merged, elections, file=here::here("results/data.RData"))
+save(data, 
+     villes_to_merge,
+     kinshasa.subprov,
+     congo.territoire.borders,
+     ged201,
+     data.map.index,
+     conflict.aggregated,
+     conflict.aggregated_by_type,
+     nightlight_mean,
+     nightlight_gt30_mean,
+     trends_nightlight_mean,
+     trends_nightlight_gt30_mean,
+     actor_types,
+     actor_types1_table,
+     actor_types2_table,
+     actor_type_2_territories, 
+     ACLED_data, 
+     ACLED_data_models, 
+     ACLED_actor_type_2_territories,
+     data_villes_merged, 
+     elections,
+     file=here::here("results/data.RData")
+     )
 

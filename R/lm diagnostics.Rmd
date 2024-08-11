@@ -1,7 +1,11 @@
 ---
-title: "R Notebook"
+title: "Linear model diagnostics"
 output: html_notebook
+author: "Juan Luis Herrera Cortijo"
+script_uuid: "9c21d2fe-dc24-53e6-950c-8e5e84c63844"
 ---
+
+
 
 ```{r}
 
@@ -152,3 +156,5 @@ randtests::runs.test(residuals(model)[order(model$model[,indep.var,drop=T])])
 
 ```
 
+
+Report UUID: `r uuid::UUIDfromName(uuid::UUIDfromName("64d742a5-bb7a-0164-0192-f03d7f475bed","9c21d2fe-dc24-53e6-950c-8e5e84c63844"), digest::digest(model))`
