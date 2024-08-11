@@ -99,7 +99,7 @@ mean_nightlight <- nightlight_gt30_mean %>%
   dplyr::mutate(election = elections[as.character(year)]) %>%
   # Group by 'index' and 'election', then calculate the mean of 'nightlight_mean' ignoring NA values
   dplyr::group_by(index, election) %>%
-  dplyr::summarise(across(nightlight_mean, ~mean(., na.rm = TRUE)), .groups = "drop") %>%
+  dplyr::summarise(across(nightlight_mean, \(x) mean(x, na.rm = TRUE)), .groups = "drop") %>%
   # Filter out rows where 'election' is NA
   dplyr::filter(!is.na(election))
 
@@ -113,7 +113,7 @@ DMSP_2012_13 <- nightlight_gt30_mean %>%
   dplyr::filter(year %in% c(2012, 2013)) %>%
   # Group by 'index' and calculate the mean of 'nightlight_mean' ignoring NA values
   dplyr::group_by(index) %>%
-  dplyr::summarise(across(nightlight_mean, ~mean(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(nightlight_mean, \(x) mean(x, na.rm = TRUE)), .groups = "drop")
 
 # Calculating percent change in nightlight between 2014 and 2018
 # Add a small value (0.01) to 'nightlight_mean' to avoid zero values
@@ -173,7 +173,7 @@ total_conflict_deaths <- conflict.aggregated_by_type %>%
   dplyr::select(index = index.data, year, n.deaths) %>%
   # Group by 'index' and 'year', then sum 'n.deaths' ignoring NA values
   dplyr::group_by(index, year) %>%
-  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Merging conflict data with election share data
 total_conflict_deaths <- share %>%
@@ -193,7 +193,7 @@ total_conflict_deaths <- conflict.aggregated_by_type %>%
   dplyr::select(index = index.data, year, n.deaths) %>%
   # Group by 'index' and 'year', then sum 'n.deaths' ignoring NA values
   dplyr::group_by(index, year) %>%
-  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Preparing data for modeling
 to.model <- share %>%
@@ -223,7 +223,7 @@ log_total_conflict_deaths <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of deaths, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.deaths, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.deaths, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.deaths'
   dplyr::rename(log_n.deaths = n.deaths)
 
@@ -254,7 +254,7 @@ total_conflict_events <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of conflicts
-  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.conflicts, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by merging with election data
 to.model <- share %>%
@@ -283,7 +283,7 @@ log_total_conflict_events <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of conflicts, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.conflicts, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.conflicts, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.conflicts'
   dplyr::rename(log_n.conflicts = n.conflicts)
 
@@ -314,7 +314,7 @@ total_conflict_deaths <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of deaths
-  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Re-merge and reprocess the data (potential duplication, double-check required)
 total_conflict_deaths <- share %>%
@@ -337,7 +337,7 @@ total_conflict_deaths <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of deaths
-  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by merging with election data
 to.model <- share %>%
@@ -366,7 +366,7 @@ log_total_conflict_deaths <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of deaths, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.deaths, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.deaths, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.deaths'
   dplyr::rename(log_n.deaths = n.deaths)
 
@@ -397,7 +397,7 @@ total_conflict_events <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of conflicts
-  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.conflicts, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by merging with election data
 to.model <- share %>%
@@ -426,7 +426,7 @@ log_total_conflict_events <- conflict.aggregated_by_type %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of conflicts, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.conflicts, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.conflicts, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.conflicts'
   dplyr::rename(log_n.conflicts = n.conflicts)
 
@@ -457,7 +457,7 @@ total_conflict_deaths <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of deaths
-  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by fixing the index and merging with election data
 to.model <- share %>%
@@ -488,7 +488,7 @@ log_total_conflict_deaths <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of deaths, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.deaths, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.deaths, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.deaths'
   dplyr::rename(log_n.deaths = n.deaths)
 
@@ -521,7 +521,7 @@ total_conflict_events <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of conflicts
-  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.conflicts, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by fixing the index and merging with election data
 to.model <- share %>%
@@ -552,7 +552,7 @@ log_total_conflict_events <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of conflicts, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.conflicts, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.conflicts, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.conflicts'
   dplyr::rename(log_n.conflicts = n.conflicts)
 
@@ -585,7 +585,7 @@ total_conflict_deaths <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of deaths
-  dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # The next two blocks of code are commented out as they seem redundant
 
@@ -600,7 +600,7 @@ total_conflict_deaths <- ACLED_data_models %>%
 #   dplyr::filter(n.conflicts > 0) %>%
 #   dplyr::select(index = index.data, year, n.deaths) %>%
 #   dplyr::group_by(index, year) %>%
-#   dplyr::summarise(across(n.deaths, ~sum(., na.rm = TRUE)), .groups = "drop")
+#   dplyr::summarise(across(n.deaths, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by fixing the index and merging with election data
 to.model <- share %>%
@@ -631,7 +631,7 @@ log_total_conflict_deaths <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of deaths, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.deaths, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.deaths, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.deaths'
   dplyr::rename(log_n.deaths = n.deaths)
 
@@ -664,7 +664,7 @@ total_conflict_events <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Summarize the total number of conflicts
-  dplyr::summarise(across(n.conflicts, ~sum(., na.rm = TRUE)), .groups = "drop")
+  dplyr::summarise(across(n.conflicts, \(x) sum(x, na.rm = TRUE)), .groups = "drop")
 
 # Prepare the data for modeling by fixing the index and merging with election data
 to.model <- share %>%
@@ -695,7 +695,7 @@ log_total_conflict_events <- ACLED_data_models %>%
   # Group by 'index' and 'year'
   dplyr::group_by(index, year) %>%
   # Calculate the log10 of the sum of conflicts, adding 0.1 to avoid log(0)
-  dplyr::summarise(across(n.conflicts, ~log10(sum(., na.rm = TRUE) + 0.1)), .groups = "drop") %>%
+  dplyr::summarise(across(n.conflicts, \(x) log10(sum(x, na.rm = TRUE) + 0.1)), .groups = "drop") %>%
   # Rename the column to 'log_n.conflicts'
   dplyr::rename(log_n.conflicts = n.conflicts)
 
@@ -742,7 +742,7 @@ to.model <- share %>%
   # Left join with conflict deaths data by 'index' and 'year'
   dplyr::left_join(conflict_deaths_by_type, by = c("index", "year")) %>%
   # Replace NA values in all columns except 'index', 'year', 'votes_share', and 'label' with 0
-  dplyr::mutate(across(-c(index, year, votes_share, label), ~tidyr::replace_na(., 0))) %>%
+  dplyr::mutate(across(-c(index, year, votes_share, label), \(x) tidyr::replace_na(x, 0))) %>%
   # Rename 'label' to 'region' and remove the 'index' column
   dplyr::rename(region = label) %>%
   dplyr::select(-index)
@@ -776,7 +776,7 @@ to.model <- share %>%
   # Left join with conflict events data by 'index' and 'year'
   dplyr::left_join(conflict_events_by_type, by = c("index", "year")) %>%
   # Replace NA values in all columns except 'index', 'year', 'votes_share', and 'label' with 0
-  dplyr::mutate(across(-c(index, year, votes_share, label), ~tidyr::replace_na(., 0))) %>%
+  dplyr::mutate(across(-c(index, year, votes_share, label), \(x) tidyr::replace_na(x, 0))) %>%
   # Rename 'label' to 'region' and remove the 'index' column
   dplyr::rename(region = label) %>%
   dplyr::select(-index)
@@ -795,12 +795,12 @@ model_t3b_2 <- plm::plm(
 ##### Model 3 #####
 
 # Define a helper function to summarize a variable from a nested dataframe
-.summarise_var <- function(.x, .var) {
-  if (!is.null(.x)) {
+.summarise_var <- function(values, .var) {
+  if (!is.null(values)) {
     # Convert to data frame and summarize the specified variable, returning the sum
-    .x %>%
+    values %>%
       as.data.frame() %>%
-      dplyr::summarise(across(dplyr::one_of(.var), ~sum(., na.rm = TRUE))) %>%
+      dplyr::summarise(across(dplyr::one_of(.var), \(x) sum(x, na.rm = TRUE))) %>%
       dplyr::pull(.var)
   }
 }
@@ -811,10 +811,10 @@ conflict_deaths_by_casualty_type <- conflict.aggregated_by_type %>%
   dplyr::filter(n.conflicts > 0) %>%
   # Create new columns by applying the summarization function to nested data
   dplyr::mutate(
-    n.deaths_a = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_a")),
-    n.deaths_b = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_b")),
-    n.deaths_civilians = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_civilians")),
-    n.deaths_unknow = purrr::map(conflict.data, ~.summarise_var(.x, "deaths_unknown"))
+    n.deaths_a = purrr::map(conflict.data, \(x) .summarise_var(x, "deaths_a")),
+    n.deaths_b = purrr::map(conflict.data, \(x) .summarise_var(x, "deaths_b")),
+    n.deaths_civilians = purrr::map(conflict.data, \(x) .summarise_var(x, "deaths_civilians")),
+    n.deaths_unknow = purrr::map(conflict.data, \(x) .summarise_var(x, "deaths_unknown"))
   ) %>%
   # Unnest the newly created columns to bring them to the top level
   tidyr::unnest(c(dplyr::starts_with("n.deaths")))
@@ -842,14 +842,14 @@ conflict_deaths_by_casualty_type %<>%
 # Group by 'index' and 'year', and summarize all columns
 conflict_deaths_by_casualty_type %<>%
   dplyr::group_by(index, year) %>%
-  dplyr::summarise(across(everything(), ~sum(., na.rm = FALSE)), .groups = "drop")
+  dplyr::summarise(across(everything(), \(x) sum(x, na.rm = FALSE)), .groups = "drop")
 
 # Prepare the data for modeling by merging it with the election data
 to.model <- share %>%
   # Left join with conflict deaths by casualty type data by 'index' and 'year'
   dplyr::left_join(conflict_deaths_by_casualty_type, by = c("index", "year")) %>%
   # Replace NA values in all columns except 'index', 'year', 'votes_share', and 'label' with 0
-  dplyr::mutate(across(-c(index, year, votes_share, label), ~tidyr::replace_na(., 0))) %>%
+  dplyr::mutate(dplyr::across(-c(index, year, votes_share, label), \(x) tidyr::replace_na(x, 0))) %>%
   # Rename 'label' to 'region' and remove the 'index' column
   dplyr::rename(region = label) %>%
   dplyr::select(-index)
@@ -888,7 +888,7 @@ periods <- conflict.aggregated_by_type %>%
 
 # Map over the list of variables to create models for each period
 models_tA2 <- vars %>%
-  purrr::map(~ purrr::map(periods, function(period, var) {
+  purrr::map(\(x) purrr::map(periods, function(period, var) {
     
     # Filter the conflict data to include only records with more than 0 conflicts and for the specific year
     to.model <- conflict.aggregated_by_type %>%
@@ -913,7 +913,7 @@ models_tA2 <- vars %>%
       dplyr::left_join(to.model, by = c("index")) %>%
       
       # Replace NA values in the selected variables with 0 and rename 'label' to 'region'
-      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~tidyr::replace_na(., 0))) %>%
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), \(x) tidyr::replace_na(x, 0))) %>%
       dplyr::rename(region = label) %>%
       
       # Drop the 'index' column as it's no longer needed
@@ -925,7 +925,7 @@ models_tA2 <- vars %>%
     # Fit the linear model using the formula and the prepared data
     lm(formula, to.model)
     
-  }, var = .x)) %>%
+  }, var = x)) %>%
   
   # Flatten the nested list of models into a single list
   purrr::flatten()
@@ -966,7 +966,7 @@ periods <- ACLED_data_models %>%
 
 # Map over the list of variables to create models for each period in the ACLED data
 models_tA2b <- vars %>%
-  purrr::map(~ purrr::map(periods, function(period, var) {
+  purrr::map( \(x) purrr::map(periods, function(period, var) {
     
     # Filter the ACLED data to include only records with more than 0 conflicts and for the specific year
     to.model <- ACLED_data_models %>%
@@ -992,7 +992,7 @@ models_tA2b <- vars %>%
       dplyr::left_join(to.model, by = c("index")) %>%
       
       # Replace NA values in the selected variables with 0 and rename 'label' to 'region'
-      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~tidyr::replace_na(., 0))) %>%
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), \(x) tidyr::replace_na(x, 0))) %>%
       dplyr::rename(region = label) %>%
       
       # Drop the 'index' column as it's no longer needed
@@ -1004,7 +1004,7 @@ models_tA2b <- vars %>%
     # Fit the linear model using the formula and the prepared data
     lm(formula, to.model)
     
-  }, var = .x)) %>%
+  }, var = x)) %>%
   
   # Flatten the nested list of models into a single list
   purrr::flatten()
@@ -1036,7 +1036,7 @@ rm(list = models_computed)
 vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
 
 # Extract unique years from the merged conflict data, discard NA values, and sort the years
-table_A2c_periods <- conflict.aggregated_by_type %>%
+periods <- conflict.aggregated_by_type %>%
   merge_villes(index = "index.data") %>%  # Merge the data by "index.data"
   dplyr::pull("year") %>%  # Extract the "year" column
   unique() %>%  # Get unique years
@@ -1045,7 +1045,7 @@ table_A2c_periods <- conflict.aggregated_by_type %>%
 
 # Map over the list of variables to create models for each period
 models_tA2c <- vars %>%
-  purrr::map(~ purrr::map(table_A2c_periods, function(period, var) {
+  purrr::map(\(x) purrr::map(periods, function(period, var) {
     
     # Filter the conflict data to include only records with more than 0 conflicts and for the specific year
     to.model <- conflict.aggregated_by_type %>%
@@ -1054,7 +1054,7 @@ models_tA2c <- vars %>%
       dplyr::filter(year == period) %>%  # Filter the data for the specific period
       dplyr::group_by(index.data, year) %>%  # Group by index and year
       dplyr::summarise(  # Summarize the data
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, removing NAs
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x,na.rm = TRUE)),  # Sum conflicts and deaths, removing NAs
         .groups = "drop"  # Drop the grouping after summarizing
       ) %>%
       dplyr::mutate(  # Create log-transformed variables
@@ -1080,7 +1080,7 @@ models_tA2c <- vars %>%
     # Fit the linear model using the formula and the prepared data
     lm(formula, to.model)
     
-  }, var = .x)) %>%
+  }, var = x)) %>%
   
   # Flatten the nested list of models into a single list
   purrr::flatten()
@@ -1101,6 +1101,6 @@ if (run_diagnostics) {
 
 models_computed <- "models_tA2c"
 
-save(table_A2c_periods,list=models_computed, file = here::here("results/TableA2c_models.RData"))
+save(periods,list=models_computed, file = here::here("results/TableA2c_models.RData"))
 
 rm(list = models_computed)
