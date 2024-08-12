@@ -2052,3 +2052,97 @@ models_computed <- "models_tA8ib"
 save(list=models_computed, file = here::here("results/TableA8ib_models.RData"))
 
 rm(list = models_computed)
+
+
+
+#### Table A8ic ####
+
+
+
+# Define a vector of variable names that will be used in the modeling process
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Generate models for a sequence of k values from 1 to 10
+models_tA8ic <- 1:10 %>% purrr::map(\(k) {
+  # Store the current value of k
+  k <- k
+  
+  # Remove the first row from the borders data (possibly to avoid an outlier or incorrect entry)
+  borders <- congo.territoire.borders %>% dplyr::slice(-1)  
+  
+  # Compute the centroids of the borders and create k-nearest neighbors for the given k value
+  w1nb <- borders %>%
+    sf::st_centroid(borders) %>% 
+    spdep::knearneigh(k = k, longlat = TRUE) %>% 
+    spdep::knn2nb() 
+  
+  # Convert the neighbor list to a weights list with "W" style (row-standardized)
+  listw1nb <- w1nb %>% spdep::nb2listw(style = "W")
+  
+  # Convert neighbor relationships to spatial lines and set the coordinate reference system
+  neighbors_sf <- spdep::nb2lines(w1nb, coords = sp::coordinates(as(borders, "Spatial"))) %>% 
+    as('sf') %>% 
+    sf::st_set_crs(sf::st_crs(borders))
+  
+  # Plot the borders and neighbor relationships
+  ggplot2::ggplot(congo.territoire.borders) +
+    ggplot2::geom_sf(fill = NA) +
+    ggplot2::theme_void() +
+    ggplot2::geom_sf(data = neighbors_sf, color = "red")
+  
+  # Save the plot to a PNG file
+  ggplot2::ggsave(here::here(paste0("manuscript/knn/table_8ic_nb_", k, ".png")), width = 10, height = 10)
+  
+  # Loop over each variable in the 'vars' vector to create models
+  vars %>% purrr::map(\(var) {
+    
+    # Filter the data for the year 2011 and select relevant columns
+    to.model <- type_2_model %>% 
+      dplyr::filter(year == 2011) %>% 
+      dplyr::select(index = index.data, dyad, dplyr::one_of(var)) %>% 
+      dplyr::arrange(dyad)
+    
+    # Pivot the data to a wider format, with dyads as columns and fill missing values with 0
+    to.model %<>% tidyr::pivot_wider(values_from = dplyr::one_of(var), names_from = "dyad", values_fill = 0)
+    
+    # Join with another dataset, replace missing numeric values with 0, rename columns, and remove unnecessary columns
+    to.model <- share_not_2018 %>% 
+      dplyr::left_join(to.model, by = c("index")) %>% 
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~ tidyr::replace_na(., 0))) %>% 
+      dplyr::rename(region = label) %>% 
+      dplyr::select(-index, -region)
+    
+    # Define the formula for the main model
+    formula <- as.formula(paste0("election_2011 ~ ."))
+    
+    # Define the formula for the lag model, excluding certain variables
+    lag_formula <- as.formula(paste0("~ ", paste0(purrr::discard(names(to.model), \(x) x %in% c("election_2011", "election_2006")), collapse = " + ")))
+    
+    # Fit a spatial lag model using the formulas defined above
+    m <- spatialreg::lmSLX(formula, to.model, listw = listw1nb, zero.policy = TRUE, Durbin = lag_formula)
+    
+    # Return the fitted model
+    m
+  }) 
+})
+
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA8ic, 
+                           table_name =  "Table_A8ic", 
+                           model_name_prefix = "model_tA8ic_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA8ic"
+
+save(list=models_computed, file = here::here("results/TableA8ic_models.RData"))
+
+rm(list = models_computed)

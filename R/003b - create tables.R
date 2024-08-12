@@ -1870,7 +1870,7 @@ rm(models_tA8i)
 
 
 # Load the pre-saved RData file that contains the model results for Table A2c
-load("results/TableA8i_models.RData")
+load("results/TableA8ib_models.RData")
 
 # Define names for the models to use later for plotting
 model_names <- c(paste("Conflicts"), paste("Log Conflicts"), paste("Deaths"), paste("Log Deaths"))
@@ -2009,5 +2009,148 @@ Table_A8ib %<>%
 
 
 
-rm(models_tA8i)
+rm(models_tA8ib)
 
+
+
+##### TABLE A8ic ######
+
+
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA8ic_models.RData")
+
+
+# Define model names for easier interpretation
+model_names <- c(paste("Conflicts"), paste("Log Conflicts"), paste("Deaths"), paste("Log Deaths"))
+
+# Assign model names for display
+model_names.to_print <- model_names
+
+# Compute and visualize the AIC values for each model across the range of k values
+models_tA8ic %>%
+  purrr::map(\(x) purrr::map(x, AIC) %>% unlist) %>%
+  unlist %>% 
+  matrix(nrow = 10, byrow = TRUE) %>%
+  as.data.frame() %>%
+  magrittr::set_names(model_names) %>%
+  dplyr::mutate(k = dplyr::row_number()) %>%
+  tidyr::pivot_longer(cols = -k, names_to = "model", values_to = "AIC") %>%
+  ggplot2::ggplot(ggplot2::aes(y = AIC, x = k)) +
+  ggplot2::geom_point() +
+  ggplot2::facet_wrap(~model, ncol = 3, scales = "free_y") +
+  ggplot2::scale_x_continuous(breaks = 1:10) +
+  ggplot2::geom_vline(xintercept = 6, color = "red") 
+# Save the AIC plot to a PNG file
+ggplot2::ggsave(filename = here::here("manuscript/knn/table_8ic_AIC_detail.png"))
+
+# Select the model corresponding to k = 6
+k <- 6
+models_tA8ic <- models_tA8ic %>% purrr::pluck(k)
+model_names.to_print <- model_names
+
+# Compute F-statistics for each model
+F.stat <- models_tA8ic %>% purrr::map(\(x) {
+  summ <- summary(x, vcov. = vcovHC(x, method = "arellano", type = "HC3"))
+  .p <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(.p < 0.01 ~ "***",
+                           .p < 0.05 ~ "**",
+                           .p < 0.1 ~ "*",
+                           TRUE ~ ""))
+}) %>% unlist %>% c("F Statistic", .)
+
+# Compute degrees of freedom for each model
+df <- models_tA8ic %>% purrr::map(\(x) {
+  summ <- summary(x, vcov. = vcovHC(x, method = "arellano", type = "HC3"))
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>% unlist %>% c("df", .)
+
+# Create a summary table with stargazer, adding F-statistic and df as additional lines
+Table_A8ic <- suppressWarnings(stargazer::stargazer(models_tA8ic, type = "html",
+                                                    column.labels = model_names, dep.var.caption = "Votes share",
+                                                    omit.stat = "f", add.lines = list(F.stat, df))) %>%
+  paste0(collapse = "")
+
+# Convert the stargazer output to a data frame and clean up the table
+Table_A8ic <- Table_A8ic %>%
+  xml2::read_html() %>%
+  rvest::html_table() %>%
+  as.data.frame() %>%
+  dplyr::slice(-c(1:5))
+
+# Extract and clean the table names
+table_names <- as.vector(Table_A8ic %>% dplyr::slice(1) %>% unlist)
+table_names[1] <- " "
+Table_A8ic <- magrittr::set_names(Table_A8ic, c(" ", model_names.to_print)) %>% dplyr::slice(-1)
+
+# Identify and remove empty lines in the table
+empty_lines <- Table_A8ic %>% 
+  dplyr::transmute(across(dplyr::everything(), ~ nchar(.) == 0)) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>% 
+  dplyr::pull(1) %>% 
+  which()
+
+Table_A8ic %<>% dplyr::slice(-empty_lines)
+
+# Set scientific notation off
+options(scipen = 999)
+
+# Recompute the spatial weights for k = 6
+borders <- congo.territoire.borders %>% dplyr::slice(-1)  
+w1nb <- borders %>%
+  sf::st_centroid(borders) %>% 
+  spdep::knearneigh(k = k, longlat = TRUE) %>% 
+  spdep::knn2nb() 
+
+listw1nb <- w1nb %>% spdep::nb2listw(style = "W")
+
+# Compute and merge the impact estimates for each model into the summary table
+Table_A8ic <- models_tA8ic %>% purrr::map(\(x) { 
+  impacts_summary <- x %>%
+    spatialreg::impacts(listw = listw1nb) %>%
+    summary(zstats = TRUE)
+ 
+  purrr::map2_chr(signif(unlist(impacts_summary$impacts), 3), 
+                                    p_stars(as.vector(impacts_summary$pzmat)), 
+                                    ~ paste0(.x, .y)) %>%
+  purrr::map2_chr(signif(unlist(impacts_summary$se), 3), 
+                                ~ paste0(.x, "\n(", .y, ")"))
+  
+  
+}) %>%
+  unlist %>% 
+  matrix(., ncol = 4, byrow = FALSE, dimnames = list(names(.)[1:33])) %>%
+  as.data.frame() %>%
+  dplyr::mutate(` ` = stringr::str_replace(stringr::str_to_sentence(rownames(.)), "\\.", " "), .before = 1) %>%
+  magrittr::set_names(names(Table_A8ic)) %>%
+  dplyr::bind_rows(Table_A8ic %>% dplyr::slice(1:44), ., Table_A8ic %>% dplyr::slice(45:nrow(Table_A8ic))) %>%
+  magrittr::set_rownames(NULL)
+
+# Further process and finalize the summary table
+Table_A8ic <- dplyr::bind_rows(
+  Table_A8ic %>%
+    dplyr::slice(1:77) %>%
+    tidyr::separate(1, c("a", "b"), "\\.|\\s") %>%
+    make_dyad_labels(var = "b") %>%
+    make_dyad_labels(var = "a") %>%
+    tidyr::replace_na(replace = list(b = "")) %>%
+    tidyr::unite(` `, a, b, sep = " ", remove = TRUE),
+  
+  Table_A8ic %>%
+    dplyr::slice(78:nrow(Table_A8ic))
+)
+
+Table_A8ic %<>% dplyr::slice(-c(45:66))
+
+# Convert the final summary table to a flextable for formatting and output
+Table_A8ic %<>% flextable::flextable() %>%
+  flextable::merge_at(i = nrow(Table_A8ic), j = 2:ncol(Table_A8ic)) %>%
+  flextable::style(pr_t = officer::fp_text(font.size = 9), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>%
+  flextable::hline(i = c(44, 55), border = officer::fp_border()) %>%
+  flextable::autofit() %>%
+  flextable::fit_to_width(9)
+
+rm(models_tA8ic)
