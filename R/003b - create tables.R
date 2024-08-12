@@ -1005,3 +1005,115 @@ Table_A2d %<>% flextable::flextable() %>%
   flextable::hline(i = c(18, 21), border = officer::fp_border()) %>%
   flextable::autofit() %>%
   flextable::fit_to_width(9)
+
+##### TABLE A3 #####
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA3_models.RData")
+
+# Create a vector of model names for different types of conflicts and deaths, including ACLED data
+model_names <- c(
+  paste("Conflicts"),
+  paste("Log Conflicts"),
+  paste("Deaths"),
+  paste("Log Deaths"),
+  paste("ACLED\nConflicts"),
+  paste("ACLED\nLog Conflicts"),
+  paste("ACLED\nDeaths"),
+  paste("ACLED\nLog Deaths")
+)
+
+# Assign model names for printing in the table
+model_names.to_print <- model_names
+
+# Extract the standard errors for each model using heteroscedasticity-consistent (HC3) standard errors
+models.to.print_se <- purrr::map(models_tA3, ~ {
+  lmtest::coeftest(.x, sandwich::vcovHC(.x, method = "arellano", type = "HC3"))[, "Std. Error"]
+})
+
+# Calculate the F-statistic for each model, format it, and append significance stars based on p-values
+F.stat <- purrr::map(models_tA3, ~ {
+  summ <- summary(.x, vcov. = sandwich::vcovHC(.x, method = "arellano", type = "HC3"))
+  
+  # Compute the p-value for the F-statistic
+  .p <- pf(
+    summ$fstatistic["value"],
+    summ$fstatistic["numdf"],
+    summ$fstatistic["dendf"],
+    lower.tail = FALSE
+  )
+  
+  # Format the F-statistic value with significance stars
+  sprintf(
+    "%0.3f%s",
+    summ$fstatistic["value"],
+    dplyr::case_when(
+      .p < 0.01 ~ "***",
+      .p < 0.05 ~ "**",
+      .p < 0.1  ~ "*",
+      TRUE ~ ""
+    )
+  )
+}) %>%
+  unlist() %>%  # Flatten the list to a vector
+  c("F Statistic", .)  # Prepend "F Statistic" to the vector
+
+# Extract the degrees of freedom (df) from the model summaries
+df <- purrr::map(models_tA3, ~ {
+  summ <- summary(.x, vcov. = sandwich::vcovHC(.x, method = "arellano", type = "HC3"))
+  
+  # Combine the numerator and denominator degrees of freedom into a single string
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>%
+  unlist() %>%  # Flatten the list to a vector
+  c("df", .)  # Prepend "df" to the vector
+
+# Generate the regression table in HTML format, suppressing warnings during generation
+Table_A3 <- suppressWarnings(
+  stargazer::stargazer(
+    models_tA3, type = "html",
+    se = models.to.print_se,
+    dep.var.caption = "Votes share 2011",
+    omit.stat = "f",
+    add.lines = list(F.stat, df)
+  )
+) %>%
+  
+  # Collapse the HTML output into a single string
+  paste0(collapse = "")
+
+# Convert the HTML table into a data frame and remove the first 5 rows (unnecessary headers)
+Table_A3 <- xml2::read_html(Table_A3) %>%
+  rvest::html_table() %>%
+  as.data.frame() %>%
+  dplyr::slice(-c(1:5))
+
+# Set the column names of the table using the prepared model names for printing
+Table_A3 <- magrittr::set_names(Table_A3, c(" ", model_names.to_print)) %>%
+  dplyr::slice(-1)  # Remove the first row (original column names)
+
+# Identify rows where all columns are empty and get their indices
+empty_lines <- Table_A3 %>%
+  dplyr::transmute(dplyr::across(dplyr::everything(), ~ nchar(.) == 0)) %>%
+  dplyr::rowwise() %>%
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>%
+  dplyr::pull(1) %>%
+  which()
+
+# Remove the identified empty rows from the table
+Table_A3 %<>% dplyr::slice(-empty_lines)
+
+# Convert the final table to a flextable object and apply various styles and formatting
+Table_A3 %<>% flextable::flextable() %>%
+  flextable::merge_at(i = nrow(Table_A3), j = 2:ncol(Table_A3)) %>%
+  flextable::style(
+    pr_t = officer::fp_text(font.size = 10),
+    part = "all",
+    pr_p = officer::fp_par(line_spacing = 1, padding = 0)
+  ) %>%
+  flextable::hline(i = 12, border = officer::fp_border()) %>%
+  flextable::vline(j = c(1, 5), border = officer::fp_border()) %>%
+  flextable::autofit() %>%
+  flextable::fit_to_width(10.5)
+
