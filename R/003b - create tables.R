@@ -9,6 +9,11 @@
 # Script UUID: ab9f1273-a819-55ec-b7f0-6727060aee3f
 ###############################################################################
 
+#### Functions ####
+
+make_dyad_labels <- function(df,var) df %>% 
+  dplyr::mutate(dplyr::across(dplyr::one_of(var),
+                              ~dplyr::case_when(.%in% names(dyad_labels)~ dyad_labels[.],TRUE~.)))
 
 #### TABLES ####
 
@@ -1753,3 +1758,106 @@ Table_A6iii <- Table_A6iii %>%
   flextable::fit_to_width(10.5)
 
 rm(models_tA6iii)
+
+
+##### TABLE A8i #####
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA8i_models.RData")
+
+
+# Create a list of model names
+model_names <- c(
+  paste("Conflicts"),
+  paste("Log Conflicts"),
+  paste("Deaths"),
+  paste("Log Deaths"),
+  paste("ACLED\nConflicts"),
+  paste("ACLED\nLog Conflicts"),
+  paste("ACLED\nDeaths"),
+  paste("ACLED\nLog Deaths")
+)
+
+# Store the model names for printing
+model_names.to_print <- model_names
+
+# Compute standard errors for each model using robust covariance matrices
+models.to.print_se <- purrr::map(models_tA8i, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method = "arellano", type = "HC3"))[, "Std. Error"]
+})
+
+# Calculate F-statistics for each model and annotate them with significance levels
+F.stat <- purrr::map(models_tA8i, \(x) {
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
+  p_value <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(
+            p_value < 0.01 ~ "***",
+            p_value < 0.05 ~ "**",
+            p_value < 0.1 ~ "*",
+            TRUE ~ ""
+          ))
+}) %>%
+  unlist %>%
+  c("F Statistic", .)
+
+# Extract degrees of freedom for each model
+df <- purrr::map(models_tA8i, \(x) {
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>%
+  unlist %>%
+  c("df", .)
+
+# Generate an HTML table using stargazer and add custom lines for F-statistics and degrees of freedom
+Table_A8i <- suppressWarnings(stargazer::stargazer(models_tA8i, type = "html",
+                                                   se = models.to.print_se,
+                                                   dep.var.caption = "Votes share 2006",
+                                                   omit.stat = "f",
+                                                   add.lines = list(F.stat, df))) %>%
+  paste0(collapse = "")
+
+# Convert the HTML table to a data frame and remove the first 5 rows
+Table_A8i <- rvest::read_html(Table_A8i) %>%
+  rvest::html_table() %>%
+  as.data.frame() %>%
+  dplyr::slice(-c(1:5))
+
+# Extract the first row as column names, and adjust the first column name
+table_names <- as.vector(Table_A8i %>%
+                           dplyr::slice(1) %>%
+                           unlist)
+table_names[1] <- " "
+
+# Update the labels in the first column of the table
+Table_A8i %<>% make_dyad_labels(var = names(Table_A8i)[1])
+
+# Set the column names and remove the first row
+Table_A8i <- magrittr::set_names(Table_A8i, c(" ", model_names.to_print)) %>%
+  dplyr::slice(-1)
+
+# Identify and remove empty rows from the table
+empty_lines <- Table_A8i %>%
+  dplyr::transmute(across(dplyr::everything(), \(x) nchar(x) == 0)) %>%
+  dplyr::rowwise() %>%
+  dplyr::transmute(base::all(dplyr::c_across(dplyr::everything()))) %>%
+  dplyr::pull(1) %>%
+  which()
+
+Table_A8i %<>% dplyr::slice(-empty_lines)
+
+# Convert the table to a flextable and apply various styles and formatting
+Table_A8i %<>%
+  flextable::flextable() %>%
+  flextable::merge_at(i = nrow(Table_A8i), j = 2:ncol(Table_A8i)) %>%
+  flextable::style(pr_t = officer::fp_text(font.size = 10), part = "all",
+                   pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>%
+  flextable::hline(i = 28, border = officer::fp_border()) %>%
+  flextable::vline(j = c(1, 5), border = officer::fp_border()) %>%
+  flextable::autofit() %>%
+  flextable::fit_to_width(10.5)
+
+
+
+rm(models_tA8i)

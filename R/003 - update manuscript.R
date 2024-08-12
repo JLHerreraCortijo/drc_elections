@@ -105,9 +105,7 @@ print.province.tables.to.doc <- function(province.tables,title,file,tables.per.p
 }
 
 
-make_dyad_labels <- function(df,var) df %>% 
-  dplyr::mutate(dplyr::across(dplyr::one_of(var),
-                              ~dplyr::case_when(.%in% names(dyad_labels)~ dyad_labels[.],TRUE~.)))
+
 
 
 

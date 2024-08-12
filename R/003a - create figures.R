@@ -1284,3 +1284,24 @@ Figure_A10 <- to.plot %>%
 if (update_FigA10) {
   ggplot2::ggsave(here::here("manuscript/figures/FigureA10.png"), Figure_A10, width = figA10_width, height = figA10_height, units = "in")
 }
+
+
+
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA8i_models.RData")
+
+# Prepare data for forest plot for the year 2006
+forest_plot_data_2006 <- models_tA8i[1:4] %>%
+  purrr::map(broom::tidy) %>%
+  purrr::map2(model_names.to_print[1:4], \(x, name) x %>% dplyr::mutate(model = name)) %>%
+  purrr::map2_dfr(models.to.print_se[1:4], \(x, se) {
+    as.data.frame(se) %>%
+      magrittr::set_names("se.robust") %>%
+      dplyr::mutate(term = rownames(.)) %>%
+      dplyr::right_join(x, by = "term")
+  }) %>%
+  dplyr::mutate(year = 2006)
+
+rm(models_tA8i)

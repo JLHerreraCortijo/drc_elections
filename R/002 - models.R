@@ -179,6 +179,15 @@ share_not_2018 <- share %>% dplyr::select(index, label, year, votes_share) %>%
     names_prefix = "election_"  # Add a prefix to the new column names
   )
 
+# Filter the 'share' dataset for the year 2006, then reshape it from long to wide format
+share_2006 <- share %>% dplyr::select(index, label, year, votes_share) %>%
+  dplyr::filter(year == 2006) %>%  # Filter rows where the year is 2006
+  tidyr::pivot_wider(              # Reshape data: create a new column for each 'year' value
+    names_from = "year",           # The values of 'year' will become new column names
+    values_from = "votes_share",   # The values for the new columns will come from 'votes_share'
+    names_prefix = "election_"     # Prefix these new column names with 'election_'
+  )
+
 #### Table 3a ####
 
 ##### Model 1 #####
@@ -917,7 +926,7 @@ models_tA2 <- vars %>%
       
       # Group by index and year, summarizing conflict and death counts, and compute log-transformed variables
       dplyr::group_by(index.data, year) %>%
-      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>%
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)), .groups = "drop") %>%
       dplyr::mutate(
         log_n.conflicts = log10(n.conflicts + 0.1),
         log_n.deaths = log10(n.deaths + 0.1)
@@ -995,7 +1004,7 @@ models_tA2b <- vars %>%
       
       # Group by index and year, summarizing conflict and death counts, and compute log-transformed variables
       dplyr::group_by(index, year) %>%
-      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>%
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)), .groups = "drop") %>%
       dplyr::mutate(
         log_n.conflicts = log10(n.conflicts + 0.1),
         log_n.deaths = log10(n.deaths + 0.1)
@@ -1185,7 +1194,7 @@ models_tA2d <- 1:10 %>%
           dplyr::filter(year == period) %>%  # Filter for the specific period
           dplyr::group_by(index.data, year) %>%  # Group by index and year
           dplyr::summarise(
-            dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Summarize conflicts and deaths
+            dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Summarize conflicts and deaths
             .groups = "drop"  # Drop the grouping
           ) %>%
           dplyr::mutate(
@@ -1272,7 +1281,7 @@ models_tA3 <- vars %>%
       dplyr::filter(year != 2018) %>%  # Exclude data from the year 2018
       dplyr::group_by(index.data) %>%  # Group by 'index.data'
       dplyr::summarise(
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, ignoring NAs
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Sum conflicts and deaths, ignoring NAs
         .groups = "drop"  # Drop the grouping after summarizing
       ) %>%
       dplyr::mutate(
@@ -1306,7 +1315,7 @@ models_tA3_ACLED <- vars %>%
       dplyr::filter(year != 2018) %>%  # Exclude data from the year 2018
       dplyr::group_by(index) %>%  # Group by 'index'
       dplyr::summarise(
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, ignoring NAs
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Sum conflicts and deaths, ignoring NAs
         .groups = "drop"  # Drop the grouping after summarizing
       ) %>%
       dplyr::mutate(
@@ -1373,7 +1382,7 @@ models_tA4 <- vars %>%
       dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where there are conflicts
       dplyr::group_by(index.data) %>%  # Group by 'index.data'
       dplyr::summarise(
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, ignoring NAs
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Sum conflicts and deaths, ignoring NAs
         .groups = "drop"  # Drop the grouping after summarizing
       ) %>%
       dplyr::mutate(
@@ -1406,7 +1415,7 @@ models_tA4_ACLED <- vars %>%
       dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where there are conflicts
       dplyr::group_by(index) %>%  # Group by 'index'
       dplyr::summarise(
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, ignoring NAs
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Sum conflicts and deaths, ignoring NAs
         .groups = "drop"  # Drop the grouping after summarizing
       ) %>%
       dplyr::mutate(
@@ -1467,14 +1476,7 @@ rm(list = models_computed)
 # Define a vector of variable names that will be used in the analysis
 vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
 
-# Filter the 'share' dataset for the year 2006, then reshape it from long to wide format
-share_2006 <- share %>%
-  dplyr::filter(year == 2006) %>%  # Filter rows where the year is 2006
-  tidyr::pivot_wider(              # Reshape data: create a new column for each 'year' value
-    names_from = "year",           # The values of 'year' will become new column names
-    values_from = "votes_share",   # The values for the new columns will come from 'votes_share'
-    names_prefix = "election_"     # Prefix these new column names with 'election_'
-  )
+
 
 # Create a list of models for each variable in 'vars'
 models_tA6i <- vars %>%
@@ -1486,7 +1488,7 @@ models_tA6i <- vars %>%
       dplyr::filter(year == 2006) %>%     # Keep only rows where the year is 2006
       dplyr::group_by(index.data, year) %>%  # Group by 'index.data' and 'year'
       dplyr::summarise(                      # Summarize the grouped data
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum 'n.conflicts' and 'n.deaths' across groups
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Sum 'n.conflicts' and 'n.deaths' across groups
         .groups = "drop"  # Drop the grouping after summarization
       ) %>%
       dplyr::mutate(  # Add new variables to the dataset
@@ -1528,7 +1530,7 @@ models_tA6i_ACLED <- vars %>%
       dplyr::filter(year == 2006) %>%     # Keep only rows where the year is 2006
       dplyr::group_by(index, year) %>%  # Group by 'index' and 'year'
       dplyr::summarise(  # Summarize the grouped data
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum 'n.conflicts' and 'n.deaths' across groups
+        dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),  # Sum 'n.conflicts' and 'n.deaths' across groups
         .groups = "drop"  # Drop the grouping after summarization
       ) %>%
       dplyr::mutate(  # Add new variables to the dataset
@@ -1602,7 +1604,7 @@ models_tA6ii <- vars %>%
       # Group the data by `index.data` and `year`
       dplyr::group_by(index.data, year) %>% 
       # Summarize the data by summing `n.conflicts` and `n.deaths`, removing any missing values
-      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>% 
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)), .groups = "drop") %>% 
       # Create new variables with the logarithm (base 10) of `n.conflicts` and `n.deaths`
       dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1)) %>% 
       # Select the relevant columns: `index.data`, `year`, and the variable of interest
@@ -1641,7 +1643,7 @@ models_tA6ii_ACLED <- vars %>%
       # Group the data by `index` and `year`
       dplyr::group_by(index, year) %>% 
       # Summarize the data by summing `n.conflicts` and `n.deaths`, removing any missing values
-      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>% 
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)), .groups = "drop") %>% 
       # Create new variables with the logarithm (base 10) of `n.conflicts` and `n.deaths`
       dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1)) %>% 
       # Select the relevant columns: `index`, `year`, and the variable of interest
@@ -1709,7 +1711,7 @@ models_tA6iii <- vars %>% purrr::map(\(var) {
     dplyr::group_by(index.data, year) %>%
     # Summarize the data by calculating the sum of `n.conflicts` and `n.deaths`, removing NA values
     dplyr::summarise(
-      dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),
+      dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),
       .groups = "drop"
     ) %>%
     # Create new variables by applying the logarithm to `n.conflicts` and `n.deaths`, adding 0.1 to avoid log(0)
@@ -1755,7 +1757,7 @@ models_tA6iii_ACLED <- vars %>% purrr::map(\(var) {
     dplyr::group_by(index, year) %>%
     # Summarize the data by calculating the sum of `n.conflicts` and `n.deaths`, removing NA values
     dplyr::summarise(
-      dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),
+      dplyr::across(c(n.conflicts, n.deaths), \(x) sum(x, na.rm = TRUE)),
       .groups = "drop"
     ) %>%
     # Create new variables by applying the logarithm to `n.conflicts` and `n.deaths`, adding 0.1 to avoid log(0)
@@ -1814,5 +1816,149 @@ if (run_diagnostics) {
 models_computed <- "models_tA6iii"
 
 save(list=models_computed, file = here::here("results/TableA6iii_models.RData"))
+
+rm(list = models_computed)
+
+
+#### Table A8i ####
+
+
+# Define a vector of variable names to be used in the analysis
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Filter the dataset to only include rows where the number of conflicts is greater than 0
+# Then, for each row, create a new variable 'dyad' by concatenating 'side_a' and 'side_b', sorted and joined with an underscore
+type_2_model <- actor_type_2_territories %>%
+  dplyr::filter(n.conflicts > 0) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
+  dplyr::ungroup()
+
+# Group the data by 'dyad', 'year', and 'index.data', then summarize all numeric columns by summing their values
+type_2_model %<>%
+  dplyr::group_by(dyad, year, index.data) %>%
+  dplyr::summarise(
+    dplyr::across(tidyselect::where(is.numeric), \(x) sum(x, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  # Add new variables 'log_n.conflicts' and 'log_n.deaths' by applying a log transformation
+  dplyr::mutate(
+    log_n.conflicts = log10(n.conflicts + 0.1),
+    log_n.deaths = log10(n.deaths + 0.1)
+  )
+
+# Ensure that the total number of deaths in the processed dataset matches the original dataset
+stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
+
+# Repeat the process for the 'ACLED_actor_type_2_territories' dataset
+ACLED_type_2_model <- ACLED_actor_type_2_territories %>%
+  dplyr::filter(n.conflicts > 0) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
+  dplyr::ungroup()
+
+# Filter the data to only include the year 2006
+ACLED_type_2_model %<>%
+  dplyr::filter(year == 2006) %>%
+  dplyr::group_by(dyad, index.data) %>%
+  dplyr::summarise(
+    dplyr::across(tidyselect::where(is.numeric), \(x) sum(x, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  # Add log-transformed variables for conflicts and deaths
+  dplyr::mutate(
+    log_n.conflicts = log10(n.conflicts + 0.1),
+    log_n.deaths = log10(n.deaths + 0.1)
+  )
+
+# Generate models for each variable in 'vars'
+models_tA8i <- vars %>%
+  purrr::map(function(var) {
+    # Filter the data for the year 2006 and select relevant columns
+    to.model <- type_2_model %>%
+      dplyr::filter(year == 2006) %>%
+      dplyr::select(index = index.data, dyad, dplyr::one_of(var))
+    
+    # Reshape the data to wide format
+    to.model %<>%
+      tidyr::pivot_wider(
+        values_from = dplyr::one_of(var),
+        names_from = "dyad",
+        values_fill = 0
+      )
+    
+    # Join with 'share_2006' data and replace NA values with 0
+    to.model <- share_2006 %>%
+      dplyr::left_join(to.model, by = c("index")) %>%
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), \(x) tidyr::replace_na(x, 0))) %>%
+      dplyr::rename(region = label) %>%
+      dplyr::select(-index, -region)
+    
+    # Create the formula for the linear model
+    formula <- as.formula(paste0("election_2006 ~ ."))
+    
+    # Fit a linear model to the data
+    lm(formula, to.model)
+  })
+
+# Check non-dyads relevance
+# ACLED_type_2_model %>% dplyr::filter(!stringr::str_detect(dyad, "_")) %>%
+# dplyr::group_by(dyad) %>% dplyr::summarise(dplyr::across(dplyr::one_of(c("n.deaths", "n.conflicts")), sum))
+# # A tibble: 1 × 3
+# dyad      n.deaths n.conflicts
+# <chr>        <int>       <int>
+#   1 civilians        0          19
+
+# Filter out non-dyad entries from the 'ACLED_type_2_model' dataset
+ACLED_type_2_model %<>% dplyr::filter(stringr::str_detect(dyad, "_"))
+
+# Generate models for the filtered 'ACLED_type_2_model' data
+models_tA8i_ACLED <- vars %>%
+  purrr::map(function(var) {
+    # Select relevant columns from the data
+    to.model <- ACLED_type_2_model %>%
+      dplyr::select(index = index.data, dyad, dplyr::one_of(var))
+    
+    # Reshape the data to wide format
+    to.model %<>%
+      tidyr::pivot_wider(
+        values_from = var,
+        names_from = "dyad",
+        values_fill = 0
+      )
+    
+    # Join with 'share_2006' data and replace NA values with 0
+    to.model <- share_2006 %>%
+      dplyr::left_join(to.model, by = c("index")) %>%
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), \(x) tidyr::replace_na(x, 0))) %>%
+      dplyr::rename(region = label) %>%
+      dplyr::select(-index, -region)
+    
+    # Create the formula for the linear model
+    formula <- as.formula(paste0("election_2006 ~ ."))
+    
+    # Fit a linear model to the data
+    lm(formula, to.model)
+  })
+
+# Combine the two sets of models into one list
+models_tA8i <- c(models_tA8i, models_tA8i_ACLED)
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA8i, 
+                           table_name =  "Table_A8i", 
+                           model_name_prefix = "model_tA8i_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA8i"
+
+save(list=models_computed, file = here::here("results/TableA8i_models.RData"))
 
 rm(list = models_computed)
