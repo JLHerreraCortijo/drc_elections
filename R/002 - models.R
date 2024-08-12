@@ -1583,3 +1583,111 @@ models_computed <- "models_tA6i"
 save(list=models_computed, file = here::here("results/TableA6i_models.RData"))
 
 rm(list = models_computed)
+
+
+#### Table A6ii ####
+
+# Define a vector of variable names that will be used in the model
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Create a list of linear models, one for each variable in `vars`, using the `conflict.aggregated_by_type` data
+models_tA6ii <- vars %>% 
+  # Map over each variable in `vars`
+  purrr::map(function(var) {
+    # Filter the data to include only rows where `n.conflicts` is greater than 0
+    to.model <- conflict.aggregated_by_type %>% 
+      dplyr::filter(n.conflicts > 0) %>% 
+      # Exclude data from the year 2018
+      dplyr::filter(year != 2018) %>% 
+      # Group the data by `index.data` and `year`
+      dplyr::group_by(index.data, year) %>% 
+      # Summarize the data by summing `n.conflicts` and `n.deaths`, removing any missing values
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>% 
+      # Create new variables with the logarithm (base 10) of `n.conflicts` and `n.deaths`
+      dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1)) %>% 
+      # Select the relevant columns: `index.data`, `year`, and the variable of interest
+      dplyr::select(index = index.data, year, dplyr::one_of(var)) %>% 
+      # Modify the `year` column to include the variable name as a prefix
+      dplyr::mutate(year = paste(var, year, sep = "_")) %>% 
+      # Reshape the data to a wider format, with each year as a separate column
+      tidyr::pivot_wider(names_from = "year", values_from = dplyr::all_of(var))
+    
+    # Join the model data with `share_not_2018` based on the `index` column
+    to.model <- share_not_2018 %>% 
+      dplyr::left_join(to.model, by = c("index")) %>% 
+      # Replace missing values (NA) in columns that start with the variable name with 0
+      dplyr::mutate(dplyr::across(dplyr::starts_with(var), \(x) tidyr::replace_na(x, 0))) %>% 
+      # Rename the `label` column to `region`
+      dplyr::rename(region = label) %>% 
+      # Remove the `index` column from the final data
+      dplyr::select(-index)
+    
+    # Define the formula for the linear model, incorporating the variable of interest for 2006 and 2011
+    formula <- as.formula(paste0("election_2011 ~ election_2006 + ", paste0(var, "_2006"), "+", paste0(var, "_2011")))
+    
+    # Fit a linear model using the defined formula and the prepared data
+    lm(formula, to.model)
+  })
+
+# Create a similar list of linear models using `ACLED_data_models` data
+models_tA6ii_ACLED <- vars %>% 
+  # Map over each variable in `vars`
+  purrr::map(function(var) {
+    # Filter the data to include only rows where `n.conflicts` is greater than 0
+    to.model <- ACLED_data_models %>% 
+      dplyr::filter(n.conflicts > 0) %>% 
+      # Exclude data from the year 2018
+      dplyr::filter(year != 2018) %>% 
+      # Group the data by `index` and `year`
+      dplyr::group_by(index, year) %>% 
+      # Summarize the data by summing `n.conflicts` and `n.deaths`, removing any missing values
+      dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>% 
+      # Create new variables with the logarithm (base 10) of `n.conflicts` and `n.deaths`
+      dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1)) %>% 
+      # Select the relevant columns: `index`, `year`, and the variable of interest
+      dplyr::select(index, year, dplyr::one_of(var)) %>% 
+      # Modify the `year` column to include the variable name as a prefix
+      dplyr::mutate(year = paste(var, year, sep = "_")) %>% 
+      # Reshape the data to a wider format, with each year as a separate column
+      tidyr::pivot_wider(names_from = "year", values_from = dplyr::all_of(var))
+    
+    # Fix the `index` values using a custom function `fix_ACLED_index` and join with `share_not_2018`
+    to.model <- share_not_2018 %>% 
+      fix_ACLED_index() %>% 
+      dplyr::left_join(to.model, by = c("index")) %>% 
+      # Replace missing values (NA) in columns that start with the variable name with 0
+      dplyr::mutate(dplyr::across(dplyr::starts_with(var), \(x) tidyr::replace_na(x, 0))) %>% 
+      # Rename the `label` column to `region`
+      dplyr::rename(region = label) %>% 
+      # Remove the `index` column from the final data
+      dplyr::select(-index)
+    
+    # Define the formula for the linear model, incorporating the variable of interest for 2006 and 2011
+    formula <- as.formula(paste0("election_2011 ~ election_2006 + ", paste0(var, "_2006"), "+", paste0(var, "_2011")))
+    
+    # Fit a linear model using the defined formula and the prepared data
+    lm(formula, to.model)
+  })
+
+# Combine the lists of models from both `models_tA6ii` and `models_tA6ii_ACLED`
+models_tA6ii <- c(models_tA6ii, models_tA6ii_ACLED)
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA6ii, 
+                           table_name =  "Table_A6ii", 
+                           model_name_prefix = "model_tA6ii_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA6ii"
+
+save(list=models_computed, file = here::here("results/TableA6ii_models.RData"))
+
+rm(list = models_computed)

@@ -1147,7 +1147,7 @@ F.stat <- purrr::map(models_tA4, \(x) {
   summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
   
   # Compute the p-value for the F-statistic
-  .p <- stats::pf(
+  .p <- pf(
     summ$fstatistic["value"],
     summ$fstatistic["numdf"],
     summ$fstatistic["dendf"],
@@ -1425,6 +1425,7 @@ Table_A5 <- conflict.groups.period.table %>%
 
 # Load the pre-saved RData file that contains the model results for Table A2c
 load("results/TableA6i_models.RData")
+
 # Create a vector of model names to use for labeling the output tables
 model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
                  paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
@@ -1442,7 +1443,7 @@ F.stat <- purrr::map(models_tA6i, \(x) {
   # Generate a summary of the model with a robust covariance matrix
   summ <- summary(x, vcov. = sandwich::vcovHC(x, method="arellano", type="HC3"))
   # Calculate the p-value of the F-statistic
-  .p <- stats::pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  .p <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
   # Format the F-statistic value with significance stars based on the p-value
   sprintf("%0.3f%s", summ$fstatistic["value"],
           dplyr::case_when(
@@ -1490,9 +1491,9 @@ Table_A6i <-
 empty_lines <- Table_A6i %>% 
   dplyr::transmute(across(dplyr::everything(), \(x) nchar(x) == 0)) %>% 
   dplyr::rowwise() %>% 
-  dplyr::transmute(base::all(dplyr::c_across(dplyr::everything()))) %>% 
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>% 
   dplyr::pull(1) %>% 
-  base::which()
+  which()
 
 # Remove the identified empty rows from the table
 Table_A6i %<>% dplyr::slice(-empty_lines)
@@ -1506,3 +1507,117 @@ Table_A6i %<>%
   flextable::vline(j = c(1, 5), border = officer::fp_border()) %>% 
   flextable::autofit() %>% 
   flextable::fit_to_width(10.5)
+
+
+##### TABLE A6ii #####
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA6ii_models.RData")
+
+
+# Create a vector of model names, each representing different types of conflicts and deaths
+model_names <- c(
+  paste("Conflicts"),          # Name for Conflicts model
+  paste("Log Conflicts"),      # Name for Log Conflicts model
+  paste("Deaths"),             # Name for Deaths model
+  paste("Log Deaths"),         # Name for Log Deaths model
+  paste("ACLED\nConflicts"),   # Name for ACLED Conflicts model
+  paste("ACLED\nLog Conflicts"), # Name for ACLED Log Conflicts model
+  paste("ACLED\nDeaths"),      # Name for ACLED Deaths model
+  paste("ACLED\nLog Deaths")   # Name for ACLED Log Deaths model
+)
+
+# Assign the model names to a new variable for printing
+model_names.to_print <- model_names
+
+# Extract standard errors from each model using robust standard errors (Arellano method) and save them in a list
+models.to.print_se <- purrr::map(models_tA6ii, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method = "arellano", type = "HC3"))[,"Std. Error"]
+})
+
+# Compute F-statistics for each model, format them with significance stars, and combine into a single vector
+F.stat <- purrr::map(models_tA6ii, \(x) {
+  # Get the summary of the model with robust standard errors
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
+  
+  # Compute the p-value of the F-statistic
+  p_val <- pf(
+    summ$fstatistic["value"],
+    summ$fstatistic["numdf"],
+    summ$fstatistic["dendf"],
+    lower.tail = FALSE
+  )
+  
+  # Format the F-statistic and add significance stars based on p-value
+  sprintf(
+    "%0.3f%s",
+    summ$fstatistic["value"],
+    dplyr::case_when(
+      p_val < 0.01 ~ "***",    # Add three stars for p-value < 0.01
+      p_val < 0.05 ~ "**",     # Add two stars for p-value < 0.05
+      p_val < 0.1 ~ "*",       # Add one star for p-value < 0.1
+      TRUE ~ ""                # No stars for p-value >= 0.1
+    )
+  )
+}) %>%
+  unlist() %>%                # Unlist the results into a single vector
+  c("F Statistic", .)         # Add a label "F Statistic" at the beginning
+
+# Extract degrees of freedom for each model and format them into a single vector
+df <- purrr::map(models_tA6ii, \(x) {
+  # Get the summary of the model with robust standard errors
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
+  
+  # Concatenate numerator and denominator degrees of freedom
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>%
+  unlist() %>%                # Unlist the results into a single vector
+  c("df", .)                  # Add a label "df" at the beginning
+
+# Create an HTML table using stargazer, suppress warnings during the process
+Table_A6ii <- suppressWarnings(
+  stargazer::stargazer(
+    models_tA6ii,
+    type = "html",               # Specify output format as HTML
+    se = models.to.print_se,     # Provide standard errors
+    dep.var.caption = "Votes share 2011", # Set dependent variable caption
+    omit.stat = "f",             # Omit F-statistic from default output
+    add.lines = list(F.stat, df) # Add custom lines for F-statistics and degrees of freedom
+  )
+) %>% paste0(collapse = "")      # Concatenate the HTML code into a single string
+
+# Parse the HTML string into a data frame, extract the table content, and remove unnecessary rows
+Table_A6ii <- xml2::read_html(Table_A6ii) %>% 
+  rvest::html_table() %>% 
+  as.data.frame() %>% 
+  dplyr::slice(-c(1:5))          # Remove the first 5 rows (header and irrelevant content)
+
+# Rename the columns of the data frame, using model names for the columns
+Table_A6ii <- magrittr::set_names(Table_A6ii, c(" ", model_names.to_print)) %>% 
+  dplyr::slice(-1)              # Remove the first row after renaming (redundant content)
+
+# Identify empty rows by checking if all characters in a row are empty, and find their indices
+empty_lines <- Table_A6ii %>% 
+  dplyr::transmute(across(dplyr::everything(), \(x) { nchar(x) == 0 })) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>% 
+  dplyr::pull(1) %>% 
+  which()                       # Get the indices of completely empty rows
+
+# Remove the empty rows from the table
+Table_A6ii <- dplyr::slice(Table_A6ii, -empty_lines)
+
+# Convert the cleaned table to a flextable object and apply formatting
+Table_A6ii <- Table_A6ii %>% 
+  flextable::flextable() %>% 
+  flextable::merge_at(i = nrow(Table_A6ii), j = 2:ncol(Table_A6ii)) %>%  # Merge the last row for formatting
+  flextable::style(
+    pr_t = officer::fp_text(font.size = 9), 
+    part = "all", 
+    pr_p = officer::fp_par(line_spacing = 1, padding = 0)
+  ) %>% 
+  flextable::hline(i = 20, border = officer::fp_border()) %>%  # Add a horizontal line at row 20
+  flextable::vline(j = c(1, 5), border = officer::fp_border()) %>%  # Add vertical lines at specified columns
+  flextable::autofit() %>%       # Adjust column widths to fit content
+  flextable::fit_to_width(10.5)  # Set the table width to 10.5 units
