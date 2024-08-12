@@ -162,7 +162,7 @@ share_viles_merged <- data_villes_merged %>%
 
 
 # Reshape the 'share' data from long to wide format, creating separate columns for each election year
-share_long  <- share %>% dplyr::select(index, label, year, votes_share) %>%
+share_wide  <- share %>% dplyr::select(index, label, year, votes_share) %>%
   tidyr::pivot_wider(
     names_from = "year",  # Use 'year' values as the new column names
     values_from = "votes_share",  # The values for the new columns come from 'votes_share'
@@ -1383,7 +1383,7 @@ models_tA4 <- vars %>%
       dplyr::select(index = index.data, dplyr::one_of(var))  # Select relevant columns for modeling
     
     # Merge the conflict data with the election vote share data
-    to.model <- share_long %>%
+    to.model <- share_wide %>%
       dplyr::left_join(to.model, by = c("index")) %>%  # Join on 'index'
       dplyr::mutate(dplyr::across(dplyr::one_of(var), ~ tidyr::replace_na(., 0))) %>%  # Replace NAs with 0
       dplyr::rename(region = label) %>%  # Rename 'label' to 'region'
@@ -1416,7 +1416,7 @@ models_tA4_ACLED <- vars %>%
       dplyr::select(index, dplyr::one_of(var))  # Select relevant columns for modeling
     
     # Fix the index in the election vote share data and merge with the conflict data
-    to.model <- share_long %>%
+    to.model <- share_wide %>%
       fix_ACLED_index() %>%  # Apply a function to fix the index
       dplyr::left_join(to.model, by = c("index")) %>%  # Join on 'index'
       dplyr::mutate(dplyr::across(dplyr::one_of(var), ~ tidyr::replace_na(., 0))) %>%  # Replace NAs with 0
@@ -1458,4 +1458,128 @@ save(
 )
 
 # Remove the models from the environment to free up memory
+rm(list = models_computed)
+
+
+
+#### Table A6i ####
+
+# Define a vector of variable names that will be used in the analysis
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Filter the 'share' dataset for the year 2006, then reshape it from long to wide format
+share_2006 <- share %>%
+  dplyr::filter(year == 2006) %>%  # Filter rows where the year is 2006
+  tidyr::pivot_wider(              # Reshape data: create a new column for each 'year' value
+    names_from = "year",           # The values of 'year' will become new column names
+    values_from = "votes_share",   # The values for the new columns will come from 'votes_share'
+    names_prefix = "election_"     # Prefix these new column names with 'election_'
+  )
+
+# Create a list of models for each variable in 'vars'
+models_tA6i <- vars %>%
+  purrr::map(function(var) {  # Apply the following function to each variable in 'vars'
+    
+    # Filter and summarize the 'conflict.aggregated_by_type' data for modeling
+    to.model <- conflict.aggregated_by_type %>%
+      dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where 'n.conflicts' is greater than 0
+      dplyr::filter(year == 2006) %>%     # Keep only rows where the year is 2006
+      dplyr::group_by(index.data, year) %>%  # Group by 'index.data' and 'year'
+      dplyr::summarise(                      # Summarize the grouped data
+        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum 'n.conflicts' and 'n.deaths' across groups
+        .groups = "drop"  # Drop the grouping after summarization
+      ) %>%
+      dplyr::mutate(  # Add new variables to the dataset
+        log_n.conflicts = log10(n.conflicts + 0.1),  # Compute log10 of 'n.conflicts' with a small offset
+        log_n.deaths = log10(n.deaths + 0.1)  # Compute log10 of 'n.deaths' with a small offset
+      ) %>%
+      dplyr::select(index = index.data, year, dplyr::one_of(var)) %>%  # Select relevant columns for the model
+      dplyr::mutate(  # Modify the 'year' column to include the variable name
+        year = paste(var, year, sep = "_")
+      ) %>%
+      tidyr::pivot_wider(  # Reshape data: create a new column for each 'year' value
+        names_from = "year",  # The modified 'year' column becomes the new column names
+        values_from = dplyr::all_of(var)  # The values for the new columns come from the current variable
+      )
+    
+    # Merge the reshaped 'share_2006' data with the 'to.model' data
+    to.model <- share_2006 %>%
+      dplyr::left_join(to.model, by = c("index")) %>%  # Perform a left join by the 'index' column
+      dplyr::mutate(  # Replace NA values in columns starting with the variable name with 0
+        dplyr::across(dplyr::starts_with(var), ~tidyr::replace_na(., 0))
+      ) %>%
+      dplyr::rename(region = label) %>%  # Rename the 'label' column to 'region'
+      dplyr::select(-index)  # Remove the 'index' column from the dataset
+    
+    # Create a formula for the linear model
+    formula <- as.formula(paste0("election_2006 ~ ", paste0(var, "_2006")))
+    
+    # Fit a linear model using the formula and the prepared data
+    lm(formula, to.model)
+  })
+
+# Create a list of models for each variable in 'vars' using ACLED data
+models_tA6i_ACLED <- vars %>%
+  purrr::map(function(var) {  # Apply the following function to each variable in 'vars'
+    
+    # Filter and summarize the 'ACLED_data_models' data for modeling
+    to.model <- ACLED_data_models %>%
+      dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where 'n.conflicts' is greater than 0
+      dplyr::filter(year == 2006) %>%     # Keep only rows where the year is 2006
+      dplyr::group_by(index, year) %>%  # Group by 'index' and 'year'
+      dplyr::summarise(  # Summarize the grouped data
+        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum 'n.conflicts' and 'n.deaths' across groups
+        .groups = "drop"  # Drop the grouping after summarization
+      ) %>%
+      dplyr::mutate(  # Add new variables to the dataset
+        log_n.conflicts = log10(n.conflicts + 0.1),  # Compute log10 of 'n.conflicts' with a small offset
+        log_n.deaths = log10(n.deaths + 0.1)  # Compute log10 of 'n.deaths' with a small offset
+      ) %>%
+      dplyr::select(index, year, dplyr::one_of(var)) %>%  # Select relevant columns for the model
+      dplyr::mutate(  # Modify the 'year' column to include the variable name
+        year = paste(var, year, sep = "_")
+      ) %>%
+      tidyr::pivot_wider(  # Reshape data: create a new column for each 'year' value
+        names_from = "year",  # The modified 'year' column becomes the new column names
+        values_from = dplyr::all_of(var)  # The values for the new columns come from the current variable
+      )
+    
+    # Merge the reshaped 'share_2006' data with the 'to.model' data after fixing ACLED index
+    to.model <- share_2006 %>%
+      fix_ACLED_index() %>%  # Apply a custom function to fix the ACLED index
+      dplyr::left_join(to.model, by = c("index")) %>%  # Perform a left join by the 'index' column
+      dplyr::mutate(  # Replace NA values in columns starting with the variable name with 0
+        dplyr::across(dplyr::starts_with(var), ~tidyr::replace_na(., 0))
+      ) %>%
+      dplyr::rename(region = label) %>%  # Rename the 'label' column to 'region'
+      dplyr::select(-index)  # Remove the 'index' column from the dataset
+    
+    # Create a formula for the linear model
+    formula <- as.formula(paste0("election_2006 ~ ", paste0(var, "_2006")))
+    
+    # Fit a linear model using the formula and the prepared data
+    lm(formula, to.model)
+  })
+
+# Combine the two lists of models into one
+models_tA6i <- c(models_tA6i, models_tA6i_ACLED)
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA6i, 
+                           table_name =  "Table_A6i", 
+                           model_name_prefix = "model_tA6i_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA6i"
+
+save(list=models_computed, file = here::here("results/TableA6i_models.RData"))
+
 rm(list = models_computed)

@@ -1418,3 +1418,91 @@ Table_A5 <- conflict.groups.period.table %>%
   ) %>%
   flextable::autofit() %>% 
   flextable::fit_to_width(6.49)
+
+
+##### TABLE A6i #####
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA6i_models.RData")
+# Create a vector of model names to use for labeling the output tables
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+# Duplicate the model names vector for later use in the table output
+model_names.to_print <- model_names
+
+# Calculate the standard errors for each model using a robust covariance matrix estimator (HC3) and store them in a list
+models.to.print_se <- purrr::map(models_tA6i, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method="arellano", type="HC3"))[,"Std. Error"]
+})
+
+# Calculate the F-statistic for each model and format it with significance stars
+F.stat <- purrr::map(models_tA6i, \(x) {
+  # Generate a summary of the model with a robust covariance matrix
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method="arellano", type="HC3"))
+  # Calculate the p-value of the F-statistic
+  .p <- stats::pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  # Format the F-statistic value with significance stars based on the p-value
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(
+            .p < 0.01 ~ "***",
+            .p < 0.05 ~ "**",
+            .p < 0.1 ~ "*",
+            TRUE ~ ""
+          ))
+}) %>% 
+  unlist() %>%  # Flatten the list into a character vector
+  c("F Statistic", .)  # Add a label for the F-statistic row
+
+# Extract the degrees of freedom for each model and format them into a string
+df <- purrr::map(models_tA6i, \(x) {
+  # Generate a summary of the model with a robust covariance matrix
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method="arellano", type="HC3"))
+  # Concatenate the numerator and denominator degrees of freedom
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>% 
+  unlist() %>%  # Flatten the list into a character vector
+  c("df", .)  # Add a label for the degrees of freedom row
+
+# Generate the HTML table for the regression models using stargazer, adding custom lines for F-statistics and degrees of freedom
+Table_A6i <- suppressWarnings(
+  stargazer::stargazer(models_tA6i, type = "html",
+                       se = models.to.print_se,
+                       dep.var.caption = "Votes share_2006 2006",
+                       omit.stat = "f",
+                       add.lines = list(F.stat, df))
+) %>% 
+  paste0(collapse = "")  # Collapse the list of HTML lines into a single string
+
+# Parse the HTML table into a data frame and remove the first five rows (which contain unwanted metadata)
+Table_A6i <- xml2::read_html(Table_A6i) %>% 
+  rvest::html_table() %>% 
+  as.data.frame() %>% 
+  dplyr::slice(-c(1:5))
+
+# Rename the columns of the table using the model names vector and remove the first row (which contains the original column names)
+Table_A6i <- 
+  magrittr::set_names(Table_A6i, c(" ", model_names.to_print)) %>% 
+  dplyr::slice(-1)
+
+# Identify rows that are completely empty (i.e., all cells are blank)
+empty_lines <- Table_A6i %>% 
+  dplyr::transmute(across(dplyr::everything(), \(x) nchar(x) == 0)) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::transmute(base::all(dplyr::c_across(dplyr::everything()))) %>% 
+  dplyr::pull(1) %>% 
+  base::which()
+
+# Remove the identified empty rows from the table
+Table_A6i %<>% dplyr::slice(-empty_lines)
+
+# Convert the data frame into a flextable and apply various formatting options
+Table_A6i %<>% 
+  flextable::flextable() %>% 
+  flextable::merge_at(i = nrow(Table_A6i), j = 2:ncol(Table_A6i)) %>% 
+  flextable::style(pr_t = officer::fp_text(font.size = 10), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>% 
+  flextable::hline(i = 10, border = officer::fp_border()) %>% 
+  flextable::vline(j = c(1, 5), border = officer::fp_border()) %>% 
+  flextable::autofit() %>% 
+  flextable::fit_to_width(10.5)
