@@ -175,7 +175,7 @@ Table_3a %<>%
   # Fit the table to a width of 10.5 inches
   flextable::fit_to_width(10.5)
 
-
+rm(models.to.print)
 
 ##### TABLE 3b ####
 
@@ -291,6 +291,8 @@ Table_3b %<>%
   flextable::autofit() %>%
   # Fit the table to a width of 6.49 inches
   flextable::fit_to_width(6.49)
+
+rm(models.to.print)
 
 ##### TABLE 1v2 #####
 # Convert the ged201 object into a data frame for manipulation
@@ -580,6 +582,8 @@ Table_A2 %<>% flextable::flextable() %>%
   flextable::fit_to_width(9)
 
 
+rm(models_tA2)
+
 ##### TABLE A2b #####
 
 # Load the pre-saved RData file that contains the model results
@@ -699,6 +703,7 @@ Table_A2b %<>% flextable::flextable() %>%
   flextable::autofit() %>%
   flextable::fit_to_width(9)
 
+rm(models_tA2b)
 
 ##### TABLE A2c ######
 
@@ -819,6 +824,7 @@ Table_A2c %<>% flextable::flextable() %>%
   flextable::autofit() %>%
   flextable::fit_to_width(9)
 
+rm(models_tA2c)
 
 ##### TABLE A2d ######
 
@@ -1006,6 +1012,8 @@ Table_A2d %<>% flextable::flextable() %>%
   flextable::autofit() %>%
   flextable::fit_to_width(9)
 
+rm(models_tA2d)
+
 ##### TABLE A3 #####
 
 
@@ -1117,6 +1125,8 @@ Table_A3 %<>% flextable::flextable() %>%
   flextable::autofit() %>%
   flextable::fit_to_width(10.5)
 
+rm(models_tA3)
+
 ##### TABLE A4 #####
 
 # Load the pre-saved RData file that contains the model results for Table A2c
@@ -1227,6 +1237,7 @@ Table_A4 %<>% flextable::flextable() %>%
   flextable::autofit() %>%
   flextable::fit_to_width(10.5)
 
+rm(models_tA4)
 
 ##### TABLE A5 #####
 
@@ -1508,6 +1519,7 @@ Table_A6i %<>%
   flextable::autofit() %>% 
   flextable::fit_to_width(10.5)
 
+rm(models_tA6i)
 
 ##### TABLE A6ii #####
 
@@ -1621,3 +1633,123 @@ Table_A6ii <- Table_A6ii %>%
   flextable::vline(j = c(1, 5), border = officer::fp_border()) %>%  # Add vertical lines at specified columns
   flextable::autofit() %>%       # Adjust column widths to fit content
   flextable::fit_to_width(10.5)  # Set the table width to 10.5 units
+
+rm(models_tA6ii)
+
+##### TABLE A6iii #####
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA6iii_models.RData")
+
+# Create a vector of model names, some with line breaks for display
+model_names <- c(
+  paste("Conflicts"),
+  paste("Log Conflicts"),
+  paste("Deaths"),
+  paste("Log Deaths"),
+  paste("ACLED\nConflicts"),
+  paste("ACLED\nLog Conflicts"),
+  paste("ACLED\nDeaths"),
+  paste("ACLED\nLog Deaths")
+)
+
+# Copy model names to a new object for later use in table creation
+model_names.to_print <- model_names
+
+# Compute standard errors for each model using the coeftest function with robust covariance matrix estimation
+models.to.print_se <- purrr::map(models_tA6iii, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method="arellano", type="HC3"))[, "Std. Error"]
+})
+
+# Calculate F-statistics for each model and format them with significance stars
+F.stat <- purrr::map(models_tA6iii, \(x) {
+  summ <- summary(x, vcov.=sandwich::vcovHC(x, method="arellano", type="HC3"))
+  # Compute the p-value for the F-statistic
+  p_value <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  
+  # Format the F-statistic value with significance stars
+  sprintf(
+    "%0.3f%s",
+    summ$fstatistic["value"],
+    dplyr::case_when(
+      p_value < 0.01 ~ "***",
+      p_value < 0.05 ~ "**",
+      p_value < 0.1 ~ "*",
+      TRUE ~ ""
+    )
+  )
+}) %>% 
+  # Unlist the results into a vector
+  unlist() %>% 
+  # Add a label "F Statistic" as the first element in the vector
+  c("F Statistic", .)
+
+# Extract the degrees of freedom for each model's F-statistic and format them as text
+df <- purrr::map(models_tA6iii, \(x) {
+  summ <- summary(x, vcov.=sandwich::vcovHC(x, method="arellano", type="HC3"))
+  
+  # Combine the numerator and denominator degrees of freedom into a single string
+  paste(summ$fstatistic[2:3], collapse=";")
+}) %>% 
+  # Unlist the results into a vector
+  unlist() %>% 
+  # Add a label "df" as the first element in the vector
+  c("df", .)
+
+# Create an HTML regression table with additional statistics using stargazer
+Table_A6iii <- suppressWarnings(
+  stargazer::stargazer(
+    models_tA6iii,
+    type="html",
+    se=models.to.print_se,
+    dep.var.caption = "Votes share 2018",
+    omit.stat = "f",
+    add.lines = list(F.stat, df)
+  )
+) %>% 
+  # Collapse the output into a single string
+  paste0(collapse = "")
+
+# Parse the HTML table into a data frame, removing the first 5 rows (header rows)
+Table_A6iii <- xml2::read_html(Table_A6iii) %>% 
+  rvest::html_table() %>% 
+  as.data.frame() %>% 
+  dplyr::slice(-c(1:5))
+
+# Assign new column names to the table, using the vector of model names
+Table_A6iii <- magrittr::set_names(Table_A6iii, c(" ", model_names.to_print)) %>% 
+  # Remove the first row, which now contains old column names
+  dplyr::slice(-1)
+
+# Identify and remove rows where all cells are empty
+empty_lines <- Table_A6iii %>% 
+  dplyr::transmute(dplyr::across(dplyr::everything(), \(x) {nchar(x) == 0})) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>% 
+  dplyr::pull(1) %>% 
+  which()
+
+Table_A6iii <- dplyr::slice(Table_A6iii, -empty_lines)
+
+# Format the table as a flextable, applying various styles and adjustments
+Table_A6iii <- Table_A6iii %>% 
+  flextable::flextable() %>% 
+  # Merge cells in the last row across all columns except the first
+  flextable::merge_at(i = nrow(Table_A6iii), j = 2:ncol(Table_A6iii)) %>% 
+  # Apply text styling to the entire table
+  flextable::style(
+    pr_t = officer::fp_text(font.size = 9),
+    part = "all",
+    pr_p = officer::fp_par(line_spacing = 1, padding = 0)
+  ) %>% 
+  # Add a horizontal line at row 30
+  flextable::hline(i = 30, border = officer::fp_border()) %>% 
+  # Add vertical lines between specific columns
+  flextable::vline(j = c(1, 5), border = officer::fp_border()) %>% 
+  # Automatically adjust column widths to fit the content
+  flextable::autofit() %>% 
+  # Adjust the table width to a specified value
+  flextable::fit_to_width(10.5)
+
+rm(models_tA6iii)
