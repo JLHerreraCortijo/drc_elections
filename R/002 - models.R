@@ -188,6 +188,33 @@ share_2006 <- share %>% dplyr::select(index, label, year, votes_share) %>%
     names_prefix = "election_"     # Prefix these new column names with 'election_'
   )
 
+
+# Filter the dataset to only include rows where the number of conflicts is greater than 0
+# Then, for each row, create a new variable 'dyad' by concatenating 'side_a' and 'side_b', sorted and joined with an underscore
+type_2_model <- actor_type_2_territories %>%
+  dplyr::filter(n.conflicts > 0) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
+  dplyr::ungroup()
+
+# Group the data by 'dyad', 'year', and 'index.data', then summarize all numeric columns by summing their values
+type_2_model %<>%
+  dplyr::group_by(dyad, year, index.data) %>%
+  dplyr::summarise(
+    dplyr::across(tidyselect::where(is.numeric), \(x) sum(x, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  # Add new variables 'log_n.conflicts' and 'log_n.deaths' by applying a log transformation
+  dplyr::mutate(
+    log_n.conflicts = log10(n.conflicts + 0.1),
+    log_n.deaths = log10(n.deaths + 0.1)
+  )
+
+# Ensure that the total number of deaths in the processed dataset matches the original dataset
+stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
+
+
+
 #### Table 3a ####
 
 ##### Model 1 #####
@@ -1826,29 +1853,6 @@ rm(list = models_computed)
 # Define a vector of variable names to be used in the analysis
 vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
 
-# Filter the dataset to only include rows where the number of conflicts is greater than 0
-# Then, for each row, create a new variable 'dyad' by concatenating 'side_a' and 'side_b', sorted and joined with an underscore
-type_2_model <- actor_type_2_territories %>%
-  dplyr::filter(n.conflicts > 0) %>%
-  dplyr::rowwise() %>%
-  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
-  dplyr::ungroup()
-
-# Group the data by 'dyad', 'year', and 'index.data', then summarize all numeric columns by summing their values
-type_2_model %<>%
-  dplyr::group_by(dyad, year, index.data) %>%
-  dplyr::summarise(
-    dplyr::across(tidyselect::where(is.numeric), \(x) sum(x, na.rm = TRUE)),
-    .groups = "drop"
-  ) %>%
-  # Add new variables 'log_n.conflicts' and 'log_n.deaths' by applying a log transformation
-  dplyr::mutate(
-    log_n.conflicts = log10(n.conflicts + 0.1),
-    log_n.deaths = log10(n.deaths + 0.1)
-  )
-
-# Ensure that the total number of deaths in the processed dataset matches the original dataset
-stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
 
 # Repeat the process for the 'ACLED_actor_type_2_territories' dataset
 ACLED_type_2_model <- ACLED_actor_type_2_territories %>%
@@ -1960,5 +1964,91 @@ if (run_diagnostics) {
 models_computed <- "models_tA8i"
 
 save(list=models_computed, file = here::here("results/TableA8i_models.RData"))
+
+rm(list = models_computed)
+
+
+#### Table A8ib ####
+
+
+# Define a vector of variable names to be used in the models
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Create models for different values of k using a range from 1 to 10
+models_tA8ib <- 1:10 %>% 
+  purrr::map(\(k) { # Iterate over each value of k
+    
+    # Remove the first row from the territorial borders data
+    borders <- congo.territoire.borders %>% dplyr::slice(-1)
+    
+    # Calculate the centroid for each border and find k nearest neighbors
+    w1nb <- borders %>% 
+      sf::st_centroid(borders) %>% 
+      spdep::knearneigh(k = k, longlat = TRUE) %>% 
+      spdep::knn2nb()
+    
+    # Convert neighbors to a spatial weights list
+    listw1nb <- w1nb %>% spdep::nb2listw(style = "W")
+    
+    # Create spatial lines from the neighbor connections and convert to sf format
+    neighbors_sf <- as(spdep::nb2lines(w1nb, coords = sp::coordinates(as(borders, "Spatial"))), 'sf')
+    neighbors_sf <- sf::st_set_crs(neighbors_sf, sf::st_crs(borders))
+    
+    # Plot the territorial borders and the neighbor connections using ggplot2
+    ggplot2::ggplot(congo.territoire.borders) + 
+      ggplot2::geom_sf(fill = NA) +
+      ggplot2::theme_void() +
+      ggplot2::geom_sf(data = neighbors_sf, color = "red")
+    
+    # Save the plot as a PNG file
+    ggplot2::ggsave(here::here(paste0("manuscript/knn/table_8ib_nb_", k, ".png")), width = 10, height = 10)
+    
+    # Iterate over each variable in the 'vars' vector to build models
+    vars %>% purrr::map(\(var) {
+      
+      # Filter data for the year 2006 and select relevant columns
+      to.model <- type_2_model %>%  
+        dplyr::filter(year == 2006) %>% 
+        dplyr::select(index = index.data, dyad, dplyr::one_of(var)) %>% 
+        dplyr::arrange(dyad)
+      
+      # Reshape the data to a wide format with dyads as columns
+      to.model %<>% tidyr::pivot_wider(values_from = var, names_from = "dyad", values_fill = 0)
+      
+      # Merge with share_2006 data, replace NAs with 0, and clean up column names
+      to.model <- share_2006 %>%  
+        dplyr::left_join(to.model, by = c("index")) %>% 
+        dplyr::mutate(dplyr::across(tidyselect:::where(is.numeric), \(x) tidyr::replace_na(x, 0))) %>% 
+        dplyr::rename(region = label) %>% 
+        dplyr::select(-index, -region)
+      
+      # Define the formula for the regression model
+      formula <- as.formula(paste0("election_2006 ~ ."))
+      
+      # Fit a spatial lag model (SLX) using the prepared data and spatial weights
+      m <- spatialreg::lmSLX(formula, to.model, listw = listw1nb, zero.policy = TRUE)
+      
+      # Return the fitted model
+      m
+    }) 
+  })
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA8ib, 
+                           table_name =  "Table_A8ib", 
+                           model_name_prefix = "model_tA8ib_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA8ib"
+
+save(list=models_computed, file = here::here("results/TableA8ib_models.RData"))
 
 rm(list = models_computed)

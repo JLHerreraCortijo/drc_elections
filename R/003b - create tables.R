@@ -15,6 +15,10 @@ make_dyad_labels <- function(df,var) df %>%
   dplyr::mutate(dplyr::across(dplyr::one_of(var),
                               ~dplyr::case_when(.%in% names(dyad_labels)~ dyad_labels[.],TRUE~.)))
 
+
+# Define a function to add significance stars to p-values
+p_stars <- function(p) dplyr::case_when(p < 0.01 ~ "***", p < 0.05 ~ "**", p < 0.1 ~ "*", TRUE ~ "")
+
 #### TABLES ####
 
 ##### TABLE 1 #####
@@ -960,8 +964,6 @@ empty_lines <- Table_A2d %>%
 # Remove the identified empty rows from the table
 Table_A2d %<>% dplyr::slice(-empty_lines)
 
-# Define a function to add significance stars to p-values
-p_stars <- function(p) dplyr::case_when(p < 0.01 ~ "***", p < 0.05 ~ "**", p < 0.1 ~ "*", TRUE ~ "")
 
 # Set scientific notation off for better readability
 options(scipen = 999)
@@ -1861,3 +1863,151 @@ Table_A8i %<>%
 
 
 rm(models_tA8i)
+
+
+##### TABLE A8ib ######
+
+
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA8i_models.RData")
+
+# Define names for the models to use later for plotting
+model_names <- c(paste("Conflicts"), paste("Log Conflicts"), paste("Deaths"), paste("Log Deaths"))
+
+# Copy model names for printing
+model_names.to_print <- model_names
+
+# Calculate the AIC (Akaike Information Criterion) for each model across k values and plot the results
+models_tA8ib %>% 
+  purrr::map(\(x) purrr::map(x, AIC) %>% unlist) %>% 
+  unlist %>% 
+  matrix(nrow = 10, byrow = TRUE) %>% 
+  as.data.frame() %>% 
+  magrittr::set_colnames(model_names) %>%
+  dplyr::mutate(k = dplyr::row_number()) %>%
+  tidyr::pivot_longer(cols = -k, names_to = "model", values_to = "AIC") %>%
+  ggplot2::ggplot(ggplot2::aes(y = AIC, x = k)) + 
+  ggplot2::geom_point() +
+  ggplot2::facet_wrap(~model, ncol = 3, scales = "free_y") +
+  ggplot2::scale_x_continuous(breaks = 1:10) + 
+  ggplot2::geom_vline(xintercept = 6, color = "red")
+
+# Save the AIC plot as a PNG file
+ggplot2::ggsave(filename = here::here("manuscript/knn/table_8ib_AIC_detail.png"))
+
+# Select the model corresponding to k = 6 for further analysis
+k <- 6
+models_tA8ib <- models_tA8ib %>% purrr::pluck(k)
+
+# Prepare the standard errors of the model coefficients for each model
+models.to.print_se <- purrr::map(models_tA8ib, \(model) {
+  lmtest::coeftest(model, sandwich::vcovHC(model, method = "arellano", type = "HC3"))[, "Std. Error"]
+})
+
+# Calculate the F-statistics for each model and format them with significance stars
+F.stat <- purrr::map(models_tA8ib, \(model) {
+  summ <- summary(model, vcov. = sandwich::vcovHC(model, method = "arellano", type = "HC3"))
+  .p <- stats::pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(.p < 0.01 ~ "***",
+                           .p < 0.05 ~ "**",
+                           .p < 0.1 ~ "*",
+                           TRUE ~ ""))
+}) %>% 
+  unlist %>% 
+  c("F Statistic", .)
+
+# Calculate the degrees of freedom for each model
+df <- purrr::map(models_tA8ib, \(model) {
+  summ <- summary(model, vcov. = sandwich::vcovHC(model, method = "arellano", type = "HC3"))
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>% 
+  unlist %>% 
+  c("df", .)
+
+# Generate an HTML table summarizing the model results using stargazer
+Table_A8ib <- suppressWarnings(stargazer::stargazer(models_tA8ib, type = "html",
+                                                    se = models.to.print_se,
+                                                    column.labels = model_names, dep.var.caption = "Votes share",
+                                                    omit.stat = "f",
+                                                    add.lines = list(F.stat, df))) %>% 
+  paste0(collapse = "")
+
+# Convert the HTML table to a data frame and clean it up
+Table_A8ib <- xml2::read_html(Table_A8ib) %>% 
+  rvest::html_table() %>% 
+  as.data.frame() %>% 
+  dplyr::slice(-c(1:5))
+
+# Adjust table column names
+table_names <- as.vector(Table_A8ib %>% dplyr::slice(1) %>% unlist)
+table_names[1] <- " "
+Table_A8ib <- magrittr::set_names(Table_A8ib, c(" ", model_names.to_print)) %>% 
+  dplyr::slice(-1)
+
+# Identify and remove empty rows from the table
+empty_lines <- Table_A8ib %>% 
+  dplyr::transmute(across(dplyr::everything(), \(x) nchar(x) == 0)) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>% 
+  dplyr::pull(1) %>% 
+  which()
+
+Table_A8ib %<>% dplyr::slice(-empty_lines)
+
+
+# Update territorial borders data for further processing
+borders <- congo.territoire.borders %>% dplyr::slice(-1)
+
+# Recalculate spatial weights based on the chosen k value
+w1nb <- borders %>% 
+  sf::st_centroid(borders) %>% 
+  spdep::knearneigh(k = k, longlat = TRUE) %>% 
+  spdep::knn2nb()
+
+listw1nb <- w1nb %>% spdep::nb2listw(style = "W")
+
+# Calculate the spatial impacts of the models and format them into a table
+Table_A8ib <- models_tA8ib %>% 
+  purrr::map(\(model) { 
+    x <- model %>% spatialreg::impacts(listw = listw1nb) %>% summary(zstats = TRUE)
+    
+    purrr::map2_chr(signif(unlist(x$impacts), 3), p_stars(as.vector(x$pzmat)), \(val, star) paste0(val, star)) %>% 
+      purrr::map2_chr(signif(unlist(x$se), 3), \(val, se) paste0(val, "\n(", se, ")"))
+  }) %>% 
+  unlist() %>% 
+  matrix(., ncol = 4, byrow = FALSE, dimnames = list(names(.)[1:27])) %>% 
+  as.data.frame() %>% 
+  dplyr::mutate(., ` ` = stringr::str_replace(stringr::str_to_sentence(rownames(.)), "\\.", " "), .before = 1) %>% 
+  magrittr::set_colnames(names(Table_A8ib)) %>% 
+  dplyr::bind_rows(Table_A8ib %>% dplyr::slice(1:38), ., Table_A8ib %>% dplyr::slice(39:nrow(Table_A8ib))) %>% 
+  magrittr::set_rownames(NULL)
+
+# Further clean up the table and prepare it for final output
+Table_A8ib <- dplyr::bind_rows(
+  Table_A8ib %>% dplyr::slice(1:65) %>% 
+    tidyr::separate(1, c("a", "b"), "\\.|\\s") %>% 
+    make_dyad_labels(var = "b") %>% 
+    make_dyad_labels(var = "a") %>% 
+    tidyr::replace_na(replace = list(b = "")) %>% 
+    tidyr::unite(` `, a, b, sep = " ", remove = TRUE),
+  Table_A8ib %>% dplyr::slice(66:nrow(Table_A8ib))
+)
+
+# Remove additional unwanted rows from the table
+Table_A8ib %<>% dplyr::slice(-c(39:56))
+
+# Finalize the table formatting and style using flextable
+Table_A8ib %<>% 
+  flextable::flextable() %>% 
+  flextable::merge_at(i = nrow(Table_A8ib), j = 2:ncol(Table_A8ib)) %>%
+  flextable::style(pr_t = officer::fp_text(font.size = 9), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>% 
+  flextable::hline(i = c(38, 47), border = officer::fp_border()) %>% 
+  flextable::autofit() %>% 
+  flextable::fit_to_width(9)
+
+
+
+rm(models_tA8i)
+
