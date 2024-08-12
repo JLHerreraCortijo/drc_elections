@@ -161,6 +161,24 @@ share_viles_merged <- data_villes_merged %>%
   dplyr::select(-drop)
 
 
+# Reshape the 'share' data from long to wide format, creating separate columns for each election year
+share_long  <- share %>% dplyr::select(index, label, year, votes_share) %>%
+  tidyr::pivot_wider(
+    names_from = "year",  # Use 'year' values as the new column names
+    values_from = "votes_share",  # The values for the new columns come from 'votes_share'
+    names_prefix = "election_"  # Add a prefix to the new column names
+  )
+
+
+# Filter out the year 2018 from the share dataset and reshape the data from long to wide format
+share_not_2018 <- share %>% dplyr::select(index, label, year, votes_share) %>% 
+  dplyr::filter(year != 2018) %>%  # Exclude data from the year 2018
+  tidyr::pivot_wider(
+    names_from = "year",  # Use 'year' values as the new column names
+    values_from = "votes_share",  # The values for the new columns come from 'votes_share'
+    names_prefix = "election_"  # Add a prefix to the new column names
+  )
+
 #### Table 3a ####
 
 ##### Model 1 #####
@@ -1242,14 +1260,7 @@ rm(list = models_computed)
 # Define a vector of variable names related to conflicts and deaths
 vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
 
-# Filter out the year 2018 from the share dataset and reshape the data from long to wide format
-share_not_2018 <- share %>% dplyr::select(index, label, year, votes_share) %>% 
-  dplyr::filter(year != 2018) %>%  # Exclude data from the year 2018
-  tidyr::pivot_wider(
-    names_from = "year",  # Use 'year' values as the new column names
-    values_from = "votes_share",  # The values for the new columns come from 'votes_share'
-    names_prefix = "election_"  # Add a prefix to the new column names
-  )
+
 
 # Create a list of linear models using conflict data for years other than 2018
 models_tA3 <- vars %>%
@@ -1342,4 +1353,109 @@ models_computed <- "models_tA3"
 
 save(list=models_computed, file = here::here("results/TableA3_models.RData"))
 
+rm(list = models_computed)
+
+
+
+
+#### Table A4 ####
+
+# Define a vector of variable names related to conflicts and deaths
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+
+# Create a list of linear models using conflict data, predicting 2018 election results
+models_tA4 <- vars %>%
+  purrr::map(function(var) {
+    
+    # Filter and aggregate conflict data, then calculate log-transformed variables
+    to.model <- conflict.aggregated_by_type %>%
+      dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where there are conflicts
+      dplyr::group_by(index.data) %>%  # Group by 'index.data'
+      dplyr::summarise(
+        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, ignoring NAs
+        .groups = "drop"  # Drop the grouping after summarizing
+      ) %>%
+      dplyr::mutate(
+        log_n.conflicts = log10(n.conflicts + 0.1),  # Log transform the conflict counts
+        log_n.deaths = log10(n.deaths + 0.1)  # Log transform the death counts
+      ) %>%
+      dplyr::select(index = index.data, dplyr::one_of(var))  # Select relevant columns for modeling
+    
+    # Merge the conflict data with the election vote share data
+    to.model <- share_long %>%
+      dplyr::left_join(to.model, by = c("index")) %>%  # Join on 'index'
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~ tidyr::replace_na(., 0))) %>%  # Replace NAs with 0
+      dplyr::rename(region = label) %>%  # Rename 'label' to 'region'
+      dplyr::select(-index)  # Remove the 'index' column, as it's no longer needed
+    
+    # Define the linear model formula predicting 2018 election results based on conflicts and 2006 results
+    formula <- as.formula(paste0("election_2018 ~ ", var, " + election_2006"))
+    
+    # Fit the linear model using the formula and the prepared data
+    lm(formula, to.model)
+    
+  })
+
+# Create a similar list of linear models using ACLED data
+models_tA4_ACLED <- vars %>%
+  purrr::map(function(var) {
+    
+    # Filter and aggregate ACLED conflict data, then calculate log-transformed variables
+    to.model <- ACLED_data_models %>%
+      dplyr::filter(n.conflicts > 0) %>%  # Keep only rows where there are conflicts
+      dplyr::group_by(index) %>%  # Group by 'index'
+      dplyr::summarise(
+        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),  # Sum conflicts and deaths, ignoring NAs
+        .groups = "drop"  # Drop the grouping after summarizing
+      ) %>%
+      dplyr::mutate(
+        log_n.conflicts = log10(n.conflicts + 0.1),  # Log transform the conflict counts
+        log_n.deaths = log10(n.deaths + 0.1)  # Log transform the death counts
+      ) %>%
+      dplyr::select(index, dplyr::one_of(var))  # Select relevant columns for modeling
+    
+    # Fix the index in the election vote share data and merge with the conflict data
+    to.model <- share_long %>%
+      fix_ACLED_index() %>%  # Apply a function to fix the index
+      dplyr::left_join(to.model, by = c("index")) %>%  # Join on 'index'
+      dplyr::mutate(dplyr::across(dplyr::one_of(var), ~ tidyr::replace_na(., 0))) %>%  # Replace NAs with 0
+      dplyr::rename(region = label) %>%  # Rename 'label' to 'region'
+      dplyr::select(-index)  # Remove the 'index' column, as it's no longer needed
+    
+    # Define the linear model formula predicting 2018 election results based on conflicts and 2006 results
+    formula <- as.formula(paste0("election_2018 ~ ", var, " + election_2006"))
+    
+    # Fit the linear model using the formula and the prepared data
+    lm(formula, to.model)
+    
+  })
+
+# Combine the lists of models from both datasets (conflict.aggregated_by_type and ACLED)
+models_tA4 <- c(models_tA4, models_tA4_ACLED)
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics(
+    models_list = models_tA4,  # List of models to run diagnostics on
+    table_name = "Table_A4",  # Name of the table for diagnostics
+    model_name_prefix = "model_tA4_"  # Prefix for saved diagnostic files
+  )
+  
+}
+
+##### Save the models #####
+
+# Save the computed models to a file for later use
+models_computed <- "models_tA4"
+
+save(
+  list = models_computed,  # Save the list of models under 'models_computed'
+  file = here::here("results/TableA4_models.RData")  # Save to the specified file path
+)
+
+# Remove the models from the environment to free up memory
 rm(list = models_computed)
