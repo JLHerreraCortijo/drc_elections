@@ -1226,3 +1226,195 @@ Table_A4 %<>% flextable::flextable() %>%
   flextable::vline(j = c(1, 5), border = officer::fp_border()) %>%
   flextable::autofit() %>%
   flextable::fit_to_width(10.5)
+
+
+##### TABLE A5 #####
+
+# Convert the ged201 object to a data frame for further manipulation
+ged201_for_period_and_actors <- ged201 %>% 
+  as.data.frame() %>%
+  
+  # Add a new column 'period' based on the date ranges that correspond to election periods
+  dplyr::mutate(period = dplyr::case_when(
+    date_start >= lubridate::ymd("2001-01-17") & date_end <= lubridate::ymd("2006-07-30") ~ "2006 election",
+    date_start >= lubridate::ymd("2006-07-31") & date_end <= lubridate::ymd("2011-11-28") ~ "2011 election",
+    date_start >= lubridate::ymd("2011-11-29") & date_end <= lubridate::ymd("2018-12-30") ~ "2018 election",
+    TRUE ~ NA_character_  # Assign NA if the dates do not match any of the election periods
+  )) %>%
+  
+  # Filter the data to keep only rows where side_a and side_b are in the actor_types$groups
+  dplyr::filter(side_a %in% actor_types$groups & side_b %in% actor_types$groups)
+
+# Select relevant columns, group by election, side_a, side_b, and index.data
+conflict.groups.period.table <- ged201_for_period_and_actors %>%
+  dplyr::select(election, side_a, side_b, n.deaths_a = deaths_a, n.deaths_b = deaths_b, n.deaths_civilians = deaths_civilians, index.data) %>%
+  
+  dplyr::group_by(election, side_a, side_b, index.data) %>%
+  
+  # Summarize the number of conflicts and sum of deaths
+  dplyr::summarise(
+    n.conflicts = dplyr::n(),  # Count number of conflicts
+    dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)),  # Sum deaths for side_a, side_b, and civilians
+    .groups = "drop"  # Drop the grouping after summarizing
+  ) %>%
+  
+  # Group again by election, side_a, side_b
+  dplyr::group_by(election, side_a, side_b) %>%
+  
+  # Summarize to get total conflicts and deaths, and count territories involved
+  dplyr::summarise(
+    n.conflicts = sum(n.conflicts),  # Sum the number of conflicts
+    dplyr::across(dplyr::starts_with("n.deaths"), ~sum(.)),  # Sum deaths again
+    territories = dplyr::n(),  # Count the number of territories
+    .groups = "drop"  # Drop the grouping after summarizing
+  ) %>%
+  
+  # Adjust the number of deaths for civilians
+  dplyr::mutate(
+    n.deaths_a = dplyr::case_when(side_a == "Civilians" ~ n.deaths_a + n.deaths_civilians, TRUE ~ n.deaths_a),
+    n.deaths_b = dplyr::case_when(side_b == "Civilians" ~ n.deaths_b + n.deaths_civilians, TRUE ~ n.deaths_b)
+  ) %>%
+  
+  # Remove the column for civilian deaths since it's now accounted for
+  dplyr::select(-n.deaths_civilians)
+
+# Merge the data with itself to account for conflicts between the same actors but in reverse order
+conflict.groups.period.table %<>% 
+  dplyr::left_join(
+    conflict.groups.period.table %>% dplyr::filter(side_a != side_b), 
+    by = c("election", side_a = "side_b", side_b = "side_a")
+  ) %>%
+  
+  # Create a unique identifier for each conflict using election, side_a, and side_b
+  dplyr::rowwise() %>%
+  dplyr::mutate(idx = paste(sort(c(election, side_a, side_b)), collapse = ",")) %>%
+  
+  # Ungroup the data frame to remove rowwise operation
+  dplyr::ungroup() %>%
+  
+  # Filter out duplicate conflicts using the unique identifier
+  dplyr::filter(!duplicated(idx)) %>%
+  
+  # Recalculate the total number of conflicts, deaths, and territories after merging
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    n.conflicts = sum(n.conflicts.x, n.conflicts.y, na.rm = TRUE),
+    n.deaths_a = sum(n.deaths_a.x, n.deaths_b.y, na.rm = TRUE),
+    n.deaths_b = sum(n.deaths_b.x, n.deaths_a.y, na.rm = TRUE),
+    territories = sum(territories.x, territories.y, na.rm = TRUE)
+  ) %>%
+  
+  # Ungroup the data frame after rowwise operation
+  dplyr::ungroup()
+
+# Combine data for side_a and side_b into a single 'group' column
+conflict.groups.period.table <- dplyr::bind_rows(
+  conflict.groups.period.table %>% dplyr::select(election, group = side_a, n.conflicts, n.deaths = n.deaths_a, territories),
+  conflict.groups.period.table %>% dplyr::select(election, group = side_b, n.conflicts, n.deaths = n.deaths_b, territories)
+) %>%
+  
+  # Group by election and group to summarize the total conflicts, deaths, and territories
+  dplyr::group_by(election, group) %>%
+  dplyr::summarise(
+    dplyr::across(c(n.conflicts, n.deaths, territories), ~sum(., na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  
+  # Separate the election column into multiple columns and drop the unwanted column
+  tidyr::separate(election, sep = "_", into = c("drop", "election")) %>%
+  dplyr::select(-drop) %>%
+  
+  # Reshape the data into a wide format where each election is a separate column
+  tidyr::pivot_wider(names_from = "election", values_from = c("n.conflicts", "n.deaths", "territories")) %>%
+  
+  # Replace NA values with zeros in numeric columns
+  dplyr::mutate(
+    dplyr::across(tidyselect::where(is.numeric), ~ tidyr::replace_na(., 0))
+  )
+
+# Perform checks to ensure the integrity of the results
+
+# Check if the total number of conflicts matches the number of rows in the original filtered data
+stopifnot(
+  (conflict.groups.period.table %>% 
+     dplyr::summarise(
+       dplyr::across(c(n.conflicts_2006, n.conflicts_2011, n.conflicts_2018), sum)
+     ) %>% 
+     unlist %>% 
+     sum) == nrow(ged201_for_period_and_actors) * 2
+)
+
+# Check if the total number of deaths matches the sum of deaths in the original filtered data
+stopifnot(
+  (conflict.groups.period.table %>% 
+     dplyr::summarise(
+       dplyr::across(c(n.deaths_2006, n.deaths_2011, n.deaths_2018), sum)
+     ) %>% 
+     unlist %>% 
+     sum) == (sum(ged201_for_period_and_actors$deaths_a) + sum(ged201_for_period_and_actors$deaths_b) + sum(ged201_for_period_and_actors$deaths_civilians[ged201_for_period_and_actors$side_b == "Civilians"]))
+)
+
+# Check if there are no conflicts involving 'Civilians' as side_a
+stopifnot(all(ged201_for_period_and_actors$side_a != "Civilians"))
+
+# Check if the groups in the actor_types list match those in the conflict groups table
+stopifnot(
+  all(
+    (dplyr::setdiff(actor_types$groups, conflict.groups.period.table$group) %>% sort) == 
+      (dplyr::intersect(
+        dplyr::setdiff(actor_types$groups, ged201$side_a),
+        dplyr::setdiff(actor_types$groups, ged201$side_b)
+      ) %>% sort)
+  )
+)
+
+# Add a 'Total' line summarizing all groups
+conflict.groups.period.table %<>% 
+  dplyr::bind_rows(
+    conflict.groups.period.table %>% 
+      dplyr::summarise(
+        dplyr::across(tidyselect::where(is.numeric), sum)
+      ) %>% 
+      dplyr::mutate(group = "Total", .before = 1)
+  )
+
+# Create the final table (Table_A5) and format it using flextable
+Table_A5 <- conflict.groups.period.table %>%
+  dplyr::select(
+    group, 
+    dplyr::ends_with("_2006"), 
+    dplyr::ends_with("_2011"), 
+    dplyr::ends_with("_2018"), 
+    -dplyr::starts_with("territories")
+  ) %>%
+  flextable::flextable() %>%
+  flextable::add_header(
+    values = list(
+      "n.conflicts_2006" = "2006 election",
+      "n.deaths_2006" = "2006 election",
+      "n.conflicts_2011" = "2011 election",
+      "n.deaths_2011" = "2011 election",
+      "n.conflicts_2018" = "2018 election",
+      "n.deaths_2018" = "2018 election"
+    )
+  ) %>%
+  flextable::set_header_labels(
+    values = list(
+      "n.conflicts_2006" = "Conflict\nevents",
+      "n.deaths_2006" = "Deaths",
+      "n.conflicts_2011" = "Conflict\nevents",
+      "n.deaths_2011" = "Deaths",
+      "n.conflicts_2018" = "Conflict\nevents",
+      "n.deaths_2018" = "Deaths"
+    )
+  ) %>%
+  flextable::merge_h(part = "header") %>%
+  flextable::hline(i = nrow(conflict.groups.period.table) - 1, border = officer::fp_border(width = 2)) %>%
+  flextable::vline(j = c(1, 3, 5), border = officer::fp_border(width = 2)) %>%
+  flextable::style(
+    pr_t = officer::fp_text(font.size = 9), 
+    part = "all", 
+    pr_p = officer::fp_par(line_spacing = 1, padding = 1)
+  ) %>%
+  flextable::autofit() %>% 
+  flextable::fit_to_width(6.49)
