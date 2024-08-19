@@ -2146,3 +2146,121 @@ models_computed <- "models_tA8ic"
 save(list=models_computed, file = here::here("results/TableA8ic_models.RData"))
 
 rm(list = models_computed)
+
+#### Table A8id ####
+
+# Define a vector of variable names for the model
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Create a filtered and transformed data frame (type_2_model)
+type_2_model <- actor_type_2_territories %>%
+  # Filter rows where the number of conflicts is greater than zero
+  dplyr::filter(n.conflicts > 0) %>%
+  # Use rowwise processing to treat each row independently for the next operation
+  dplyr::rowwise() %>%
+  # Create a new column 'dyad' by sorting and combining side_a and side_b
+  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
+  # Ungroup the data after rowwise processing
+  dplyr::ungroup()
+
+type_2_model %<>%
+  # Group the data by 'dyad', 'year', and 'index.data'
+  dplyr::group_by(dyad, year, index.data) %>%
+  # Summarize numeric columns by summing them (ignoring missing values)
+  dplyr::summarise(dplyr::across(tidyselect::where(is.numeric), sum, na.rm = TRUE), .groups = "drop") %>%
+  # Create log-transformed variables for conflicts and deaths
+  dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1))
+
+# Assert that the total deaths in 'type_2_model' match the original aggregated data
+stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
+
+# Generate 10 models using purrr::map
+models_tA8id <- 1:10 %>%
+  purrr::map(\(k){
+    # Set k as the current number of neighbors
+    borders <- congo.territoire.borders %>%
+      # Remove the first row from the borders data frame
+      dplyr::slice(-1)
+    
+    # Calculate centroids for each territory and create a k-nearest neighbors object
+    w1nb <- borders %>%
+      sf::st_centroid() %>%
+      spdep::knearneigh(k = k, longlat = TRUE) %>%
+      spdep::knn2nb()
+    
+    # Convert the k-nearest neighbors object to a weights list
+    listw1nb <- w1nb %>%
+      spdep::nb2listw(style = "W")
+    
+    # Convert neighbor relationships into line segments for visualization
+    neighbors_sf <- spdep::nb2lines(w1nb, coords = sp::coordinates(as(borders, "Spatial"))) %>%
+      as('sf') %>%
+      # Set the coordinate reference system for the neighbors
+      sf::st_set_crs(sf::st_crs(borders))
+    
+    # Plot the territory borders and neighbor connections using ggplot2
+    ggplot2::ggplot(congo.territoire.borders) +
+      ggplot2::geom_sf(fill = NA) +
+      ggplot2::theme_void() +
+      ggplot2::geom_sf(data = neighbors_sf, color = "red")
+    
+    # Save the plot as a PNG file using ggplot2::ggsave
+    ggplot2::ggsave(here::here(paste0("manuscript/knn/table_8id_nb_", k, ".png")), width = 10, height = 10)
+    
+    # Map over each variable in 'vars' to create a model
+    vars %>%
+      purrr::map(\(var){
+        # Filter the data for the year 2018 and select relevant columns
+        to.model <- type_2_model %>%
+          dplyr::filter(year == 2018) %>%
+          dplyr::select(index = index.data, dyad, dplyr::one_of(var)) %>%
+          dplyr::arrange(dyad)
+        
+        # Reshape the data to a wide format
+        to.model %<>%
+          tidyr::pivot_wider(values_from = var, names_from = "dyad", values_fill = 0)
+        
+        # Merge with 'share_wide' data and replace NAs with zeros
+        to.model <- share_wide %>%
+          dplyr::left_join(to.model, by = c("index")) %>%
+          dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), \(x){tidyr::replace_na(x, 0)})) %>%
+          dplyr::rename(region = label) %>%
+          dplyr::select(-index, -region)
+        
+        # Drop the 'fg_fg' column from the model data
+        to.model %<>%
+          dplyr::select(-fg_fg)
+        
+        # Create a formula for the model
+        formula <- as.formula(paste0("election_2018 ~ ."))
+        
+        # Create a formula for the lag terms in the spatial model
+        lag_formula <- as.formula(paste0("~ ", paste0(purrr::discard(names(to.model), \(x){x %in% c("election_2011", "election_2006", "election_2018")}), collapse = " + ")))
+        
+        # Fit a spatial regression model using the spatial lag model with Durbin component
+        m <- spatialreg::lmSLX(formula, to.model, listw = listw1nb, zero.policy = TRUE, Durbin = lag_formula)
+        
+        # Return the fitted model
+        m
+      })
+  })
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA8id, 
+                           table_name =  "Table_A8id", 
+                           model_name_prefix = "model_tA8id_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA8id"
+
+save(list=models_computed, file = here::here("results/TableA8id_models.RData"))
+
+rm(list = models_computed)
