@@ -1286,11 +1286,31 @@ if (update_FigA10) {
 }
 
 
-
+##### FIGURE A11 ####
 
 
 # Load the pre-saved RData file that contains the model results for Table A2c
 load("results/TableA8i_models.RData")
+
+# Create a list of model names
+model_names <- c(
+  paste("Conflicts"),
+  paste("Log Conflicts"),
+  paste("Deaths"),
+  paste("Log Deaths"),
+  paste("ACLED\nConflicts"),
+  paste("ACLED\nLog Conflicts"),
+  paste("ACLED\nDeaths"),
+  paste("ACLED\nLog Deaths")
+)
+
+# Store the model names for printing
+model_names.to_print <- model_names
+
+# Compute standard errors for each model using robust covariance matrices
+models.to.print_se <- purrr::map(models_tA8i, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method = "arellano", type = "HC3"))[, "Std. Error"]
+})
 
 # Prepare data for forest plot for the year 2006
 forest_plot_data_2006 <- models_tA8i[1:4] %>%
@@ -1310,6 +1330,13 @@ rm(models_tA8i)
 # Load the pre-saved RData file that contains the model results
 load("results/TableA8ii_models.RData")
 
+
+# Define a vector of model names that will be used for labeling the columns in the table
+model_names <- c(paste("Conflicts"), paste("Log Conflicts"), paste("Deaths"), paste("Log Deaths"))
+
+# Create a copy of model_names to be printed in the final table
+model_names.to_print <- model_names
+
 # Create a forest plot data set for 2011 by extracting coefficients and standard errors from each model
 forest_plot_data_2011 <- models_tA8ii %>% 
   # Convert each model into a tidy data frame of coefficients and statistics using broom::tidy
@@ -1328,6 +1355,13 @@ rm(models_tA8ii)
 # Load the pre-saved RData file that contains the model results
 load("results/TableA8iii_models.RData")
 
+
+# Create a vector of model names for each variable
+model_names <- c("Conflicts", "Log Conflicts", "Deaths", "Log Deaths")
+
+# Create a copy of the model names for display
+model_names.to_print <- model_names
+
 # Prepare the data for a forest plot by extracting the coefficients from the models,
 # adding model names, and setting the year to 2018
 forest_plot_data_2018 <- models_tA8iii %>%
@@ -1337,3 +1371,63 @@ forest_plot_data_2018 <- models_tA8iii %>%
   dplyr::mutate(year = 2018)
 
 rm(models_tA8iii)
+
+
+# Combine data from three different datasets (2006, 2011, 2018) into a single data frame.
+to.plot <- dplyr::bind_rows(forest_plot_data_2006, forest_plot_data_2011, forest_plot_data_2018) %>%
+  
+  # Remove any leading hyphen from the 'term' column values.
+  dplyr::mutate(term = stringr::str_remove(term, "^-")) %>%
+  
+  # Filter out rows where the 'term' is either "fg_govt", "fg_fg", "(Intercept)" 
+  # or where the term starts with "election".
+  dplyr::filter(!term %in% c("fg_govt", "fg_fg", "(Intercept)") & 
+                  !stringr::str_starts(term, "election")) %>%
+  
+  # Replace missing standard errors (se) with robust standard errors (se.robust) if available; 
+  # otherwise, use the standard error (std.error).
+  dplyr::mutate(se = dplyr::case_when(!is.na(se.robust) ~ se.robust, TRUE ~ std.error)) %>%
+  
+  # Generate human-readable dyad labels for the 'term' variable (custom function).
+  make_dyad_labels(var = "term") %>%
+  
+  # Replace any occurrences of " v " in the 'term' column with " v\n" 
+  # to insert a line break for better plot readability.
+  dplyr::mutate(term = stringr::str_replace(term, "\\sv\\s", " v\n"))
+
+# Filter the dataset to only include rows where the 'model' is "Log Deaths".
+# Adjust the 'estimate' and 'se' columns by multiplying them by log10(1.10).
+Figure_A11 <- to.plot %>%
+  dplyr::filter(model == "Log Deaths") %>%
+  dplyr::mutate(estimate = estimate * log10(1.10), se = se * log10(1.10)) %>%
+  
+  # Create a forest plot using the 'term', 'estimate', and 'se' columns as inputs.
+  ggforestplot::forestplot(name = term, estimate = estimate, se = se, 
+                           xlab = "Difference in vote share (pp)", ylab = NULL) +
+  
+  # Facet the plot by 'year' with independent x-scales for each facet.
+  ggplot2::facet_wrap(~ year, scales = "free_x") +
+  
+  # Customize the x-axis to display labels as percentages without a suffix.
+  ggplot2::scale_x_continuous(labels = \(x) scales::percent(x, suffix = "")) +
+  
+  # Adjust theme settings: set panel spacing and customize axis text sizes.
+  ggplot2::theme(
+    panel.spacing.x = ggplot2::unit(0.3, "in"),
+    axis.text.x = ggplot2::element_text(size = 8),
+    axis.text.y = ggplot2::element_text(size = 8)
+  )
+
+# Save the plot as a PNG file if the 'update_FigA11' flag is TRUE.
+if (update_FigA11) {
+  
+  # Save the plot 'Figure_A11' to the specified path with defined dimensions and white background.
+  ggplot2::ggsave(
+    here::here("manuscript/figures/FigureA11.png"),
+    Figure_A11,
+    width = figA11_width,
+    height = figA11_height,
+    units = "in",
+    bg = "white"
+  )
+}

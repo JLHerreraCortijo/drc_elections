@@ -18,6 +18,8 @@ library(officer)
 #### FUNCTIONS ####
 
 
+source(here::here("R/000 - utils.R"))
+
 compute.province.table <- function(p.table,col.2006,col.2011,col.2018,aggr.fn){
   
   province <- p.table$province %>% unique

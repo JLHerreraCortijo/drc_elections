@@ -9,16 +9,6 @@
 # Script UUID: ab9f1273-a819-55ec-b7f0-6727060aee3f
 ###############################################################################
 
-#### Functions ####
-
-make_dyad_labels <- function(df,var) df %>% 
-  dplyr::mutate(dplyr::across(dplyr::one_of(var),
-                              ~dplyr::case_when(.%in% names(dyad_labels)~ dyad_labels[.],TRUE~.)))
-
-
-# Define a function to add significance stars to p-values
-p_stars <- function(p) dplyr::case_when(p < 0.01 ~ "***", p < 0.05 ~ "**", p < 0.1 ~ "*", TRUE ~ "")
-
 #### TABLES ####
 
 ##### TABLE 1 #####
