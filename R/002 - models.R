@@ -240,7 +240,26 @@ type_2_model_not_2018 %<>%
 # Ensure that the total number of deaths in the processed dataset matches the original dataset
 stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
 
+# Filter the dataset to only include rows where the number of conflicts is greater than 0
+# Then, for each row, create a new variable 'dyad' by concatenating 'side_a' and 'side_b', sorted and joined with an underscore
+type_2_model_sum_all <- actor_type_2_territories %>%
+  dplyr::filter(n.conflicts > 0) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
+  dplyr::ungroup()
 
+# Group the data by 'dyad', 'year', and 'index.data', then summarize all numeric columns by summing their values
+type_2_model_sum_all %<>%
+  dplyr::group_by(dyad, index.data) %>%
+  dplyr::summarise(
+    dplyr::across(tidyselect::where(is.numeric), \(x) sum(x, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  # Add new variables 'log_n.conflicts' and 'log_n.deaths' by applying a log transformation
+  dplyr::mutate(
+    log_n.conflicts = log10(n.conflicts + 0.1),
+    log_n.deaths = log10(n.deaths + 0.1)
+  )
 
 #### Table 3a ####
 
@@ -2322,5 +2341,62 @@ if (run_diagnostics) {
 models_computed <- "models_tA8ii"
 
 save(list=models_computed, file = here::here("results/TableA8ii_models.RData"))
+
+rm(list = models_computed)
+
+
+
+#### Table A8iii ####
+
+
+# Define a vector of variable names that will be used in the models
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# Apply purrr::map to iterate over the list of variables and create a linear model for each
+models_tA8iii <- vars %>% purrr::map(\(var){
+  
+  # Select the 'index', 'dyad', and the current variable from 'type_2_model' dataset
+  to.model <- type_2_model_sum_all %>%  
+    dplyr::select(index = index.data, dyad, dplyr::one_of(var))
+  
+  # Reshape the data into a wide format, using 'dyad' as columns and filling missing values with 0
+  to.model %<>% tidyr::pivot_wider(
+    values_from = var, 
+    names_from = "dyad", 
+    values_fill = 0
+  )
+  
+  # Merge the reshaped data with 'share_wide' dataset by 'index', fill any remaining NAs with 0,
+  # rename 'label' column to 'region', and drop 'index' and 'region' columns
+  to.model <- share_wide %>%
+    dplyr::left_join(to.model, by = c("index")) %>%
+    dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), \(x) { tidyr::replace_na(x, 0) })) %>%
+    dplyr::rename(region = label) %>%
+    dplyr::select(-index, -region)
+  
+  # Define the formula for the linear model: the dependent variable 'election_2018' is modeled by all other variables
+  formula <- as.formula(paste0("election_2018 ~ ."))
+  
+  # Fit a linear model with the formula and the prepared data
+  lm(formula, to.model)
+})
+
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA8iii, 
+                           table_name =  "Table_A8iii", 
+                           model_name_prefix = "model_tA8iii_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA8iii"
+
+save(list=models_computed, file = here::here("results/TableA8iii_models.RData"))
 
 rm(list = models_computed)

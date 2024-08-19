@@ -1324,3 +1324,16 @@ forest_plot_data_2011 <- models_tA8ii %>%
   dplyr::mutate(year = 2011)
 
 rm(models_tA8ii)
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA8iii_models.RData")
+
+# Prepare the data for a forest plot by extracting the coefficients from the models,
+# adding model names, and setting the year to 2018
+forest_plot_data_2018 <- models_tA8iii %>%
+  purrr::map(broom::tidy) %>%
+  purrr::map2(model_names.to_print[1:4], \(x, y) { x %>% dplyr::mutate(model = y, se.robust = NA_real_) }) %>%
+  dplyr::bind_rows() %>%
+  dplyr::mutate(year = 2018)
+
+rm(models_tA8iii)

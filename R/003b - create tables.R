@@ -2335,6 +2335,7 @@ rm(models_tA8id)
 
 # Load the pre-saved RData file that contains the model results
 load("results/TableA8ii_models.RData")
+
 # Define a vector of model names that will be used for labeling the columns in the table
 model_names <- c(paste("Conflicts"), paste("Log Conflicts"), paste("Deaths"), paste("Log Deaths"))
 
@@ -2431,4 +2432,94 @@ Table_A8ii %<>%
 
 rm(models_tA8ii)
 
+
+##### TABLE A8iii #####
+
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA8iii_models.RData")
+
+
+# Create a vector of model names for each variable
+model_names <- c("Conflicts", "Log Conflicts", "Deaths", "Log Deaths")
+
+# Create a copy of the model names for display
+model_names.to_print <- model_names
+
+# Calculate the F-statistics for each model and add significance stars
+F.stat <- models_tA8iii %>% purrr::map(\(x){
+  # Get the summary of the linear model
+  summ <- summary(x)
+  
+  # Calculate the p-value for the F-statistic
+  p_value <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  
+  # Format the F-statistic value with significance stars based on the p-value
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(
+            p_value < 0.01 ~ "***",
+            p_value < 0.05 ~ "**",
+            p_value < 0.1  ~ "*",
+            TRUE ~ ""
+          ))
+}) %>% unlist %>% c("F Statistic", .)
+
+# Extract the degrees of freedom for each model
+df <- models_tA8iii %>% purrr::map(\(x){
+  # Get the summary of the linear model
+  summ <- summary(x)
+  
+  # Combine numerator and denominator degrees of freedom into a single string
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>% unlist %>% c("df", .)
+
+# Generate an HTML table for the models using stargazer, including the F-statistics and degrees of freedom
+Table_A8iii <- suppressWarnings(stargazer::stargazer(
+  models_tA8iii,
+  type = "html",
+  column.labels = model_names,
+  dep.var.caption = "Votes share 2018",
+  omit.stat = "f",
+  add.lines = list(F.stat, df)
+)) %>% paste0(collapse = "")
+
+# Read the HTML table into a data frame and remove unnecessary rows
+Table_A8iii <- rvest::read_html(Table_A8iii) %>%
+  rvest::html_table() %>%
+  as.data.frame() %>%
+  dplyr::slice(-c(1:5))
+
+# Extract the first row (which contains the column names) as a vector
+table_names <- as.vector(Table_A8iii %>% dplyr::slice(1) %>% unlist)
+
+# Replace the first column name with an empty string (for better formatting)
+table_names[1] <- " "
+
+# Apply custom labels for dyads using a function 'make_dyad_labels'
+Table_A8iii %<>% make_dyad_labels(var = names(Table_A8iii)[1])
+
+# Rename the columns using the modified 'model_names.to_print' vector and remove the first row
+Table_A8iii %<>% magrittr::set_names(c(" ", model_names.to_print)) %>%
+  dplyr::slice(-1)
+
+# Find and remove rows where all columns are empty
+empty_lines <- Table_A8iii %>%
+  dplyr::transmute(dplyr::across(dplyr::everything(), \(x) { nchar(x) == 0 })) %>%
+  dplyr::rowwise() %>%
+  dplyr::transmute(base::all(dplyr::c_across(dplyr::everything()))) %>%
+  dplyr::pull(1) %>%
+  which()
+
+Table_A8iii %<>% dplyr::slice(-empty_lines)
+
+# Format the table as a flextable, merge the last row, apply text styles and adjust width
+Table_A8iii %<>%
+  flextable::flextable() %>%
+  flextable::merge_at(i = nrow(Table_A8iii), j = 2:ncol(Table_A8iii)) %>%
+  flextable::style(pr_t = officer::fp_text(font.size = 9), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>%
+  flextable::hline(i = 30, border = officer::fp_border()) %>%
+  flextable::autofit() %>%
+  flextable::fit_to_width(6.49)
+
+rm(models_tA8iii)
 
