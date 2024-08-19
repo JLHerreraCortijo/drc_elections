@@ -1305,3 +1305,22 @@ forest_plot_data_2006 <- models_tA8i[1:4] %>%
   dplyr::mutate(year = 2006)
 
 rm(models_tA8i)
+
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA8ii_models.RData")
+
+# Create a forest plot data set for 2011 by extracting coefficients and standard errors from each model
+forest_plot_data_2011 <- models_tA8ii %>% 
+  # Convert each model into a tidy data frame of coefficients and statistics using broom::tidy
+  purrr::map(broom::tidy) %>% 
+  # For each tidy model, add the model name as a column and initialize a column for robust standard errors
+  purrr::map2(model_names.to_print[1:4], \(data, model_name) {
+    data %>% dplyr::mutate(model = model_name, se.robust = NA_real_)
+  }) %>% 
+  # Combine all the tidy data frames into a single data frame
+  dplyr::bind_rows() %>% 
+  # Add a column for the year (2011) to the data set
+  dplyr::mutate(year = 2011)
+
+rm(models_tA8ii)

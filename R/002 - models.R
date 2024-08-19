@@ -210,6 +210,33 @@ type_2_model %<>%
     log_n.deaths = log10(n.deaths + 0.1)
   )
 
+# Filter the dataset 'actor_type_2_territories' to retain only rows where the number of conflicts is greater than 0
+type_2_model_not_2018 <- actor_type_2_territories %>%
+  dplyr::filter(n.conflicts > 0) %>%
+  # Apply rowwise operation to mutate (create or modify) a new column 'dyad' by combining 'side_a' and 'side_b'
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    # Create the 'dyad' by sorting and collapsing the two sides ('side_a' and 'side_b') into a single string
+    dyad = paste(sort(c(side_a, side_b)), collapse = "_")
+  ) %>%
+  # Remove rowwise grouping
+  dplyr::ungroup()
+
+# Further process 'type_2_model_not_2018' by excluding data from the year 2018
+type_2_model_not_2018 %<>%
+  dplyr::filter(year != 2018) %>%
+  # Group the data by 'dyad' and 'index.data'
+  dplyr::group_by(dyad, index.data) %>%
+  # Summarize numeric columns by summing their values, removing NA values in the process
+  dplyr::summarise(
+    dplyr::across(tidyselect::where(is.numeric), \(x) sum(x, na.rm = TRUE)),
+    .groups = "drop"  # Drop the grouping after summarization
+  ) %>%
+  # Create two new columns: 'log_n.conflicts' and 'log_n.deaths', which are the log-transformed values of 'n.conflicts' and 'n.deaths'
+  dplyr::mutate(
+    log_n.conflicts = log10(n.conflicts + 0.1),
+    log_n.deaths = log10(n.deaths + 0.1)
+  )
 # Ensure that the total number of deaths in the processed dataset matches the original dataset
 stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
 
@@ -2152,27 +2179,6 @@ rm(list = models_computed)
 # Define a vector of variable names for the model
 vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
 
-# Create a filtered and transformed data frame (type_2_model)
-type_2_model <- actor_type_2_territories %>%
-  # Filter rows where the number of conflicts is greater than zero
-  dplyr::filter(n.conflicts > 0) %>%
-  # Use rowwise processing to treat each row independently for the next operation
-  dplyr::rowwise() %>%
-  # Create a new column 'dyad' by sorting and combining side_a and side_b
-  dplyr::mutate(dyad = paste(sort(c(side_a, side_b)), collapse = "_")) %>%
-  # Ungroup the data after rowwise processing
-  dplyr::ungroup()
-
-type_2_model %<>%
-  # Group the data by 'dyad', 'year', and 'index.data'
-  dplyr::group_by(dyad, year, index.data) %>%
-  # Summarize numeric columns by summing them (ignoring missing values)
-  dplyr::summarise(dplyr::across(tidyselect::where(is.numeric), sum, na.rm = TRUE), .groups = "drop") %>%
-  # Create log-transformed variables for conflicts and deaths
-  dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1))
-
-# Assert that the total deaths in 'type_2_model' match the original aggregated data
-stopifnot(sum(type_2_model$n.deaths) == sum(conflict.aggregated_by_type$n.deaths))
 
 # Generate 10 models using purrr::map
 models_tA8id <- 1:10 %>%
@@ -2262,5 +2268,59 @@ if (run_diagnostics) {
 models_computed <- "models_tA8id"
 
 save(list=models_computed, file = here::here("results/TableA8id_models.RData"))
+
+rm(list = models_computed)
+
+#### Table A8ii ####
+# Define a vector of variable names to be used in the model
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
+
+# For each variable in 'vars', fit a linear model
+models_tA8ii <- vars %>%
+  purrr::map(\(var) {
+    # Select relevant columns from 'type_2_model_not_2018' for the current variable and rename 'index.data' to 'index'
+    to.model <- type_2_model_not_2018 %>%
+      dplyr::select(index = index.data, dyad, dplyr::one_of(var))
+    
+    # Reshape 'to.model' into a wider format, with 'dyad' as column names and 'var' as values
+    to.model %<>%
+      tidyr::pivot_wider(
+        values_from = var,
+        names_from = "dyad",
+        values_fill = 0  # Replace missing values with 0
+      )
+    
+    # Join the reshaped 'to.model' with 'share_not_2018' on the 'index' column
+    to.model <- share_not_2018 %>%
+      dplyr::left_join(to.model, by = c("index")) %>%
+      # Replace NA values in numeric columns with 0
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), \(x) tidyr::replace_na(x, 0))) %>%
+      # Rename 'label' to 'region', and remove 'index' and 'region' columns
+      dplyr::rename(region = label) %>%
+      dplyr::select(-index, -region)
+    
+    # Define a linear model formula to predict 'election_2011' using all other variables as predictors
+    formula <- as.formula(paste0("election_2011 ~ ."))
+    
+    # Fit the linear model using the defined formula and 'to.model' data
+    lm(formula, to.model)
+  })
+
+###### Diagnostics ######
+
+# Diagnostics section to run additional diagnostics on the models if specified
+if (run_diagnostics) {
+  
+  run_lm_list_diagnostics( models_list = models_tA8ii, 
+                           table_name =  "Table_A8ii", 
+                           model_name_prefix = "model_tA8ii_")
+  
+}
+
+##### Save the models #####
+
+models_computed <- "models_tA8ii"
+
+save(list=models_computed, file = here::here("results/TableA8ii_models.RData"))
 
 rm(list = models_computed)

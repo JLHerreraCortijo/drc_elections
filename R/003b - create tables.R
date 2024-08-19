@@ -838,7 +838,7 @@ rm(models_tA2c)
 ##### TABLE A2d ######
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA2d_models.RData")
 
 # Create a vector of model names for Conflicts, Log Conflicts, Deaths, and Log Deaths across different periods
@@ -1024,7 +1024,7 @@ rm(models_tA2d)
 ##### TABLE A3 #####
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA3_models.RData")
 
 # Create a vector of model names for different types of conflicts and deaths, including ACLED data
@@ -1136,7 +1136,7 @@ rm(models_tA3)
 
 ##### TABLE A4 #####
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA4_models.RData")
 
 # Create a vector of model names for different types of conflicts and deaths, including ACLED data
@@ -1441,7 +1441,7 @@ Table_A5 <- conflict.groups.period.table %>%
 ##### TABLE A6i #####
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA6i_models.RData")
 
 # Create a vector of model names to use for labeling the output tables
@@ -1531,7 +1531,7 @@ rm(models_tA6i)
 ##### TABLE A6ii #####
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA6ii_models.RData")
 
 
@@ -1646,7 +1646,7 @@ rm(models_tA6ii)
 ##### TABLE A6iii #####
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA6iii_models.RData")
 
 # Create a vector of model names, some with line breaks for display
@@ -1765,7 +1765,7 @@ rm(models_tA6iii)
 ##### TABLE A8i #####
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA8i_models.RData")
 
 
@@ -1869,7 +1869,7 @@ rm(models_tA8i)
 
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA8ib_models.RData")
 
 # Define names for the models to use later for plotting
@@ -2018,7 +2018,7 @@ rm(models_tA8ib)
 
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA8ic_models.RData")
 
 
@@ -2159,7 +2159,7 @@ rm(models_tA8ic)
 ##### TABLE A8id ######
 
 
-# Load the pre-saved RData file that contains the model results for Table A2c
+# Load the pre-saved RData file that contains the model results
 load("results/TableA8id_models.RData")
 
 # Define a vector of model names for identification
@@ -2331,6 +2331,104 @@ Table_A8id %<>%
 rm(models_tA8id)
 
 
+##### TABLE A8ii #####
 
+# Load the pre-saved RData file that contains the model results
+load("results/TableA8ii_models.RData")
+# Define a vector of model names that will be used for labeling the columns in the table
+model_names <- c(paste("Conflicts"), paste("Log Conflicts"), paste("Deaths"), paste("Log Deaths"))
+
+# Create a copy of model_names to be printed in the final table
+model_names.to_print <- model_names
+
+# Calculate the F-statistic for each model in models_tA8ii, format it as a string with stars for significance levels
+F.stat <- purrr::map(models_tA8ii, \(x) {
+  # Get the summary of the current model
+  summ <- summary(x)
+  
+  # Calculate the p-value of the F-statistic
+  .p <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  
+  # Return the F-statistic with significance stars
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(.p < 0.01 ~ "***",
+                           .p < 0.05 ~ "**",
+                           .p < 0.1 ~ "*",
+                           TRUE ~ ""))
+}) %>% 
+  # Unlist the result into a single vector and add the label "F Statistic" at the beginning
+  unlist() %>% c("F Statistic", .)
+
+# Calculate the degrees of freedom (df) for each model in models_tA8ii
+df <- purrr::map(models_tA8ii, \(x) {
+  # Get the summary of the current model
+  summ <- summary(x)
+  
+  # Concatenate the numerator and denominator degrees of freedom into a single string
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>% 
+  # Unlist the result into a single vector and add the label "df" at the beginning
+  unlist() %>% c("df", .)
+
+# Generate the HTML output table using stargazer, adding F-statistic and degrees of freedom as additional lines
+Table_A8ii <- suppressWarnings(
+  stargazer::stargazer(models_tA8ii, type = "html",
+                       column.labels = model_names, 
+                       dep.var.caption = "Votes share 2018", 
+                       omit.stat = "f",
+                       add.lines = list(F.stat, df))
+) %>% 
+  # Convert the table into a single HTML string
+  paste0(collapse = "")
+
+# Convert the HTML string to a data frame by parsing the HTML, extracting the table, and converting it to a data frame
+Table_A8ii <- xml2::read_html(Table_A8ii) %>% 
+  rvest::html_table() %>% 
+  as.data.frame() %>% 
+  # Remove the first 5 rows of the table (usually containing non-relevant information like headers)
+  dplyr::slice(-c(1:5))
+
+# Extract the first row (the header row) and convert it to a vector
+table_names <- as.vector(Table_A8ii %>% dplyr::slice(1) %>% unlist())
+
+# Replace the first element of the header vector with a blank space
+table_names[1] <- " "
+
+# Apply custom dyad labels to the first column of the table
+Table_A8ii %<>% make_dyad_labels(var = names(Table_A8ii)[1])
+
+# Rename the columns of the table to match the model names, starting from the second row
+Table_A8ii <- magrittr::set_names(Table_A8ii, c(" ", model_names.to_print)) %>% 
+  # Remove the first row, which now contains redundant header information
+  dplyr::slice(-1)
+
+# Identify rows that are completely empty and remove them from the table
+empty_lines <- Table_A8ii %>% 
+  # Check for empty strings in each cell of the table
+  dplyr::transmute(across(dplyr::everything(), \(x) nchar(x) == 0)) %>% 
+  # Use rowwise to evaluate whether all columns in a row are empty
+  dplyr::rowwise() %>% 
+  dplyr::transmute(all(dplyr::c_across(dplyr::everything()))) %>% 
+  # Extract the row indices of fully empty rows
+  dplyr::pull(1) %>% which()
+
+# Remove the empty rows from the table
+Table_A8ii %<>% dplyr::slice(-empty_lines)
+
+# Convert the cleaned data frame into a flextable object, and apply formatting
+Table_A8ii %<>% 
+  flextable::flextable() %>% 
+  # Merge the cells in the last row across columns 2 to the end
+  flextable::merge_at(i = nrow(Table_A8ii), j = 2:ncol(Table_A8ii)) %>%
+  # Apply font size and padding to the entire table
+  flextable::style(pr_t = officer::fp_text(font.size = 9), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>% 
+  # Add a horizontal line at the 26th row
+  flextable::hline(i = 26, border = officer::fp_border()) %>% 
+  # Automatically adjust column widths to fit the content
+  flextable::autofit() %>% 
+  # Fit the table to a specific width of 6.49 units
+  flextable::fit_to_width(6.49)
+
+rm(models_tA8ii)
 
 
