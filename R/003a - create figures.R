@@ -1431,3 +1431,90 @@ if (update_FigA11) {
     bg = "white"
   )
 }
+
+
+##### FIGURE A12 ####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA13_models.RData")
+
+
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+
+model_names.to_print <- model_names
+# Forest plot data
+
+forest_plot_data_2011_only <- models_tA13[1:4] %>% purrr::map(broom::tidy) %>% purrr::map2(model_names.to_print[1:4],~.x %>% dplyr::mutate(model=.y,se.robust=NA_real_)) %>% dplyr::bind_rows() %>%
+  dplyr::mutate(year=2011)
+
+rm(models_tA13)
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA14_models.RData")
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+
+model_names.to_print <- model_names
+
+# Forest plot data
+
+forest_plot_data_2018_only <- models_tA14[1:4] %>% purrr::map(broom::tidy) %>% purrr::map2(model_names.to_print[1:4],~.x %>% dplyr::mutate(model=.y,se.robust=NA_real_)) %>% bind_rows %>%
+  dplyr::mutate(year=2018)
+
+rm(models_tA14)
+
+to.plot <- dplyr::bind_rows(forest_plot_data_2006,forest_plot_data_2011_only,forest_plot_data_2018_only) %>%
+  dplyr::mutate(term=stringr::str_remove(term,"^-")) %>%
+  dplyr::filter(!term %in% c("fg_govt","fg_fg","(Intercept)") & !stringr::str_starts(term,"election")) %>%
+  dplyr::mutate(se=dplyr::case_when(!is.na(se.robust) ~ se.robust, TRUE ~std.error)) %>%
+  make_dyad_labels(var="term") %>%
+  dplyr::mutate(term=stringr::str_replace(term,"\\sv\\s"," v\n"))
+
+
+
+Figure_A12 <- to.plot %>% dplyr::filter(model=="Log Deaths") %>% dplyr::mutate(estimate=estimate*log10(1.10),se=se*log10(1.10)) %>%
+  ggforestplot::forestplot(name=term,estimate=estimate,se=se,xlab="Difference in vote share (pp)",ylab=NULL)+
+  ggplot2::facet_wrap(~year,scales = "free_x")+
+  ggplot2::scale_x_continuous(labels = ~scales::percent(.,suffix = ""))+
+  ggplot2::theme(panel.spacing.x = ggplot2::unit(0.3,"in"),
+                 axis.text.x = ggplot2::element_text(size=8),
+                 axis.text.y = ggplot2::element_text(size=8))
+
+
+# Save the plot as a PNG file if the 'update_FigA12' flag is TRUE.
+if (update_FigA12) {
+ggsave(here::here("manuscript/figures/FigureA12.png"),Figure_A12,width = figA12_width,height = figA12_height,units = "in",bg="white")
+
+}
+
+
+
+##### FIGURE A13 #####
+
+df <- actor_type_2_territories %>% dplyr::select(side_a,side_b,year,index.data,n.deaths) %>%
+  dplyr::filter(year==2006) %>%
+  dplyr::mutate(Actors=paste0(side_a,"_",side_b),.before=1) %>%
+  dplyr::mutate(log_n.deaths=log10(n.deaths+0.1)) %>%
+  dplyr::arrange(Actors) %>%
+  dplyr::select(-c(2:4)) %>% tidyr::pivot_wider(names_from = "Actors",values_from = "log_n.deaths",values_fill = 0) %>%
+  dplyr::select(-index.data,-n.deaths) %>% 
+  dplyr::select(-dplyr::starts_with("afdl"))
+
+
+names(df) %<>% data.frame(x=.) %>% make_dyad_labels("x") %>% dplyr::pull("x") %>% stringr::str_replace("v","v\n")
+
+df %<>% dplyr::select(dplyr::one_of(sort(names(df))))
+
+# df is a data.frame containing only the columns to analyse
+
+# Compute correlation matrix using the "spearman" method, where each pair of variables is used
+corr_matrix <- df %>% corrr::correlate(use = "pairwise", method = "spearman", quiet=TRUE,diagonal = 1.0)
+
+corr_matrix <- cor(df)
+
+corrplot::corrplot(corr_matrix,tl.col="black",tl.cex=0.7,type="lower",diag=FALSE)

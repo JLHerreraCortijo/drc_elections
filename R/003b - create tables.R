@@ -2513,3 +2513,1196 @@ Table_A8iii %<>%
 
 rm(models_tA8iii)
 
+##### TABLE A9i #####
+
+
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA9i_models.RData")
+
+# Define a vector of variable names that will be used for the models
+vars <- c("n.deaths", "log_n.deaths")
+
+# Define a vector of model names based on the variables for output labeling
+model_names <- c(paste("Deaths"), paste("Log Deaths"))
+
+# Copy the model names to another variable that will be used for printing
+model_names.to_print <- model_names
+
+# Extract the standard errors from the models using coeftest and heteroskedasticity-robust standard errors (Arellano HC3)
+models.to.print_se <- purrr::map(models_tA9i, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method = "arellano", type = "HC3"))[, "Std. Error"]
+})
+
+# Compute the F-statistic for each model and format it as a string with significance stars (***, **, *)
+F.stat <- purrr::map(models_tA9i, \(x) {
+  # Get the summary of the model using heteroskedasticity-robust standard errors
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
+  
+  # Calculate the p-value of the F-statistic
+  p_value <- pf(summ$fstatistic["value"], summ$fstatistic["numdf"], summ$fstatistic["dendf"], lower.tail = FALSE)
+  
+  # Format the F-statistic with significance stars based on the p-value
+  sprintf("%0.3f%s", summ$fstatistic["value"],
+          dplyr::case_when(
+            p_value < 0.01 ~ "***",
+            p_value < 0.05 ~ "**",
+            p_value < 0.1 ~ "*",
+            TRUE ~ ""
+          ))
+}) %>% 
+  # Flatten the list of F-statistics into a single vector and prepend "F Statistic" label
+  unlist() %>% 
+  c("F Statistic", .)
+
+# Extract the degrees of freedom from each model and concatenate them as a single string
+df <- purrr::map(models_tA9i, \(x) {
+  # Get the summary of the model with heteroskedasticity-robust standard errors
+  summ <- summary(x, vcov. = sandwich::vcovHC(x, method = "arellano", type = "HC3"))
+  
+  # Concatenate the numerator and denominator degrees of freedom
+  paste(summ$fstatistic[2:3], collapse = ";")
+}) %>% 
+  # Flatten the list of degree of freedom strings into a single vector and prepend "df" label
+  unlist() %>% 
+  c("df", .)
+
+# Generate a regression table with stargazer, suppressing warnings during execution
+Table_A9i <- suppressWarnings(
+  stargazer::stargazer(models_tA9i, type = "html",
+                       se = models.to.print_se,
+                       column.labels = model_names, 
+                       dep.var.caption = "Votes share 2006",
+                       omit.stat = "f",
+                       add.lines = list(F.stat, df))
+) %>% 
+  # Collapse the HTML table into a single string for further processing
+  paste0(collapse = "")
+
+# Parse the HTML table into a data frame using rvest
+Table_A9i <- rvest::read_html(Table_A9i) %>% 
+  rvest::html_table() %>% 
+  as.data.frame() %>% 
+  dplyr::slice(-c(1:5))  # Remove the first five rows, which are typically non-relevant headers
+
+# Extract the first row as the table's column names, replacing the first column name with a blank space
+table_names <- Table_A9i %>% dplyr::slice(1) %>% unlist() %>% as.vector()
+table_names[1] <- " "
+
+# Set new column names for the table and remove the first row
+Table_A9i <- magrittr::set_names(Table_A9i, c(" ", model_names.to_print)) %>% 
+  dplyr::slice(-1)
+
+# Identify rows where all columns are empty (indicated by zero-length character strings)
+empty_lines <- Table_A9i %>% 
+  dplyr::transmute(across(dplyr::everything(), \(x) nchar(x) == 0)) %>% 
+  dplyr::rowwise() %>% 
+  dplyr::transmute(all(c_across(dplyr::everything()))) %>% 
+  dplyr::pull(1) %>% 
+  which()
+
+# Remove rows that are identified as empty
+Table_A9i <- dplyr::slice(Table_A9i, -empty_lines)
+
+# Convert the data frame to a flextable object and apply formatting
+Table_A9i <- Table_A9i %>% 
+  flextable::flextable() %>% 
+  # Merge cells in the last row across columns 2 to the end
+  flextable::merge_at(i = nrow(Table_A9i), j = 2:ncol(Table_A9i)) %>% 
+  # Apply style formatting (font size, line spacing, and padding)
+  flextable::style(pr_t = officer::fp_text(font.size = 9), part = "all",
+                   pr_p = officer::fp_par(line_spacing = 1, padding = 0)) %>% 
+  # Add a horizontal line at row 10 using a custom border
+  flextable::hline(i = 10, border = officer::fp_border()) %>% 
+  # Automatically adjust the width of the columns to fit content
+  flextable::autofit() %>% 
+  # Ensure the table fits within a specified width (6.49 inches)
+  flextable::fit_to_width(6.49)
+
+
+rm(models_tA9i)
+
+##### TABLE A9ii #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA9ii_models.RData")
+
+model_names <- c(paste("Deaths"),paste("Log Deaths"))
+
+
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA9ii,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA9ii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA9ii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A9ii <- suppressWarnings(stargazer::stargazer(models_tA9ii,type="html",
+                                                    se=models.to.print_se,
+                                                    
+                                                    column.labels=model_names,dep.var.caption = "Votes share 2011",
+                                                    omit.stat = "f",
+                                                    add.lines = list(F.stat,
+                                                                     df))) %>% paste0(collapse = "")
+
+Table_A9ii <- read_html(Table_A9ii) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+table_names <- as.vector(Table_A9ii %>% slice(1) %>% unlist)
+table_names[1] <- " "
+Table_A9ii <- set_names(Table_A9ii,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A9ii %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A9ii %<>% slice(-empty_lines)
+
+Table_A9ii %<>% flextable() %>% merge_at(i=nrow(Table_A9ii),j=2:ncol(Table_A9ii)) %>%
+  style(pr_t=fp_text(font.size = 9),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 18,border = officer::fp_border())%>% autofit() %>% flextable::fit_to_width(6.49)
+
+rm(models_tA9ii)
+
+##### TABLE A9iii #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA9iii_models.RData")
+
+
+
+
+
+model_names <- c(paste("Deaths"),paste("Log Deaths"))
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA9iii,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA9iii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA9iii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A9iii <- suppressWarnings(stargazer::stargazer(models_tA9iii,type="html",
+                                                     se=models.to.print_se,
+                                                     
+                                                     column.labels=model_names,dep.var.caption = "Votes share 2018",
+                                                     omit.stat = "f",
+                                                     add.lines = list(F.stat,
+                                                                      df))) %>% paste0(collapse = "")
+
+Table_A9iii <- read_html(Table_A9iii) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+table_names <- as.vector(Table_A9iii %>% slice(1) %>% unlist)
+table_names[1] <- " "
+Table_A9iii <- set_names(Table_A9iii,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A9iii %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A9iii %<>% slice(-empty_lines)
+
+Table_A9iii %<>% flextable() %>% merge_at(i=nrow(Table_A9iii),j=2:ncol(Table_A9iii)) %>%
+  style(pr_t=fp_text(font.size = 9),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 28,border = officer::fp_border())%>% autofit() %>% flextable::fit_to_width(6.49)
+
+
+
+rm(models_tA9iii)
+
+##### TABLE A10 #####
+
+# Combine rows from two selections of the ACLED_data: selecting event_date, actor1 (renamed to actor), 
+# fatalities, and inter1 in one, and event_date, actor2 (renamed to actor), fatalities, and inter2 in the other
+to.plot <- dplyr::bind_rows(
+  ACLED_data %>%
+    dplyr::select(event_date, actor = actor1, fatalities, inter = inter1),
+  ACLED_data %>%
+    dplyr::select(event_date, actor = actor2, fatalities, inter = inter2)
+) %>%
+  
+  # Group the data by actor and inter variables
+  dplyr::group_by(actor, inter) %>%
+  
+  # Summarize the data: count number of events, sum the fatalities, get the first and last event dates
+  dplyr::summarise(
+    n.events = n(),
+    fatalities = sum(fatalities),
+    first_event_date = min(event_date),
+    last_event_date = max(event_date),
+    .groups = "drop"
+  )
+
+# Mutate the data to replace empty actor names with "(Empty)", 
+# and then convert the summarized data frame into a flextable object
+Table_A10 <- to.plot %>%
+  
+  # Replace any empty strings in the actor column with "(Empty)"
+  dplyr::mutate(actor = dplyr::case_when(actor == "" ~ "(Empty)", TRUE ~ actor)) %>%
+  
+  # Create a flextable from the summarized data
+  flextable() %>%
+  
+  # Add vertical lines in columns 1 and 4 with a thickness of 2
+  flextable::vline(j = c(1, 4), border = officer::fp_border(width = 2)) %>%
+  
+  # Apply styling to all parts of the table: set font size and line spacing
+  style(
+    pr_t = officer::fp_text(font.size = 8),
+    part = "all",
+    pr_p = officer::fp_par(line_spacing = 1, padding = 1)
+  ) %>%
+  
+  # Automatically adjust column widths to fit content
+  autofit() %>%
+  
+  # Fit the table to a specific width (6.49 inches)
+  flextable::fit_to_width(6.49)
+
+##### TABLE A11 #####
+
+# Group the ACLED_data by time_period, event_type, and sub_event_type,
+# then summarize the data by counting the number of events and summing the fatalities
+to.plot <- ACLED_data %>%
+  dplyr::group_by(time_period, event_type, sub_event_type) %>%
+  dplyr::summarise(
+    n.events = n(),
+    fatalities = sum(fatalities),
+    .groups = "drop"
+  )
+
+# Convert the summarized data into a flextable object for display and formatting
+Table_A11 <- to.plot %>%
+  
+  # Create the flextable from the summarized data
+  flextable() %>%
+  
+  # Merge vertical cells in columns 1 and 2
+  flextable::merge_v(j = c(1, 2)) %>%
+  
+  # Apply styling to the body of the table, setting font size, line spacing, and bottom cell border
+  style(
+    pr_t = officer::fp_text(font.size = 8),
+    part = "body",
+    pr_p = officer::fp_par(line_spacing = 1, padding = 1),
+    pr_c = officer::fp_cell(border.bottom = officer::fp_border())
+  ) %>%
+  
+  # Apply styling to the header of the table, setting font size and line spacing
+  style(
+    pr_t = officer::fp_text(font.size = 8),
+    part = "header",
+    pr_p = officer::fp_par(line_spacing = 1, padding = 1)
+  ) %>%
+  
+  # Add vertical lines in columns 1 and 2 with a thickness of 2
+  flextable::vline(j = c(1, 2), border = officer::fp_border(width = 2)) %>%
+  
+  # Automatically adjust column widths to fit content
+  autofit() %>%
+  
+  # Fit the table to a specific width (6.49 inches)
+  flextable::fit_to_width(6.49)
+
+##### TABLE A12 #####
+
+# Select relevant columns from the dataset 'actor_types2_table' and exclude irrelevant columns
+to.plot <- actor_types2_table %>% 
+  dplyr::select(side_a, side_b, n.conflicts_2006, n.deaths_2006, n.conflicts_2011, n.deaths_2011, n.conflicts_2018, n.deaths_2018) %>%
+  
+  # Filter out rows where 'side_a' equals "Total"
+  dplyr::filter(side_a != "Total") %>%
+  
+  # Create a new 'Actors' column by concatenating 'side_a' and 'side_b'
+  dplyr::mutate(Actors = paste0(side_a, " vs. ", side_b), .before = 1) %>%
+  
+  # Remove the 'side_a' and 'side_b' columns after combining them
+  dplyr::select(-c(2:3)) %>%
+  
+  # Add a new row with the total sums for all numeric columns and set 'Actors' as "Total"
+  dplyr::bind_rows(
+    .,
+    dplyr::summarise(
+      .,
+      dplyr::across(tidyselect:::where(is.numeric), sum)
+    ) %>% dplyr::mutate(Actors = "Total")
+  ) %>%
+  
+  # Calculate total conflicts and deaths for each row
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    n.conflicts_total = sum(dplyr::c_across(dplyr::starts_with("n.conflicts_"))),
+    n.deaths_total = sum(dplyr::c_across(dplyr::starts_with("n.deaths_")))
+  ) %>%
+  
+  # Ungroup the data after rowwise operation
+  dplyr::ungroup()
+
+# Summarize the total deaths and conflicts in the original dataset
+original_deaths_sum <- sum(ACLED_actor_type_2_territories$n.deaths, na.rm = TRUE)
+original_conflicts_sum <- sum(ACLED_actor_type_2_territories$n.conflicts, na.rm = TRUE)
+
+# Remove rows with missing values in 'side_b' and check that no NA values remain
+ACLED_to.plot <- ACLED_actor_type_2_territories %>%
+  dplyr::filter(!is.na(side_b))
+stopifnot(!any(is.na(ACLED_to.plot$side_b)))
+
+# Check that the sums of deaths and conflicts after filtering do not exceed the original sums
+filtered_deaths_sum <- sum(ACLED_to.plot$n.deaths, na.rm = TRUE)
+filtered_conflicts_sum <- sum(ACLED_to.plot$n.conflicts, na.rm = TRUE)
+stopifnot(filtered_deaths_sum <= original_deaths_sum)
+stopifnot(filtered_conflicts_sum <= original_conflicts_sum)
+
+# Reshape the data to long format, combining 'var' and 'year' into a single column
+ACLED_to.plot %<>% 
+  tidyr::pivot_longer(cols = dplyr::all_of(c("n.deaths", "n.conflicts")), names_to = "var", values_to = "value") %>%
+  tidyr::unite(col = "var", var, year)
+stopifnot("var" %in% names(ACLED_to.plot))
+
+# Verify that the sum of deaths and conflicts remains unchanged after pivoting
+pivot_deaths_sum <- sum(ACLED_to.plot$value[grepl("n.deaths", ACLED_to.plot$var)], na.rm = TRUE)
+pivot_conflicts_sum <- sum(ACLED_to.plot$value[grepl("n.conflicts", ACLED_to.plot$var)], na.rm = TRUE)
+stopifnot(all.equal(filtered_deaths_sum, pivot_deaths_sum))
+stopifnot(all.equal(filtered_conflicts_sum, pivot_conflicts_sum))
+
+# Group data by 'side_a', 'side_b', and 'var', then sum the 'value' column for each group
+ACLED_to.plot %<>% 
+  dplyr::group_by(side_a, side_b, var) %>%
+  dplyr::summarise(value = sum(value), .groups = "drop")
+stopifnot("value" %in% names(ACLED_to.plot))
+
+# Verify that the sum of deaths and conflicts remains unchanged after grouping
+grouped_deaths_sum <- sum(ACLED_to.plot$value[grepl("n.deaths", ACLED_to.plot$var)], na.rm = TRUE)
+grouped_conflicts_sum <- sum(ACLED_to.plot$value[grepl("n.conflicts", ACLED_to.plot$var)], na.rm = TRUE)
+stopifnot(all.equal(pivot_deaths_sum, grouped_deaths_sum))
+stopifnot(all.equal(pivot_conflicts_sum, grouped_conflicts_sum))
+
+# Create a new column 'Actors' by concatenating 'side_a' and 'side_b', then remove the original columns
+ACLED_to.plot %<>% 
+  dplyr::mutate(Actors = paste0(side_a, "_", side_b), .before = 1) %>%
+  dplyr::select(-side_a, -side_b)
+stopifnot("Actors" %in% names(ACLED_to.plot))
+
+# Reshape the data back to wide format and rename the columns accordingly
+ACLED_to.plot %<>% 
+  tidyr::pivot_wider(id_cols = "Actors", names_from = "var", values_from = "value", values_fill = 0) %>%
+  dplyr::select(
+    Actors,
+    ACLED_n.conflicts_2006 = n.conflicts_2006,
+    ACLED_n.deaths_2006 = n.deaths_2006,
+    ACLED_n.conflicts_2011 = n.conflicts_2011,
+    ACLED_n.deaths_2011 = n.deaths_2011,
+    ACLED_n.conflicts_2018 = n.conflicts_2018,
+    ACLED_n.deaths_2018 = n.deaths_2018
+  )
+stopifnot(all(c("Actors", "ACLED_n.conflicts_2006", "ACLED_n.deaths_2006", "ACLED_n.conflicts_2011", "ACLED_n.deaths_2011", "ACLED_n.conflicts_2018", "ACLED_n.deaths_2018") %in% names(ACLED_to.plot)))
+
+# Calculate the total conflicts and deaths for each row and add them as new columns
+ACLED_to.plot %<>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    ACLED_n.conflicts_total = sum(dplyr::c_across(cols = dplyr::starts_with("ACLED_n.conflicts"))),
+    ACLED_n.deaths_total = sum(dplyr::c_across(cols = dplyr::starts_with("ACLED_n.deaths")))
+  ) %>%
+  dplyr::ungroup()
+stopifnot(all(c("ACLED_n.conflicts_total", "ACLED_n.deaths_total") %in% names(ACLED_to.plot)))
+
+# Ensure the totals calculated match the previously summed values before transformations
+stopifnot(round(sum(ACLED_to.plot$ACLED_n.conflicts_total, na.rm = TRUE), 0) == round(filtered_conflicts_sum, 0))
+stopifnot(round(sum(ACLED_to.plot$ACLED_n.deaths_total, na.rm = TRUE), 0) == round(filtered_deaths_sum, 0))
+
+# Add a total row to the dataset by summing all numeric columns and setting 'Actors' as "Total"
+ACLED_to.plot %<>% 
+  dplyr::bind_rows(
+    .,
+    dplyr::summarise(., dplyr::across(tidyselect:::where(is.numeric), sum)) %>%
+      dplyr::mutate(Actors = "Total")
+  )
+stopifnot(ACLED_to.plot[nrow(ACLED_to.plot), "Actors"] == "Total")
+
+# Verify the sums in the total row are correct
+stopifnot(round(ACLED_to.plot[nrow(ACLED_to.plot), "ACLED_n.conflicts_total"], 0) == round(sum(ACLED_to.plot$ACLED_n.conflicts_total[1:(nrow(ACLED_to.plot) - 1)], na.rm = TRUE), 0))
+stopifnot(round(ACLED_to.plot[nrow(ACLED_to.plot), "ACLED_n.deaths_total"], 0) == round(sum(ACLED_to.plot$ACLED_n.deaths_total[1:(nrow(ACLED_to.plot) - 1)], na.rm = TRUE), 0))
+
+# Combine the two datasets, apply transformations and create a formatted table
+Table_A12 <- to.plot %>%
+  
+  # Replace " vs. " with "_" in the 'Actors' column
+  dplyr::mutate(Actors = stringr::str_replace(Actors, "\\svs.\\s", "_")) %>%
+  
+  # Merge with 'ACLED_to.plot' by 'Actors'
+  dplyr::left_join(ACLED_to.plot, by = "Actors") %>%
+  
+  # Filter rows where at least one numeric value is not zero
+  dplyr::filter(dplyr::if_any(tidyselect:::where(is.numeric), .fns = \(x){ x != 0 })) %>%
+  
+  # Apply custom dyad labels
+  make_dyad_labels(var = "Actors") %>%
+  
+  # Sort by 'Actors'
+  dplyr::arrange(Actors) %>%
+  
+  # Create a flextable with specified formatting and headers
+  flextable() %>%
+  flextable::add_header(values = list(
+    "n.conflicts_2006" = "2006 election",
+    "n.deaths_2006" = "2006 election",
+    "n.conflicts_2011" = "2011 election",
+    "n.deaths_2011" = "2011 election",
+    "n.conflicts_2018" = "2018 election",
+    "n.deaths_2018" = "2018 election",
+    "n.conflicts_total" = "Total",
+    "n.deaths_total" = "Total",
+    "ACLED_n.conflicts_2006" = "2006 election",
+    "ACLED_n.deaths_2006" = "2006 election",
+    "ACLED_n.conflicts_2011" = "2011 election",
+    "ACLED_n.deaths_2011" = "2011 election",
+    "ACLED_n.conflicts_2018" = "2018 election",
+    "ACLED_n.deaths_2018" = "2018 election",
+    "ACLED_n.conflicts_total" = "Total",
+    "ACLED_n.deaths_total" = "Total"
+  )) %>%
+  
+  # Add a second header with source information
+  flextable::add_header(values = list(
+    "n.conflicts_2006" = "UDCP",
+    "n.deaths_2006" = "UDCP",
+    "n.conflicts_2011" = "UDCP",
+    "n.deaths_2011" = "UDCP",
+    "n.conflicts_2018" = "UDCP",
+    "n.deaths_2018" = "UDCP",
+    "n.conflicts_total" = "UDCP",
+    "n.deaths_total" = "UDCP",
+    "ACLED_n.conflicts_2006" = "ACLED",
+    "ACLED_n.deaths_2006" = "ACLED",
+    "ACLED_n.conflicts_2011" = "ACLED",
+    "ACLED_n.deaths_2011" = "ACLED",
+    "ACLED_n.conflicts_2018" = "ACLED",
+    "ACLED_n.deaths_2018" = "ACLED",
+    "ACLED_n.conflicts_total" = "ACLED",
+    "ACLED_n.deaths_total" = "ACLED"
+  )) %>%
+  
+  # Set specific labels for the headers
+  flextable::set_header_labels(values = list(
+    "n.conflicts_2006" = "Conflict\nevents",
+    "n.deaths_2006" = "Deaths",
+    "n.conflicts_2011" = "Conflict\nevents",
+    "n.deaths_2011" = "Deaths",
+    "n.conflicts_2018" = "Conflict\nevents",
+    "n.deaths_2018" = "Deaths",
+    "n.conflicts_total" = "Conflict\nevents",
+    "n.deaths_total" = "Deaths",
+    "ACLED_n.conflicts_2006" = "Conflict\nevents",
+    "ACLED_n.deaths_2006" = "Deaths",
+    "ACLED_n.conflicts_2011" = "Conflict\nevents",
+    "ACLED_n.deaths_2011" = "Deaths",
+    "ACLED_n.conflicts_2018" = "Conflict\nevents",
+    "ACLED_n.deaths_2018" = "Deaths",
+    "ACLED_n.conflicts_total" = "Conflict\nevents",
+    "ACLED_n.deaths_total" = "Deaths"
+  )) %>%
+  
+  # Merge headers and apply vertical lines for formatting
+  flextable::merge_h(part = "header") %>%
+  flextable::vline(j = c(1, 3, 5, 7, 9, 11, 13, 15), border = officer::fp_border(width = 2)) %>%
+  flextable::vline(j = c(1, 9), border = officer::fp_border(width = 2.5)) %>%
+  flextable::hline(i = c(14), border = officer::fp_border(width = 2.5)) %>%
+  
+  # Apply styling to the table
+  style(pr_t = officer::fp_text(font.size = 9), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 1)) %>%
+  style(i = 13, pr_t = officer::fp_text(font.size = 9, bold = TRUE), part = "body", pr_p = officer::fp_par(line_spacing = 1, padding = 1)) %>%
+  style(pr_t = officer::fp_text(font.size = 9, bold = TRUE), part = "header", pr_p = officer::fp_par(line_spacing = 1, padding = 1)) %>%
+  style(j = c(1, 8, 9, 16, 17), pr_t = officer::fp_text(font.size = 9, bold = TRUE), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 1)) %>%
+  
+  # Align columns and autofit the table to the page width
+  flextable::align(j = 2:9, part = "body", align = "right") %>%
+  flextable::align(i = 1, j = 2:17, part = "header", align = "center") %>%
+  flextable::autofit() %>%
+  flextable::fit_to_width(10.5)
+
+##### TABLE A13 #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA13_models.RData")
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+
+model_names.to_print <- model_names
+
+# models.to.print_se <- map(models.to.print,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA13,~{
+  summ <- summary(.x)#,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA13,~{
+  summ <- summary(.x)#,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A13 <- suppressWarnings(stargazer::stargazer(models_tA13,type="html",
+                                                   
+                                                   
+                                                   dep.var.caption = "Votes share 2018",
+                                                   omit.stat = "f",
+                                                   add.lines = list(F.stat,
+                                                                    df))) %>% paste0(collapse = "")
+
+Table_A13 <- read_html(Table_A13) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+table_names <- as.vector(Table_A13 %>% slice(1) %>% unlist)
+table_names[1] <- " "
+
+
+
+Table_A13 %<>% make_dyad_labels(var=names(Table_A13)[1])
+
+Table_A13 <- set_names(Table_A13,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A13 %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A13 %<>% slice(-empty_lines)
+
+
+
+Table_A13 %<>% flextable() %>% merge_at(i=nrow(Table_A13),j=2:ncol(Table_A13)) %>%
+  style(pr_t=fp_text(font.size = 10),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 34,border = officer::fp_border())%>% 
+  vline(j=c(1,5),border=officer::fp_border()) %>%
+  autofit() %>% flextable::fit_to_width(10.5)
+
+
+
+# Diagnostics    
+if(run_diagnostics){
+  if(!dir.exists("manuscript/diagnostics/Table_A13/")){
+    dir.create("manuscript/diagnostics/Table_A13/",recursive = T)
+  }
+  
+  models_tA13[1:4] %>% purrr::walk2(model_names,~{
+    model <- .x
+    try(rmarkdown::render("R/lm diagnostics.Rmd",output_file = paste0("manuscript/diagnostics/Table_A13/",.y,".html")))
+  })     
+  
+}
+
+
+rm(models_tA13)
+
+##### TABLE A14  #####
+
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA14_models.RData")
+
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+
+model_names.to_print <- model_names
+
+# models.to.print_se <- map(models_tA14,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA14,~{
+  summ <- summary(.x)#,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA14,~{
+  summ <- summary(.x)#,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A14 <- suppressWarnings(stargazer::stargazer(models_tA14,type="html",
+                                                   
+                                                   
+                                                   dep.var.caption = "Votes share 2018",
+                                                   omit.stat = "f",
+                                                   add.lines = list(F.stat,
+                                                                    df))) %>% paste0(collapse = "")
+
+Table_A14 <- read_html(Table_A14) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+table_names <- as.vector(Table_A14 %>% slice(1) %>% unlist)
+table_names[1] <- " "
+
+Table_A14 %<>% make_dyad_labels(var=names(Table_A14)[1])
+
+Table_A14 <- set_names(Table_A14,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A14 %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A14 %<>% slice(-empty_lines)
+
+
+Table_A14 %<>% flextable() %>% merge_at(i=nrow(Table_A14),j=2:ncol(Table_A14)) %>%
+  style(pr_t=fp_text(font.size = 10),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 41,border = officer::fp_border())%>% 
+  vline(j=c(1,5),border=officer::fp_border()) %>%
+  autofit() %>% flextable::fit_to_width(10.5)
+
+
+rm(models_tA14)
+
+##### TABLE A15 #####
+
+# Convert ged201 to a data frame and mutate a new column 'period' based on election dates
+ged201_for_period_and_actors <- ged201 %>%
+  as.data.frame() %>%  # Ensure ged201 is a data frame
+  dplyr::mutate(  # Create a new column 'period' based on election date ranges
+    period = dplyr::case_when(
+      date_start >= lubridate::ymd("2001-01-17") & date_end <= lubridate::ymd("2006-07-30") ~ "2006 election",
+      date_start >= lubridate::ymd("2006-07-31") & date_end <= lubridate::ymd("2011-11-28") ~ "2011 election",
+      date_start >= lubridate::ymd("2011-11-29") & date_end <= lubridate::ymd("2018-12-30") ~ "2018 election",
+      TRUE ~ NA_character_  # Assign NA if the date doesn't fall into any election period
+    )
+  ) %>%
+  # Filter rows where both side_a and side_b belong to specific groups defined in 'actor_types'
+  dplyr::filter(side_a %in% actor_types$groups & side_b %in% actor_types$groups)
+
+# Optional visualization: filter for specific actors and view the resulting data frame
+# ged201_for_period_and_actors %>% dplyr::filter(side_a == "CNDD-FDD" | side_b == "CNDD-FDD") %>% View()
+
+# Create a table summarizing deaths by election period and actor groups
+conflict.groups.period.table <- ged201_for_period_and_actors %>%
+  dplyr::select(election = period, side_a, side_b, n.deaths = deaths_civilians, index.data) %>%  # Select relevant columns
+  dplyr::group_by(election, side_a, side_b) %>%  # Group by election period and actors
+  dplyr::summarise(dplyr::across(dplyr::starts_with("n.deaths"), \(x){sum(x)}), .groups = "drop") %>%  # Sum deaths within each group
+  tidyr::pivot_longer(cols = c(side_a, side_b), values_to = "group") %>%  # Reshape data: merge side_a and side_b into one column 'group'
+  dplyr::group_by(election, group) %>%  # Group again by election period and combined actor group
+  dplyr::summarise(dplyr::across(dplyr::starts_with("n.deaths"), \(x){sum(x)}), .groups = "drop") %>%  # Sum deaths again by group
+  dplyr::filter(n.deaths > 0 & group != "Civilians")  # Filter out rows with zero deaths and the "Civilians" group
+
+# Further manipulate the conflict groups period table by separating the election and handling missing values
+conflict.groups.period.table %<>% 
+  tidyr::separate(election, sep = "_", into = c("drop", "election")) %>%  # Separate 'election' column at underscores, drop irrelevant part
+  dplyr::select(-drop) %>%  # Remove the unnecessary column created by separation
+  tidyr::pivot_wider(names_from = "election", values_from = "n.deaths") %>%  # Reshape data: wide format with election years as columns
+  dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), \(x){tidyr::replace_na(x, 0)}))  # Replace NA values in numeric columns with 0
+
+# Add a row for totals by summing across all numeric columns for each group
+conflict.groups.period.table %<>% dplyr::bind_rows(
+  conflict.groups.period.table %>%
+    dplyr::summarise(dplyr::across(tidyselect::where(is.numeric), sum)) %>%  # Summarize numeric columns
+    dplyr::mutate(group = "Total", .before = 1)  # Add a 'Total' row and place it at the top
+)
+
+# Create the final table (Table_A15) for presentation using the flextable package
+Table_A15 <- conflict.groups.period.table %>%
+  dplyr::select(group, dplyr::ends_with("2006"), dplyr::ends_with("2011"), dplyr::ends_with("2018")) %>%  # Select relevant columns
+  flextable::flextable() %>%  # Convert the data frame into a flextable object
+  flextable::set_header_labels(values = list(
+    "2006" = "2006 election",
+    "2011" = "2011 election",
+    "2018" = "2018 election"
+  )) %>%  # Set custom header labels for the election years
+  flextable::hline(i = nrow(conflict.groups.period.table) - 1, border = officer::fp_border(width = 2)) %>%  # Add a horizontal line before the last row
+  flextable::vline(j = c(1), border = officer::fp_border(width = 2)) %>%  # Add a vertical line after the first column
+  flextable::style(pr_t = officer::fp_text(font.size = 9), part = "all", pr_p = officer::fp_par(line_spacing = 1, padding = 1)) %>%  # Apply text and paragraph styles
+  flextable::autofit() %>%  # Automatically fit column widths to content
+  flextable::fit_to_width(6.49)  # Set the table width to 6.49 inches
+
+##### TABLE A16 #####
+
+# Select relevant columns from the dataset for analysis
+df <- actor_type_2_territories %>% 
+  dplyr::select(side_a, side_b, year, index.data, n.conflicts) %>%
+  # Filter the data to include only rows from the year 2006
+  dplyr::filter(year == 2006) %>%
+  # Create a new column "Actors" by concatenating 'side_a' and 'side_b', placed at the start of the dataset
+  dplyr::mutate(Actors = paste0(side_a, "_", side_b), .before = 1) %>%
+  # Remove columns 2 through 4, keeping only "Actors" and "n.conflicts"
+  dplyr::select(-c(2:4)) %>%
+  # Reshape the data from long to wide format, filling in missing values with 0
+  tidyr::pivot_wider(names_from = "Actors", values_from = "n.conflicts", values_fill = 0) %>%
+  # Remove the 'index.data' column from the dataset
+  dplyr::select(-index.data)
+
+# Compute correlation matrix using the "spearman" method, setting diagonal values to 1
+corr_matrix <- df %>%
+  corrr::correlate(use = "pairwise", method = "spearman", quiet = TRUE, diagonal = 1.0)
+
+# Calculate Spearman correlation matrix and p-values using Hmisc::rcorr()
+r <- Hmisc::rcorr(as.matrix(df), type = "spearman")  
+
+# Convert the correlation matrix to a data frame, remove diagonal elements for clarity
+correlations <- corr_matrix %>%
+  corrr::shave() %>%
+  corrr::fashion(na_print = "-", decimals = 2, leading_zeros = FALSE) %>%
+  data.frame()
+
+# Remove upper triangle of the matrix by setting those elements to an empty string
+for(i in 1:nrow(correlations)) {
+  for(j in 2:ncol(correlations)) {
+    if(i < j) {
+      correlations[i, j] <- ""
+    }
+  }
+}
+
+# Convert p-values matrix to data frame and divide p-values by 2 for one-tailed tests
+p.values <- r$P %>%
+  as.data.frame() %>%
+  divide_by(2)
+
+# Set upper triangle of the p-values matrix to NA since it's redundant
+p.values[upper.tri(p.values)] <- NA
+
+# Initialize an empty matrix for p-value significance levels
+p.stars <- matrix("", ncol = ncol(p.values), nrow = nrow(p.values))
+
+# Assign symbols based on significance thresholds: "." for p <= 0.1, "*" for p <= 0.05, etc.
+p.stars[p.values <= 0.1 & p.values > 0.05] <- "."
+p.stars[p.values <= 0.05 & p.values > 0.01] <- "*"
+p.stars[p.values <= 0.01 & p.values > 0.001] <- "**"
+p.stars[p.values <= 0.001] <- "***"
+
+# Combine correlations with significance stars, convert to data frame and set column names
+correlations <- matrix(paste0(
+  correlations %>%
+    dplyr::select(-term) %>%
+    as.matrix(), p.stars), 
+  nrow = nrow(p.stars), ncol = ncol(p.stars)) %>%
+  as.data.frame(stringsAsFactors = FALSE) %>%
+  magrittr::set_names(correlations$term) %>%
+  dplyr::mutate(rowname = correlations$term) %>%
+  dplyr::select(rowname, dplyr::everything())
+
+# Add a column indicating the statistic type ("Spearman Correlation")
+correlations %<>%
+  dplyr::mutate(stat = "Spearman Correlation") %>%
+  dplyr::rename(vars = rowname) %>%
+  dplyr::select(stat, vars, dplyr::everything())
+
+# Format the p-values data frame, replacing numeric values with appropriate strings
+p.values %<>%
+  dplyr::mutate(stat = "Sig. (1-tailed)", vars = rownames(.)) %>%
+  dplyr::select(stat, vars, dplyr::everything()) %>%
+  dplyr::mutate_if(is.numeric, \(x) case_when(
+    is.na(x) ~ "", 
+    x < 0.001 ~ "<0.001", 
+    TRUE ~ sprintf("%0.3f", x)
+  ))
+
+# Bind rows to combine the correlations and p-values data frames into one
+to.plot <- suppressWarnings(dplyr::bind_rows(correlations))
+
+# Convert all columns to character data type
+to.plot %<>%
+  dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
+
+# Extract variable names analyzed for further operations
+vars.analyzed <- to.plot %>%
+  dplyr::pull("vars")
+
+# Filter out rows where the 'vars' column starts with "afdl_"
+to.plot %<>%
+  dplyr::rowwise() %>%
+  dplyr::filter(!stringr::str_starts(vars, "afdl_")) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(., dplyr::one_of(c(names(to.plot[1:2]), .$vars))) %>%
+  dplyr::select(-1)
+
+# Apply custom labeling to the 'vars' column to create "dyad labels"
+to.plot %<>%
+  make_dyad_labels(var = "vars")
+
+# Update column names with custom "dyad labels"
+to.plot %<>%
+  magrittr::set_colnames(data.frame(dyad = names(to.plot)) %>%
+                           make_dyad_labels(var = "dyad") %>%
+                           dplyr::pull("dyad"))
+
+# Remove the last column from the data frame, which is not needed
+to.plot %<>%
+  dplyr::select(-ncol(to.plot))
+
+# Create a formatted table using flextable, adding a footer and formatting options
+Table_A16 <- flextable::flextable(to.plot) %>%
+  flextable::add_footer(vars = "p-values: 0.1 . 0.05 * 0.01 ** 0.001 ***") %>%
+  flextable::merge_at(j = 1:ncol(to.plot), part = "footer") %>%
+  flextable::merge_v(j = 1) %>%
+  flextable::set_header_labels(stat = "", vars = "") %>%
+  flextable::align(j = 1:ncol(to.plot), align = "left") %>%
+  flextable::hline(i = ncol(to.plot), border = officer::fp_border(width = 2)) %>%
+  flextable::vline(j = 2:ncol(to.plot), border = officer::fp_border(width = 2, color = "gray80"), part = "body") %>%
+  flextable::style(pr_t = officer::fp_text(font.size = 8), part = "all") %>%
+  flextable::width(1, 1.5) %>%
+  flextable::fit_to_width(11.5)
+
+##### TABLE A17 #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA17_models.RData")
+
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA17,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA17,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA17,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A17 <- suppressWarnings(stargazer::stargazer(models_tA17,type="html",
+                                                   se=models.to.print_se,
+                                                   
+                                                   dep.var.caption = "Change in vote share 2006-2011",
+                                                   omit.stat = "f",
+                                                   add.lines = list(F.stat,
+                                                                    df))) %>% paste0(collapse = "")
+
+Table_A17 <- read_html(Table_A17) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+# table_names <- as.vector(Table_A17 %>% slice(1) %>% unlist)
+# table_names[1] <- " "
+Table_A17 <- set_names(Table_A17,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A17 %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A17 %<>% slice(-empty_lines)
+
+Table_A17 %<>% flextable() %>% merge_at(i=nrow(Table_A17),j=2:ncol(Table_A17)) %>%
+  style(pr_t=fp_text(font.size = 10),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 18,border = officer::fp_border())%>% 
+  vline(j=c(1,5),border=officer::fp_border()) %>%
+  autofit() %>% flextable::fit_to_width(10.5)
+
+
+
+rm(models_tA17)
+
+##### TABLE A18 #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA18_models.RData")
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA18,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA18,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA18,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A18 <- suppressWarnings(stargazer::stargazer(models_tA18,type="html",
+                                                   se=models.to.print_se,
+                                                   
+                                                   dep.var.caption = "Change in vote share 2011-2018",
+                                                   omit.stat = "f",
+                                                   add.lines = list(F.stat,
+                                                                    df))) %>% paste0(collapse = "")
+
+Table_A18 <- read_html(Table_A18) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+# table_names <- as.vector(Table_A18 %>% slice(1) %>% unlist)
+# table_names[1] <- " "
+Table_A18 <- set_names(Table_A18,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A18 %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A18 %<>% slice(-empty_lines)
+
+Table_A18 %<>% flextable() %>% merge_at(i=nrow(Table_A18),j=2:ncol(Table_A18)) %>%
+  style(pr_t=fp_text(font.size = 10),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 28,border = officer::fp_border())%>% 
+  vline(j=c(1,5),border=officer::fp_border()) %>%
+  autofit() %>% flextable::fit_to_width(8.5)
+
+
+rm(models_tA18)
+
+##### TABLE A19i #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA19i_models.RData")
+
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA19i,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA19i,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA19i,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A19i <- suppressWarnings(stargazer::stargazer(models_tA19i,type="html",
+                                                    se=models.to.print_se,
+                                                    
+                                                    dep.var.caption = "Turnout 2006",
+                                                    omit.stat = "f",
+                                                    add.lines = list(F.stat,
+                                                                     df))) %>% paste0(collapse = "")
+
+Table_A19i <- read_html(Table_A19i) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+# table_names <- as.vector(Table_A19i %>% slice(1) %>% unlist)
+# table_names[1] <- " "
+Table_A19i <- set_names(Table_A19i,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A19i %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A19i %<>% slice(-empty_lines)
+
+Table_A19i %<>% flextable() %>% merge_at(i=nrow(Table_A19i),j=2:ncol(Table_A19i)) %>%
+  style(pr_t=fp_text(font.size = 10),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 10,border = officer::fp_border())%>% 
+  vline(j=c(1,5),border=officer::fp_border()) %>%
+  autofit() %>% flextable::fit_to_width(10.5)
+
+
+
+rm(models_tA19i)
+
+##### TABLE A19ii #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA19ii_models.RData")
+
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA19ii,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA19ii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA19ii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A19ii <- suppressWarnings(stargazer::stargazer(models_tA19ii,type="html",
+                                                     se=models.to.print_se,
+                                                     
+                                                     dep.var.caption = "Votes turnout 2011",
+                                                     omit.stat = "f",
+                                                     add.lines = list(F.stat,
+                                                                      df))) %>% paste0(collapse = "")
+
+Table_A19ii <- read_html(Table_A19ii) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+# table_names <- as.vector(Table_A19ii %>% slice(1) %>% unlist)
+# table_names[1] <- " "
+Table_A19ii <- set_names(Table_A19ii,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A19ii %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A19ii %<>% slice(-empty_lines)
+
+Table_A19ii %<>% flextable() %>% merge_at(i=nrow(Table_A19ii),j=2:ncol(Table_A19ii)) %>%
+  style(pr_t=fp_text(font.size = 9),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 18,border = officer::fp_border())%>% 
+  vline(j = c(1,5),border = officer::fp_border())%>% 
+  autofit() %>% flextable::fit_to_width(10.5)
+
+
+
+rm(models_tA19ii)
+
+##### TABLE A19iii #####
+
+# Load the pre-saved RData file that contains the model results
+load("results/TableA19iii_models.RData")
+
+
+model_names <- c(paste("Conflicts"),paste("Log Conflicts"),paste("Deaths"),paste("Log Deaths"),
+                 paste("ACLED\nConflicts"),paste("ACLED\nLog Conflicts"),paste("ACLED\nDeaths"),paste("ACLED\nLog Deaths"))
+
+model_names.to_print <- model_names
+
+models.to.print_se <- map(models_tA19iii,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+
+
+F.stat <-map(models_tA19iii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  .p <- pf(summ$fstatistic["value"],summ$fstatistic["numdf"],summ$fstatistic["dendf"],lower.tail = F)
+  sprintf("%0.3f%s",summ$fstatistic["value"],
+          case_when(.p<0.01 ~"***",
+                    .p<0.05 ~"**",
+                    .p<0.1~"*",
+                    TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+df <-map(models_tA19iii,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic[2:3],collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+
+
+Table_A19iii <- suppressWarnings(stargazer::stargazer(models_tA19iii,type="html",
+                                                      se=models.to.print_se,
+                                                      
+                                                      dep.var.caption = "Turnout 2018",
+                                                      omit.stat = "f",
+                                                      add.lines = list(F.stat,
+                                                                       df))) %>% paste0(collapse = "")
+
+Table_A19iii <- read_html(Table_A19iii) %>% html_table() %>% as.data.frame() %>% slice(-c(1:5))
+# table_names <- as.vector(Table_A19iii %>% slice(1) %>% unlist)
+# table_names[1] <- " "
+Table_A19iii <- set_names(Table_A19iii,c(" ",model_names.to_print)) %>% slice(-1)
+
+empty_lines <- Table_A19iii %>% transmute(across(everything(),~nchar(.)==0)) %>% rowwise() %>% transmute(all(c_across(everything()))) %>% pull(1) %>% which()
+
+Table_A19iii %<>% slice(-empty_lines)
+
+Table_A19iii %<>% flextable() %>% merge_at(i=nrow(Table_A19iii),j=2:ncol(Table_A19iii)) %>%
+  style(pr_t=fp_text(font.size = 9),part = "all",pr_p = fp_par(line_spacing = 1,padding = 0))  %>% 
+  hline(i = 26,border = officer::fp_border())%>% 
+  vline(j=c(1,5),border = officer::fp_border())%>% 
+  autofit() %>% flextable::fit_to_width(10.5)
+
+
+
+rm(models_tA19iii)
