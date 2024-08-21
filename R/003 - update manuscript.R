@@ -120,7 +120,7 @@ document_path <- here::here("manuscript/main_CONFLICT.docx")
 
 figures_path <- here::here("manuscript/figures")
 
-update_document <- F
+update_document <- TRUE
 
 update_Fig1 <- F
 fig1_width <- 6.5 # inches
@@ -269,7 +269,7 @@ if (update_any_figure) {
 
 # Tables
 
-# source(here::here("R/003b - create tables.R"))
+source(here::here("R/003b - create tables.R"))
 
 
 #### UPDATE DOCUMENT #####
