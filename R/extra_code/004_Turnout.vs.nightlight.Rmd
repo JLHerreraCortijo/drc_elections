@@ -1,0 +1,496 @@
+---
+title: "TURNOUT VS. NIGHTLIGHT"
+output: 
+  html_notebook:
+    theme: united
+    toc: yes
+---
+```{r}
+here::i_am("R/004_Turnout.vs.nightlight.Rmd")
+require(lmtest)
+require(plm)
+require(stargazer)
+
+#### FUNCTIONS ####
+source(here::here("R/function.library.R"))
+#### LOAD THE DATA ####
+
+load(here::here("results/data.RData"))
+
+```
+
+
+# 1. TURNOUT VS. NIGHLIGHTS
+
+
+```{r}
+
+turnout <- data %>% select(index,label,starts_with("turnout_")) %>%
+  pivot_longer(cols = -c(index,label),values_to = "turnout") %>% separate(name,c("drop","year"),sep="_") %>% mutate(year=as.integer(year)) %>% select(-drop)
+
+
+turnout
+```
+
+```{r}
+
+turnout  %>% ggplot() + geom_histogram(aes(x=turnout,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(turnout)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+
+
+```{r,include=FALSE}
+
+# Compute neighborhood matrix (used later in diagnostic tests)
+library(spdep)
+
+x <- turnout %>% left_join(congo.territoire.borders,by=c(index="index.data")) %>% filter(year==2006)
+
+
+
+nb <- spdep::poly2nb(pl=x$geometry,row.names = x$index)
+nbw <- spdep::nb2listw(nb,zero.policy = TRUE,style="B")
+
+nb.matrix <- nb2mat(nb,zero.policy = TRUE,style="B")
+
+summary(nb)
+
+```
+
+
+## 1.1. mean_nightlight_gt30_with_VIIRS correction
+
+### Data
+
+```{r}
+
+
+elections <- list("2006"=c(2001:2006),
+                  "2011"=c(2007:2011)
+                  ) %>% 
+  map2(names(.),~rep(.y,length(.x)) %>% 
+         set_names(.x)) %>% 
+  reduce(c)
+
+
+
+
+mean_nightlight <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% 
+  mutate(election=elections[as.character(year)]) %>%  group_by(index,election) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") %>% filter(!is.na(election))
+
+
+DMSP_2012_13 <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% filter(year %in% c(2012,2013)) %>% group_by(index) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") 
+
+VIIR_percent_change <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% filter(year %in% c(2014,2018)) %>% pivot_wider(names_from = year,values_from = nightlight_mean) %>% mutate(change=(`2018`-`2014`)/(`2014`))
+
+VIIR_corrected <- DMSP_2012_13 %>% left_join(VIIR_percent_change,by="index") %>% mutate(nightlight_mean_corrected=nightlight_mean+(nightlight_mean)*change) %>% select(index,nightlight_mean=nightlight_mean_corrected) %>% mutate(election="2018")
+
+mean_nightlight %<>% bind_rows(VIIR_corrected) %>% mutate(year=as.integer(election)) %>% select(-election)
+
+to.model <- turnout %>% left_join(mean_nightlight,by=c("index","year"))  %>% rename(region=label) %>% select(-index)
+
+# Changes in nightlight
+
+differences <- to.model  %>% select(region,year,nightlight_mean) %>% as.data.frame()  %>% pivot_wider(names_from = "year",values_from = "nightlight_mean") %>%
+  mutate(`2006-2011`=`2011`-`2006`,`2011-2018`=`2018`-`2011`) %>% select(-c(`2006`,`2011`,`2018`)) %>% pivot_longer(cols = -region,names_to = "period",values_to = "difference")
+
+g <- ggplot(differences,aes(x=difference)) +geom_histogram(bins = 1+3.322*log10(nrow(to.model)),color="black",fill="red") +
+  facet_wrap(~period,ncol=2) + xlab("Change in mean nightlight") + scale_y_continuous(trans="log10") +  ylab("log10(count)")
+
+ggsave(here::here("figures/Mean_nightlight_gt30_diff_histograms.png"),g,width = 5,height = 3)
+
+
+# plm data format
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+to.model
+
+
+
+```
+
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=nightlight_mean,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+to.model
+```
+
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+m <- model_1_1 <- plm(turnout ~ nightlight_mean,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+
+pcdtest(turnout ~nightlight_mean,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(turnout ~nightlight_mean,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm(turnout ~nightlight_mean,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+ Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+
+<a href="#top">Back to top</a>
+
+## 1.2. mean_nightlight_gt30_with_VIIRS no correction
+
+### Data
+
+```{r}
+
+
+elections <- list("2006"=c(2001:2006),
+                  "2011"=c(2007:2011),
+                  "2018"=c(2014:2018)
+                  ) %>% 
+  map2(names(.),~rep(.y,length(.x)) %>% 
+         set_names(.x)) %>% 
+  reduce(c)
+
+
+
+
+mean_nightlight <- nightlight_gt30_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% 
+  mutate(election=elections[as.character(year)]) %>%  group_by(index,election) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") %>% filter(!is.na(election))
+
+
+
+mean_nightlight %<>% mutate(year=as.integer(election)) %>% select(-election)
+
+to.model <- turnout %>% left_join(mean_nightlight,by=c("index","year"))  %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+to.model
+
+
+
+```
+
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=nightlight_mean,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+m <- model_1_2 <-  plm(turnout ~ nightlight_mean,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+
+pcdtest(turnout ~nightlight_mean,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(turnout ~nightlight_mean,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm(turnout ~nightlight_mean,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+ Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+
+<a href="#top">Back to top</a>
+
+## 1.3. mean_nightlight_with_VIIRS correction
+
+### Data
+
+```{r}
+
+
+elections <- list("2006"=c(2001:2006),
+                  "2011"=c(2007:2011)
+                  ) %>% 
+  map2(names(.),~rep(.y,length(.x)) %>% 
+         set_names(.x)) %>% 
+  reduce(c)
+
+
+
+
+mean_nightlight <- nightlight_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% 
+  mutate(election=elections[as.character(year)]) %>%  group_by(index,election) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") %>% filter(!is.na(election))
+
+
+DMSP_2012_13 <- nightlight_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% filter(year %in% c(2012,2013)) %>% group_by(index) %>% summarise(across(nightlight_mean,~mean(.,na.rm = TRUE)),.groups = "drop") 
+
+VIIR_percent_change <- nightlight_mean %>% mutate(nightlight_mean=nightlight_mean+0.01) %>% select(index=index.data,year,nightlight_mean) %>% filter(year %in% c(2014,2018)) %>% pivot_wider(names_from = year,values_from = nightlight_mean) %>% mutate(change=(`2018`-`2014`)/(`2014`))
+
+VIIR_corrected <- DMSP_2012_13 %>% left_join(VIIR_percent_change,by="index") %>% mutate(nightlight_mean_corrected=nightlight_mean+(nightlight_mean)*change) %>% select(index,nightlight_mean=nightlight_mean_corrected) %>% mutate(election="2018")
+
+mean_nightlight %<>% bind_rows(VIIR_corrected) %>% mutate(year=as.integer(election)) %>% select(-election)
+
+to.model <- turnout %>% left_join(mean_nightlight,by=c("index","year"))  %>% rename(region=label) %>% select(-index)
+
+# Changes in nightlight
+
+differences <- to.model  %>% select(region,year,nightlight_mean) %>% as.data.frame()  %>% pivot_wider(names_from = "year",values_from = "nightlight_mean") %>%
+  mutate(`2006-2011`=`2011`-`2006`,`2011-2018`=`2018`-`2011`) %>% select(-c(`2006`,`2011`,`2018`)) %>% pivot_longer(cols = -region,names_to = "period",values_to = "difference")
+
+g <- ggplot(differences,aes(x=difference)) +geom_histogram(bins = 1+3.322*log10(nrow(to.model)),color="black",fill="red") +
+  facet_wrap(~period,ncol=2) + xlab("Change in mean nightlight") + scale_y_continuous(trans="log10") +  ylab("log10(count)")
+
+ggsave(here::here("figures/Mean_nightlight_diff_histograms.png"),g,width = 5,height = 3)
+
+
+# plm data format
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+to.model
+
+
+
+```
+
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=nightlight_mean,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+to.model
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+m <-  model_1_3 <-  plm(turnout ~ nightlight_mean,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+
+pcdtest(turnout ~nightlight_mean,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(turnout ~nightlight_mean,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm(turnout ~nightlight_mean,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+ Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+
+## 1.4 Models table
+
+```{r,results='asis'}
+
+models.to.print <- list(model_1_1,model_1_2,model_1_3)
+
+model_names <- c("Corrected GT30","Not Corrected GT30","Corrected All")
+
+models.to.print_se <- map(models.to.print,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+out.file <- here::here("tables/turnout.vs.nightlight_models.html")
+
+ F.stat <-map(models.to.print,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  .p <- summ$fstatistic$p.value
+  sprintf("%0.3f%s",summ$fstatistic$statistic,
+  case_when(.p<0.01 ~"***",
+            .p<0.05 ~"**",
+            .p<0.1~"*",
+            TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+  df <-map(models.to.print,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic$parameter,collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+ 
+
+suppressWarnings(stargazer::stargazer(models.to.print,type="html",
+                                      se=models.to.print_se,
+                                      out =out.file ,
+                                      column.labels=model_names,dep.var.caption = "Votes turnout",
+                                      omit.stat = "f",
+                                      add.lines = list(F.stat,
+                                                       df)))
+
+```
+
+
+<a href="#top">Back to top</a>

@@ -1,0 +1,11 @@
+---
+title: "Kabila percent of votes"
+output: html_document
+---
+
+```{r}
+
+```
+
+
+# 2006 Elections

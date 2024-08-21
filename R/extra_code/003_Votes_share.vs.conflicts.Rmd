@@ -1,0 +1,1123 @@
+---
+title: "PERCENT-VOTES VS. CONFLICTS"
+output: 
+  html_notebook:
+    theme: united
+    toc: yes
+---
+
+```{r}
+here::i_am("R/003_Votes_share.vs.conflicts.Rmd")
+require(lmtest)
+require(plm)
+require(stargazer)
+
+#### FUNCTIONS ####
+source(here::here("R/function.library.R"))
+#### LOAD THE DATA ####
+
+load(here::here("results/data.RData"))
+
+```
+
+# 1. EXPLORATORY
+
+## 1.1 Votes share data
+
+```{r}
+
+share <- data %>% select(index,label,starts_with("kabila.percent"),starts_with("ramazani.percent")) %>%
+  pivot_longer(cols = -c(index,label),values_to = "votes_share") %>% separate(name,c("drop","year"),sep="_") %>% mutate(year=as.integer(year)) %>% select(-drop)
+
+
+share
+```
+
+```{r}
+
+share  %>% ggplot() + geom_histogram(aes(x=votes_share,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(share)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+share  %>% ggplot() + geom_histogram(aes(x=votes_share),bins = 1+3.322*log10(nrow(share)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r,include=FALSE}
+
+# Compute neighborhood matrix (used later in diagnostic tests)
+library(spdep)
+
+x <- share %>% left_join(congo.territoire.borders,by=c(index="index.data")) %>% filter(year==2006)
+
+
+
+nb <- spdep::poly2nb(pl=x$geometry,row.names = x$index)
+nbw <- spdep::nb2listw(nb,zero.policy = TRUE,style="B")
+
+nb.matrix <- nb2mat(nb,zero.policy = TRUE,style="B")
+
+summary(nb)
+
+```
+
+## 1.2 Conflict & deaths data
+
+```{r,include=TRUE}
+
+total_conflict_deaths <- conflict.aggregated_by_type %>% select(index=index.data,year,n.deaths) %>% group_by(index,year) %>% summarise(across(n.deaths,~sum(.,na.rm = TRUE)),.groups = "drop")
+
+
+total_conflict_deaths <- share %>% select(-votes_share) %>% left_join(total_conflict_deaths,by=c("index","year")) %>% mutate(n.deaths=replace_na(n.deaths,0)) %>% rename(region=label) %>% select(-index)
+
+
+to.plot <- total_conflict_deaths %>% group_by(year) %>% summarise(`units with n.deaths >0`=sum(n.deaths>0),`units with 0 deaths`=sum(n.deaths==0),.groups = "drop") %>% mutate(year=as.character(year))
+
+to.plot %<>% bind_rows(to.plot %>% summarise(year="Total",across(where(is.numeric),sum)))
+
+to.plot
+
+```
+
+```{r,include=TRUE}
+
+to.test <- total_conflict_deaths %>% group_by(year) %>% summarise(any_deaths=sum(n.deaths>0),no_deaths=sum(n.deaths==0)) %>% select(-year) %>% as.matrix()
+
+chisq.test(to.test,correct = T)
+
+
+```
+
+```{r,include=TRUE}
+
+total_conflict_events <- conflict.aggregated_by_type %>% select(index=index.data,year,n.conflicts) %>% group_by(index,year) %>% summarise(across(n.conflicts,~sum(.,na.rm = TRUE)),.groups = "drop")
+
+
+total_conflict_events <- share %>% select(-votes_share) %>% left_join(total_conflict_events,by=c("index","year")) %>% mutate(n.conflicts=replace_na(n.conflicts,0)) %>% rename(region=label) %>% select(-index)
+
+
+to.plot <- total_conflict_events %>% group_by(year) %>% summarise(`units with n.conflicts >0`=sum(n.conflicts>0),`units with 0 conflicts`=sum(n.conflicts==0),.groups = "drop") %>% mutate(year=as.character(year))
+
+to.plot %<>% bind_rows(to.plot %>% summarise(year="Total",across(where(is.numeric),sum)))
+
+to.plot
+
+
+```
+
+```{r,include=TRUE}
+
+to.test <- total_conflict_events %>% group_by(year) %>% summarise(any_conflicts=sum(n.conflicts>0),no_conflicts=sum(n.conflicts==0)) %>% select(-year) %>% as.matrix()
+
+chisq.test(to.test,correct = T)
+
+
+```
+
+
+<a href="#top">Back to top</a>
+
+# 2. MODELS
+
+## 2.1. total_conflict_deaths
+
+### Data
+
+```{r}
+total_conflict_deaths <- conflict.aggregated_by_type %>% select(index=index.data,year,n.deaths) %>% group_by(index,year) %>% summarise(across(n.deaths,~sum(.,na.rm = TRUE)),.groups = "drop")
+
+
+to.model <- share %>% left_join(total_conflict_deaths,by=c("index","year")) %>% mutate(n.deaths=replace_na(n.deaths,0)) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+to.model
+
+
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=n.deaths,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=n.deaths),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+to.model %>% as.data.frame() %>% filter(n.deaths >0) %>% ggplot() + geom_histogram(aes(x=n.deaths),bins = 1+3.322*log10(nrow(to.model %>% filter(n.deaths >0))/3),color="black",fill="red") + facet_wrap(~year,ncol=3) + ggtitle("# deaths >0")
+
+```
+
+<a href="#top">Back to top</a>
+
+### Change
+
+```{r}
+.to_plot <- to.model %>% as.data.frame() %>% select(-votes_share) %>% pivot_wider(id_cols = region,names_from = "year",values_from = "n.deaths") %>%
+  mutate(change_2006_2011=`2011`-`2006`,
+         change_2011_2018=`2018`-`2011`) %>%
+  select(region,starts_with("change_"))
+.to_plot
+```
+
+```{r}
+.to_plot %<>%
+  pivot_longer(cols=-region,values_to = "change")
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=change,y=log10(..count..)),
+                                        bins = 1+3.322*log10(nrow(.to_plot)/2),
+                                        color="black",fill="red") + facet_wrap(~name,ncol=2)
+
+```
+
+```{r}
+
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=sign(change)*log10(abs(change)+1),y=log10(..count..)),
+                                        bins = 1+3.322*log10(nrow(.to_plot)/2),
+                                        color="black",fill="red") + facet_wrap(~name,ncol=2)
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+
+```{r}
+m <- model1_1 <- plm(votes_share ~n.deaths,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+
+pcdtest(votes_share ~n.deaths,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(votes_share ~n.deaths,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~n.deaths,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+
+## 2.2. log_total_conflict_deaths
+
+### Data
+
+```{r}
+
+log_total_conflict_deaths <- conflict.aggregated_by_type %>% select(index=index.data,year,n.deaths) %>% group_by(index,year) %>% summarise(across(n.deaths,~log(sum(.,na.rm = TRUE)+0.1)),.groups = "drop") %>% rename(log_n.deaths=n.deaths)
+
+
+to.model <- share %>% left_join(log_total_conflict_deaths,by=c("index","year")) %>% mutate(log_n.deaths=replace_na(log_n.deaths,0)) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+to.model
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=log_n.deaths,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=log_n.deaths),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+
+m <- model1_2 <- plm(votes_share ~log_n.deaths,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+
+pcdtest(votes_share ~log_n.deaths,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(votes_share ~log_n.deaths,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~log_n.deaths,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+## 2.3. conflict_deaths_by_type
+
+### Data
+
+```{r}
+
+conflict_deaths_by_type <- conflict.aggregated_by_type %>% select(index=index.data,year,type,n.deaths) %>% mutate(type=paste0(type,"_deaths")) %>% pivot_wider(names_from = type,values_from = n.deaths)
+
+
+to.model <- share %>% left_join(conflict_deaths_by_type,by=c("index","year")) %>% mutate(across(-c(index,year,votes_share),~replace_na(.,0))) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+
+to.model
+
+```
+
+```{r,fig.width=10}
+
+to.model %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% ggplot() + geom_histogram(aes(x=value,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)
+
+```
+
+```{r,fig.width=10}
+
+to.model %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% ggplot() + geom_histogram(aes(x=value),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)
+
+```
+
+```{r,fig.width=10}
+
+to.model %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% filter(value >0)  %>% ggplot() + geom_histogram(aes(x=value),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)  + ggtitle("# deaths >0")
+
+```
+
+<a href="#top">Back to top</a>
+
+### Change
+
+```{r}
+.to_plot <- to.model %>% as.data.frame() %>% select(-votes_share) %>%
+  pivot_longer(cols=-c(region,year),names_to = "var",values_to = "value") %>%
+  nest(data=-var) %>% mutate(data=map(data,~{
+    .x %>% pivot_wider(id_cols = region,names_from = "year",values_from = "value") %>%
+  mutate(change_2006_2011=`2011`-`2006`,
+         change_2011_2018=`2018`-`2011`) %>%
+  select(region,starts_with("change_")) %>% data.frame
+  }))
+
+ 
+.to_plot %>%mutate(data=map(data,~ .x %>%pivot_longer(cols=-c(region),values_to = "change")))%>%  unnest(data) %>% unite(col="var",var,name) %>%
+  pivot_wider(names_from = "var",values_from = "change")
+
+```
+
+```{r,fig.width=10}
+.to_plot %<>%mutate(data=map(data,~ .x %>%pivot_longer(cols=-c(region),values_to = "change")))%>%  unnest(data)
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=change),bins = 1+3.322*log10(nrow(.to_plot)/2/6),color="black",fill="red") + facet_grid(name~var) 
+
+```
+
+```{r,fig.width=10}
+
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=sign(change)*log10(abs(change)+1),y=log10(..count..)),bins = 1+3.322*log10(nrow(.to_plot)/2/6),color="black",fill="red") + facet_grid(name~var) 
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+
+m <- model1_3 <- plm(votes_share ~Non.state.vs.non.state_deaths + Foreign.vs.non.state_deaths + Non.state.vs.civilians_deaths + DRC.vs.non.state_deaths + DRC.vs.civilians_deaths +Foreign.vs.civilians_deaths,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+pcdtest(votes_share ~Non.state.vs.non.state_deaths + Foreign.vs.non.state_deaths + Non.state.vs.civilians_deaths + DRC.vs.non.state_deaths + DRC.vs.civilians_deaths +Foreign.vs.civilians_deaths,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(votes_share ~Non.state.vs.non.state_deaths + Foreign.vs.non.state_deaths + Non.state.vs.civilians_deaths + DRC.vs.non.state_deaths + DRC.vs.civilians_deaths +Foreign.vs.civilians_deaths,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~Non.state.vs.non.state_deaths + Foreign.vs.non.state_deaths + Non.state.vs.civilians_deaths + DRC.vs.non.state_deaths + DRC.vs.civilians_deaths +Foreign.vs.civilians_deaths,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+## 2.4. total_conflict_events
+
+### Data
+
+```{r}
+
+total_conflict_events <- conflict.aggregated_by_type %>% select(index=index.data,year,n.conflicts) %>% group_by(index,year) %>% summarise(across(n.conflicts,~sum(.,na.rm = TRUE)),.groups = "drop")
+
+
+to.model <- share %>% left_join(total_conflict_events,by=c("index","year")) %>% mutate(n.conflicts=replace_na(n.conflicts,0)) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=n.conflicts,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=n.conflicts),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+to.model %>% as.data.frame() %>% filter(n.conflicts >0) %>% ggplot() + geom_histogram(aes(x=n.conflicts),bins = 1+3.322*log10(nrow(to.model%>% filter(n.conflicts >0))/3),color="black",fill="red") + facet_wrap(~year,ncol=3) + ggtitle("# conflicts >0")
+
+```
+
+<a href="#top">Back to top</a>
+
+### Change
+
+```{r}
+.to_plot <- to.model %>% as.data.frame() %>% select(-votes_share) %>% pivot_wider(id_cols = region,names_from = "year",values_from = "n.conflicts") %>%
+  mutate(change_2006_2011=`2011`-`2006`,
+         change_2011_2018=`2018`-`2011`) %>%
+  select(region,starts_with("change_"))
+.to_plot
+```
+
+```{r}
+.to_plot %<>%
+  pivot_longer(cols=-region,values_to = "change")
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=change,y=log10(..count..)),
+                                        bins = 1+3.322*log10(nrow(.to_plot)/2),
+                                        color="black",fill="red") + facet_wrap(~name,ncol=2)
+
+```
+
+```{r}
+
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=sign(change)*log10(abs(change)+1),y=log10(..count..)),
+                                        bins = 1+3.322*log10(nrow(.to_plot)/2),
+                                        color="black",fill="red") + facet_wrap(~name,ncol=2)
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+m <- model1_4 <- plm(votes_share ~n.conflicts,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+pcdtest(votes_share ~n.conflicts,data=to.model,model = "within",effect="twoways",w = nb.matrix)
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(votes_share ~n.conflicts,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~n.conflicts,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+## 2.5. log_total_conflict_events
+
+### Data
+
+```{r}
+
+log_total_conflict_events <- conflict.aggregated_by_type %>% select(index=index.data,year,n.conflicts) %>% group_by(index,year) %>% summarise(across(n.conflicts,~log(sum(.,na.rm = TRUE)+0.1)),.groups = "drop") %>% rename(log_n.conflicts=n.conflicts)
+
+
+to.model <- share %>% left_join(log_total_conflict_events,by=c("index","year")) %>% mutate(log_n.conflicts=replace_na(log_n.conflicts,0)) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+to.model 
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=log_n.conflicts,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+```{r}
+
+to.model %>% as.data.frame()  %>% ggplot() + geom_histogram(aes(x=log_n.conflicts),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_wrap(~year,ncol=3)
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+
+m <- model1_5 <- plm(votes_share ~log_n.conflicts,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+pcdtest(votes_share ~log_n.conflicts,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+```
+
+Serial correlation test for short panels
+
+```{r}
+
+plm::pwartest(votes_share ~log_n.conflicts,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~log_n.conflicts,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+## 2.6. conflict_events_by_type
+
+### Data
+
+```{r}
+
+conflict_events_by_type <- conflict.aggregated_by_type %>% select(index=index.data,year,type,n.conflicts) %>% mutate(type=paste0(type,"_events")) %>% pivot_wider(names_from = type,values_from = n.conflicts)
+
+
+to.model <- share %>% left_join(conflict_events_by_type,by=c("index","year")) %>% mutate(across(-c(index,year,votes_share),~replace_na(.,0))) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+
+to.model
+```
+
+```{r,fig.width=10}
+
+to.model %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% ggplot() + geom_histogram(aes(x=value,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)
+
+```
+
+```{r,fig.width=10}
+
+to.model %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% ggplot() + geom_histogram(aes(x=value),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)
+
+```
+
+```{r,fig.width=10}
+
+to.model %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share)) %>% filter(value >0)  %>% ggplot() + geom_histogram(aes(x=value),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name) + ggtitle("# conflict >0")
+
+```
+
+<a href="#top">Back to top</a>
+
+### Change
+
+```{r}
+.to_plot <- to.model %>% as.data.frame() %>% select(-votes_share) %>%
+  pivot_longer(cols=-c(region,year),names_to = "var",values_to = "value") %>%
+  nest(data=-var) %>% mutate(data=map(data,~{
+    .x %>% pivot_wider(id_cols = region,names_from = "year",values_from = "value") %>%
+  mutate(change_2006_2011=`2011`-`2006`,
+         change_2011_2018=`2018`-`2011`) %>%
+  select(region,starts_with("change_")) %>% data.frame
+  }))
+
+ 
+.to_plot %>%mutate(data=map(data,~ .x %>%pivot_longer(cols=-c(region),values_to = "change")))%>%  unnest(data) %>% unite(col="var",var,name) %>%
+  pivot_wider(names_from = "var",values_from = "change")
+
+```
+
+```{r,fig.width=10}
+.to_plot %<>%mutate(data=map(data,~ .x %>%pivot_longer(cols=-c(region),values_to = "change")))%>%  unnest(data)
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=change),bins = 1+3.322*log10(nrow(.to_plot)/2/6),color="black",fill="red") + facet_grid(name~var) 
+
+```
+
+```{r,fig.width=10}
+
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=sign(change)*log10(abs(change)+1),y=log10(..count..)),bins = 1+3.322*log10(nrow(.to_plot)/2/6),color="black",fill="red") + facet_grid(name~var) 
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+
+m <- model1_6 <- plm(votes_share ~Non.state.vs.non.state_events + Foreign.vs.non.state_events + Non.state.vs.civilians_events + DRC.vs.non.state_events + DRC.vs.civilians_events +Foreign.vs.civilians_events,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+pcdtest(votes_share ~Non.state.vs.non.state_events + Foreign.vs.non.state_events + Non.state.vs.civilians_events + DRC.vs.non.state_events + DRC.vs.civilians_events +Foreign.vs.civilians_events,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+```
+
+Cross-sectional dependence
+
+```{r}
+
+plm::pwartest(votes_share ~Non.state.vs.non.state_events + Foreign.vs.non.state_events + Non.state.vs.civilians_events + DRC.vs.non.state_events + DRC.vs.civilians_events +Foreign.vs.civilians_events,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~Non.state.vs.non.state_events + Foreign.vs.non.state_events + Non.state.vs.civilians_events + DRC.vs.non.state_events + DRC.vs.civilians_events +Foreign.vs.civilians_events,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+<a href="#top">Back to top</a>
+
+## 2.7. conflict_deaths_by_side
+
+### Data
+
+```{r}
+
+
+.summarise_var<- function(.x,.var){
+  if(!is.null(.x)){
+    
+    .x %>% as.data.frame() %>%summarise(across(one_of(.var),~sum(.,na.rm = TRUE))) %>% pull(.var)
+  }
+}
+
+conflict_deaths_by_casualty_type <- conflict.aggregated_by_type %>% mutate(n.deaths_a=map(conflict.data,~.summarise_var(.x,"deaths_a")),
+                                       n.deaths_b=map(conflict.data,~.summarise_var(.x,"deaths_b")),
+                                       n.deaths_civilians=map(conflict.data,~.summarise_var(.x,"deaths_civilians")),
+                                       n.deaths_unknow=map(conflict.data,~.summarise_var(.x,"deaths_unknown"))
+                                       ) %>%
+  unnest(c(starts_with("n.deaths")))
+
+
+conflict_deaths_by_casualty_type %<>% mutate(n.deaths_DRC_milit=case_when(str_detect(type,"DRC")~n.deaths_a,TRUE~0),
+                                            n.deaths_foreign_milit=case_when(str_detect(type,"Foreign")~n.deaths_a,TRUE~0),
+                                            n.deaths_non_state=case_when(type=="Non-state vs non-state"~n.deaths_a+n.deaths_b,
+                                                                         type=="Non-state vs civilians"~n.deaths_a,
+                                              str_ends(type,"non-state")~n.deaths_b,
+                                                                         TRUE~0))
+
+
+
+conflict_deaths_by_casualty_type %<>% select(index=index.data,year,n.deaths,n.deaths_DRC_milit,n.deaths_foreign_milit,n.deaths_non_state,n.deaths_civilians,n.deaths_unknow)
+
+conflict_deaths_by_casualty_type %<>% group_by(index,year) %>% summarise(across(everything(),~sum(.,na.rm = FALSE)),.groups="drop")
+
+
+to.print <- conflict_deaths_by_casualty_type %>% select(-index) %>% group_by(year) %>%  summarise(across(everything(),~sum(.,na.rm = TRUE)),.groups = "drop")
+
+to.print %<>% select(Year=year,`DRC military`=n.deaths_DRC_milit,`Foreign military`=n.deaths_foreign_milit,Civilians=n.deaths_civilians, `Non State`=n.deaths_non_state,Unknown=n.deaths_unknow,Total=n.deaths) %>%
+  pivot_longer(cols = -Year,names_to = "Type") %>% pivot_wider(names_from = Year,values_from = value) %>%
+  flextable::flextable() %>% flextable::hline(5,border = officer::fp_border()) %>% flextable::autofit()
+
+doc <- read_docx()
+
+
+
+doc %<>% body_add_par("Conflict deaths by side",style="table title")
+doc %<>% body_add_flextable(to.print,align = "center")
+
+
+print(doc,target=here::here("tables/Conflict.deaths.by.side.docx"))
+
+
+to.model <- share %>% left_join(conflict_deaths_by_casualty_type,by=c("index","year")) %>% mutate(across(-c(index,year,votes_share),~replace_na(.,0))) %>% rename(region=label) %>% select(-index)
+
+to.model <- plm::pdata.frame(to.model,index=c("region","year"),drop.index = FALSE)
+
+
+to.model
+```
+
+```{r,fig.width=10}
+
+to.model  %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% ggplot() + geom_histogram(aes(x=value,y=(..count..)/sum(..count..)),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)
+
+```
+
+```{r,fig.width=10}
+
+to.model  %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))  %>% ggplot() + geom_histogram(aes(x=value),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name)
+
+```
+
+```{r,fig.width=10}
+
+to.model  %>% as.data.frame() %>% pivot_longer(cols=-c(region,year,votes_share))%>% filter(value>0)  %>% ggplot() + geom_histogram(aes(x=value),bins = 1+3.322*log10(nrow(to.model)/3),color="black",fill="red") + facet_grid(year~name) + ggtitle("# deaths >0")
+
+```
+
+<a href="#top">Back to top</a>
+
+### Change
+
+```{r}
+.to_plot <- to.model %>% as.data.frame() %>% select(-votes_share) %>%
+  pivot_longer(cols=-c(region,year),names_to = "var",values_to = "value") %>%
+  nest(data=-var) %>% mutate(data=map(data,~{
+    .x %>% pivot_wider(id_cols = region,names_from = "year",values_from = "value") %>%
+  mutate(change_2006_2011=`2011`-`2006`,
+         change_2011_2018=`2018`-`2011`) %>%
+  select(region,starts_with("change_")) %>% data.frame
+  }))
+
+ 
+.to_plot %>%mutate(data=map(data,~ .x %>%pivot_longer(cols=-c(region),values_to = "change")))%>%  unnest(data) %>% unite(col="var",var,name) %>%
+  pivot_wider(names_from = "var",values_from = "change")
+
+```
+
+```{r,fig.width=10}
+.to_plot %<>%mutate(data=map(data,~ .x %>%pivot_longer(cols=-c(region),values_to = "change")))%>%  unnest(data)
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=change),bins = 1+3.322*log10(nrow(.to_plot)/2/6),color="black",fill="red") + facet_grid(name~var) 
+
+```
+
+```{r,fig.width=10}
+
+  
+
+.to_plot %>%  ggplot() + geom_histogram(aes(x=sign(change)*log10(abs(change)+1),y=log10(..count..)),bins = 1+3.322*log10(nrow(.to_plot)/2/6),color="black",fill="red") + facet_grid(name~var) 
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model
+
+```{r}
+
+m <- model1_7 <- plm(votes_share ~n.deaths_DRC_milit + n.deaths_foreign_milit +  n.deaths_non_state + n.deaths_civilians + n.deaths_unknow,data=to.model,model="within",effect = "twoways")
+
+summary(m)
+
+
+```
+
+Coefficients with robust SE
+
+```{r}
+
+coeftest(m, vcovHC(m, method="arellano", type="HC3"))
+
+```
+
+<a href="#top">Back to top</a>
+
+### Model diagnostics
+
+Cross-sectional dependence test
+
+```{r}
+pcdtest(votes_share ~n.deaths_DRC_milit + n.deaths_foreign_milit +  n.deaths_non_state + n.deaths_civilians + n.deaths_unknow,data=to.model,model = "within",effect="twoways",w=nb.matrix)
+```
+
+Cross-sectional dependence
+
+```{r}
+
+plm::pwartest(votes_share ~n.deaths_DRC_milit + n.deaths_foreign_milit +  n.deaths_non_state + n.deaths_civilians + n.deaths_unknow,data=to.model)
+
+```
+
+Fixed effects test
+
+```{r}
+mpool <- plm::plm(votes_share ~n.deaths_DRC_milit + n.deaths_foreign_milit +  n.deaths_non_state + n.deaths_civilians + n.deaths_unknow,data=to.model,model="pooling")
+
+plm::pFtest(m,mpool)
+
+```
+
+Residuals Normality
+
+```{r}
+resid <- residuals(m)
+
+qqnorm(resid)
+qqline(resid)
+
+```
+
+```{r}
+
+ks.test(resid,"pnorm",mean(resid),sd(resid))
+
+```
+
+```{r}
+pred <- predict(m)
+
+plot(as.vector(pred),as.vector(resid),ylab="Residuals",xlab="Fitted")
+```
+
+## 2.8 Models table
+
+```{r,results='asis'}
+
+models.to.print <- list(model1_1,model1_2,model1_3,model1_4,model1_5,model1_6,model1_7)
+
+model_names <- c("Total Deaths","Log Total Deaths","Deaths by type","Total Conflicts","Log Total Conflicts","Conflicts by type","Conflict Deaths by side")
+
+models.to.print_se <- map(models.to.print,~coeftest(.x, vcovHC(.x, method="arellano", type="HC3"))[,"Std. Error"])
+
+out.file <- here::here("tables/votes_share.vs.conflicts_models.html")
+
+ F.stat <-map(models.to.print,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  .p <- summ$fstatistic$p.value
+  sprintf("%0.3f%s",summ$fstatistic$statistic,
+  case_when(.p<0.01 ~"***",
+            .p<0.05 ~"**",
+            .p<0.1~"*",
+            TRUE ~""))
+  
+  
+})  %>% unlist %>% c("F Statistic",.)
+
+  df <-map(models.to.print,~{
+  summ <- summary(.x,vcov.=vcovHC(.x, method="arellano", type="HC3"))
+  
+  paste(summ$fstatistic$parameter,collapse=";")
+  
+  
+})  %>% unlist %>% c("df",.)
+ 
+
+suppressWarnings(stargazer::stargazer(models.to.print,type="html",
+                                      se=models.to.print_se,
+                                      out =out.file ,
+                                      column.labels=model_names,dep.var.caption = "Votes share",
+                                      omit.stat = "f",
+                                      add.lines = list(F.stat,
+                                                       df)))
+
+```
+
+<a href="#top">Back to top</a>
