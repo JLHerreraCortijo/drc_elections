@@ -1435,6 +1435,44 @@ if (update_FigA11) {
 
 ##### FIGURE A12 ####
 
+
+# Load the pre-saved RData file that contains the model results for Table A2c
+load("results/TableA8i_models.RData")
+
+# Create a list of model names
+model_names <- c(
+  paste("Conflicts"),
+  paste("Log Conflicts"),
+  paste("Deaths"),
+  paste("Log Deaths"),
+  paste("ACLED\nConflicts"),
+  paste("ACLED\nLog Conflicts"),
+  paste("ACLED\nDeaths"),
+  paste("ACLED\nLog Deaths")
+)
+
+# Store the model names for printing
+model_names.to_print <- model_names
+
+# Compute standard errors for each model using robust covariance matrices
+models.to.print_se <- purrr::map(models_tA8i, \(x) {
+  lmtest::coeftest(x, sandwich::vcovHC(x, method = "arellano", type = "HC3"))[, "Std. Error"]
+})
+
+# Prepare data for forest plot for the year 2006
+forest_plot_data_2006 <- models_tA8i[1:4] %>%
+  purrr::map(broom::tidy) %>%
+  purrr::map2(model_names.to_print[1:4], \(x, name) x %>% dplyr::mutate(model = name)) %>%
+  purrr::map2_dfr(models.to.print_se[1:4], \(x, se) {
+    as.data.frame(se) %>%
+      magrittr::set_names("se.robust") %>%
+      dplyr::mutate(term = rownames(.)) %>%
+      dplyr::right_join(x, by = "term")
+  }) %>%
+  dplyr::mutate(year = 2006)
+
+rm(models_tA8i)
+
 # Load the pre-saved RData file that contains the model results
 load("results/TableA13_models.RData")
 
@@ -1463,7 +1501,7 @@ model_names.to_print <- model_names
 
 # Forest plot data
 
-forest_plot_data_2018_only <- models_tA14[1:4] %>% purrr::map(broom::tidy) %>% purrr::map2(model_names.to_print[1:4],~.x %>% dplyr::mutate(model=.y,se.robust=NA_real_)) %>% bind_rows %>%
+forest_plot_data_2018_only <- models_tA14[1:4] %>% purrr::map(broom::tidy) %>% purrr::map2(model_names.to_print[1:4],~.x %>% dplyr::mutate(model=.y,se.robust=NA_real_)) %>% dplyr::bind_rows() %>%
   dplyr::mutate(year=2018)
 
 rm(models_tA14)
@@ -1488,7 +1526,7 @@ Figure_A12 <- to.plot %>% dplyr::filter(model=="Log Deaths") %>% dplyr::mutate(e
 
 # Save the plot as a PNG file if the 'update_FigA12' flag is TRUE.
 if (update_FigA12) {
-ggsave(here::here("manuscript/figures/FigureA12.png"),Figure_A12,width = figA12_width,height = figA12_height,units = "in",bg="white")
+ggplot2::ggsave(here::here("manuscript/figures/FigureA12.png"),Figure_A12,width = figA12_width,height = figA12_height,units = "in",bg="white")
 
 }
 
