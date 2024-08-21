@@ -3553,103 +3553,122 @@ rm(list = models_computed)
 
 #### Table A19ii ####
 
-turnout <- data %>% dplyr::select(index,label,starts_with("turnout_")) %>%
-  tidyr::pivot_longer(cols = -c(index,label),values_to = "turnout") %>% tidyr::separate(name,c("drop","year"),sep="_") %>% dplyr::mutate(year=as.integer(year)) %>% dplyr::select(-drop)
 
+# Select relevant columns from 'data', including the index, label, and any columns that start with 'turnout_'
+turnout <- data %>%
+  dplyr::select(index, label, dplyr::starts_with("turnout_")) %>%
+  
+  # Reshape the data from wide to long format, turning columns into rows, except for 'index' and 'label'
+  tidyr::pivot_longer(cols = -c(index, label), values_to = "turnout") %>%
+  
+  # Split the 'name' column into 'drop' and 'year' based on the underscore separator
+  tidyr::separate(name, c("drop", "year"), sep = "_") %>%
+  
+  # Convert the 'year' column from character to integer type
+  dplyr::mutate(year = as.integer(year)) %>%
+  
+  # Remove the 'drop' column since it is no longer needed
+  dplyr::select(-drop)
 
+# Define a vector of variable names to be used in the model
+vars <- c("n.conflicts", "log_n.conflicts", "n.deaths", "log_n.deaths")
 
-vars <- c("n.conflicts","log_n.conflicts","n.deaths","log_n.deaths")
+# Filter the 'turnout' data to exclude the year 2018 and reshape it from long to wide format
+turnout %<>%
+  dplyr::filter(year != 2018) %>%
+  
+  # Pivot the data back to wide format, creating separate columns for each election year
+  tidyr::pivot_wider(names_from = "year", values_from = "turnout", names_prefix = "election_")
 
-
-turnout %<>%  dplyr::filter(year!=2018) %>%
-  tidyr::pivot_wider(names_from = "year",values_from = "turnout",names_prefix = "election_")
-
-
-# Apply a function to each element of 'vars' and return a list of models
-models.to.print <- vars %>%
-  purrr::map(function(var) {
-    # Filter data where there are conflicts and exclude the year 2018
-    to.model <- conflict.aggregated_by_type %>%
-      dplyr::filter(n.conflicts > 0) %>%
-      dplyr::filter(year != 2018) %>%
-      # Group data by 'index.data' and 'year'
-      dplyr::group_by(index.data, year) %>%
-      # Summarize the total number of conflicts and deaths, ignoring missing values
-      dplyr::summarise(
-        dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE),
-        .groups = "drop"
-      ) %>%
-      # Create new columns for log-transformed conflicts and deaths
-      dplyr::mutate(
-        log_n.conflicts = log10(n.conflicts + 0.1),
-        log_n.deaths = log10(n.deaths + 0.1)
-      ) %>%
-      # Select the relevant columns for modeling
-      dplyr::select(index = index.data, year, dplyr::one_of(var)) %>%
-      # Modify the 'year' column to create unique variable-year combinations
-      dplyr::mutate(year = paste(var, year, sep = "_")) %>%
-      # Pivot the data from long to wide format, using 'year' as column names
-      tidyr::pivot_wider(names_from = "year", values_from = dplyr::all_of(var))
+# Create a list of linear models using the conflict data and turnout data for different variables
+models.to.print <- vars %>% purrr::map(function(var) {
+  
+  # Aggregate the conflict data by 'index.data' and 'year', summing the number of conflicts and deaths
+  to.model <- conflict.aggregated_by_type %>%
+    dplyr::filter(n.conflicts > 0) %>% # Only keep rows where there are conflicts
+    dplyr::filter(year != 2018) %>% # Exclude the year 2018
+    dplyr::group_by(index.data, year) %>%
     
-    # Merge the transformed 'to.model' data with the 'turnout' data by 'index'
-    to.model <- turnout %>%
-      dplyr::left_join(to.model, by = c("index")) %>%
-      # Replace missing values in columns that start with the variable name ('var')
-      dplyr::mutate(dplyr::across(dplyr::starts_with(var), \(x) tidyr::replace_na(x, 0))) %>%
-      # Rename the 'label' column to 'region' and drop the 'index' column
-      dplyr::rename(region = label) %>%
-      dplyr::select(-index)
+    # Summarize the total number of conflicts and deaths for each group
+    dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>%
     
-    # Create a linear regression formula for the model
-    formula <- as.formula(paste0("election_2011 ~ ", paste0(var, "_2006"), "+", paste0(var, "_2011")))
+    # Create new columns for the log-transformed number of conflicts and deaths
+    dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1)) %>%
     
-    # Fit a linear model using the generated formula and the transformed data
-    lm(formula, to.model)
-  })
+    # Select the relevant columns for modeling
+    dplyr::select(index = index.data, year, dplyr::one_of(var)) %>%
+    
+    # Modify the 'year' column to include the variable name (e.g., "n.conflicts_2006")
+    dplyr::mutate(year = paste(var, year, sep = "_")) %>%
+    
+    # Reshape the data from long to wide format based on the variable and year
+    tidyr::pivot_wider(names_from = "year", values_from = dplyr::all_of(var))
+  
+  # Merge the conflict data with the turnout data by the 'index' column
+  to.model <- turnout %>%
+    dplyr::left_join(to.model, by = c("index")) %>%
+    
+    # Replace missing values (NA) with 0 for any columns that start with the variable name
+    dplyr::mutate(dplyr::across(dplyr::starts_with(var), ~ tidyr::replace_na(., 0))) %>%
+    
+    # Rename the 'label' column to 'region' and drop the 'index' column
+    dplyr::rename(region = label) %>%
+    dplyr::select(-index)
+  
+  # Define the formula for the linear model (e.g., election_2011 ~ n.conflicts_2006 + n.conflicts_2011)
+  formula <- as.formula(paste0("election_2011 ~ ", paste0(var, "_2006"), " + ", paste0(var, "_2011")))
+  
+  # Fit a linear model using the formula and the prepared data
+  lm(formula, to.model)
+  
+})
 
-# Apply a similar process to another data set, ACLED_data_models
-models.to.print_ACLED <- vars %>%
-  purrr::map(function(var) {
-    # Filter data where there are conflicts and exclude the year 2018
-    to.model <- ACLED_data_models %>%
-      dplyr::filter(n.conflicts > 0) %>%
-      dplyr::filter(year != 2018) %>%
-      # Group data by 'index' and 'year'
-      dplyr::group_by(index, year) %>%
-      # Summarize the total number of conflicts and deaths, ignoring missing values
-      dplyr::summarise(
-        dplyr::across(dplyr::one_of(c("n.conflicts", "n.deaths")), \(x) sum(x, na.rm = TRUE)),
-        .groups = "drop"
-      ) %>%
-      # Create new columns for log-transformed conflicts and deaths
-      dplyr::mutate(
-        log_n.conflicts = log10(n.conflicts + 0.1),
-        log_n.deaths = log10(n.deaths + 0.1)
-      ) %>%
-      # Select the relevant columns for modeling
-      dplyr::select(index, year, dplyr::one_of(var)) %>%
-      # Modify the 'year' column to create unique variable-year combinations
-      dplyr::mutate(year = paste(var, year, sep = "_")) %>%
-      # Pivot the data from long to wide format, using 'year' as column names
-      tidyr::pivot_wider(names_from = "year", values_from = dplyr::all_of(var))
+# Create a list of linear models using ACLED data and turnout data for different variables
+models.to.print_ACLED <- vars %>% purrr::map(function(var) {
+  
+  # Aggregate the ACLED data by 'index' and 'year', summing the number of conflicts and deaths
+  to.model <- ACLED_data_models %>%
+    dplyr::filter(n.conflicts > 0) %>% # Only keep rows where there are conflicts
+    dplyr::filter(year != 2018) %>% # Exclude the year 2018
+    dplyr::group_by(index, year) %>%
     
-    # Merge the transformed 'to.model' data with the 'turnout' data by 'index'
-    # Apply a function to fix index issues specific to the ACLED data set
-    to.model <- turnout %>%
-      fix_ACLED_index() %>%
-      dplyr::left_join(to.model, by = c("index")) %>%
-      # Replace missing values in columns that start with the variable name ('var')
-      dplyr::mutate(dplyr::across(dplyr::starts_with(var), \(x) tidyr::replace_na(x, 0))) %>%
-      # Rename the 'label' column to 'region' and drop the 'index' column
-      dplyr::rename(region = label) %>%
-      dplyr::select(-index)
+    # Summarize the total number of conflicts and deaths for each group
+    dplyr::summarise(dplyr::across(c(n.conflicts, n.deaths), sum, na.rm = TRUE), .groups = "drop") %>%
     
-    # Create a linear regression formula for the model
-    formula <- as.formula(paste0("election_2011 ~ ", paste0(var, "_2006"), "+", paste0(var, "_2011")))
+    # Create new columns for the log-transformed number of conflicts and deaths
+    dplyr::mutate(log_n.conflicts = log10(n.conflicts + 0.1), log_n.deaths = log10(n.deaths + 0.1)) %>%
     
-    # Fit a linear model using the generated formula and the transformed data
-    lm(formula, to.model)
-  })
+    # Select the relevant columns for modeling
+    dplyr::select(index, year, dplyr::one_of(var)) %>%
+    
+    # Modify the 'year' column to include the variable name (e.g., "n.conflicts_2006")
+    dplyr::mutate(year = paste(var, year, sep = "_")) %>%
+    
+    # Reshape the data from long to wide format based on the variable and year
+    tidyr::pivot_wider(names_from = "year", values_from = dplyr::all_of(var))
+  
+  # Merge the ACLED data with the turnout data after fixing the index (custom function 'fix_ACLED_index')
+  to.model <- turnout %>%
+    fix_ACLED_index() %>% # Apply custom function to fix the ACLED index
+    
+    # Join the turnout data with the conflict data by 'index'
+    dplyr::left_join(to.model, by = c("index")) %>%
+    
+    # Replace missing values (NA) with 0 for any columns that start with the variable name
+    dplyr::mutate(dplyr::across(dplyr::starts_with(var), ~ tidyr::replace_na(., 0))) %>%
+    
+    # Rename the 'label' column to 'region' and drop the 'index' column
+    dplyr::rename(region = label) %>%
+    dplyr::select(-index)
+  
+  # Define the formula for the linear model (e.g., election_2011 ~ n.conflicts_2006 + n.conflicts_2011)
+  formula <- as.formula(paste0("election_2011 ~ ", paste0(var, "_2006"), " + ", paste0(var, "_2011")))
+  
+  # Fit a linear model using the formula and the prepared data
+  lm(formula, to.model)
+  
+})
+
 
 # Combine the models from both data sources into a single list
 models_tA19ii <- c(models.to.print, models.to.print_ACLED)
